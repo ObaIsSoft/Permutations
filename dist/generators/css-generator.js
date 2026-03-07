@@ -1,0 +1,77 @@
+export class CSSGenerator {
+    generate(genome, format = "tailwind") {
+        if (format === "tailwind") {
+            return this.generateTailwindConfig(genome);
+        }
+        return "/* CSS generation not implemented for this format */";
+    }
+    generateTailwindConfig(genome) {
+        const ch = genome.chromosomes;
+        const primaryColor = this.hslToHex(ch.ch5_color_primary.hue, ch.ch5_color_primary.saturation * 100, ch.ch5_color_primary.lightness * 100);
+        const bondingRules = genome.constraints.bondingRules.map((r) => `// - ${r}`).join('\n');
+        const forbiddenPatterns = genome.constraints.forbiddenPatterns.map((p) => `// - ${p}`).join('\n');
+        const requiredPatterns = genome.constraints.requiredPatterns.map((p) => `// + ${p}`).join('\n');
+        return `
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: ["./src/**/*.{html,js,ts,jsx,tsx}"],
+  theme: {
+    extend: {
+      colors: {
+        primary: {
+          DEFAULT: '${primaryColor}',
+          hue: ${ch.ch5_color_primary.hue},
+        },
+        background: '${ch.ch6_color_temp.backgroundTemp === "cool" ? "#0a0a0a" : "#f5f5f5"}',
+        surface: '${ch.ch6_color_temp.backgroundTemp === "cool" ? "#141414" : "#ffffff"}',
+      },
+      fontFamily: {
+        display: ['${ch.ch3_type_display.family}'],
+        body: ['${ch.ch4_type_body.family}'],
+      },
+      spacing: {
+        'genome-unit': '${ch.ch2_rhythm.baseSpacing}px',
+      },
+      borderRadius: {
+        'genome': '${ch.ch7_edge.radius}px',
+        'none': '0px',
+      },
+      transitionTimingFunction: {
+        'genome': '${ch.ch8_motion.physics === "spring" ? "cubic-bezier(0.34, 1.56, 0.64, 1)" : ch.ch8_motion.physics === "step" ? "steps(8)" : "cubic-bezier(0.4, 0, 0.2, 1)"}',
+      },
+      transitionDuration: {
+        'genome': '${ch.ch8_motion.durationScale * 1000}ms',
+      },
+    },
+  },
+  plugins: [],
+  corePlugins: {
+    ${genome.constraints.forbiddenPatterns.includes("heavy_blur_effects") ? "backdropBlur: false," : ""}
+  }
+};
+
+/*
+Design Genome DNA: ${genome.dnaHash}
+Viability Score: ${genome.viabilityScore}
+Bonding Rules Applied:
+${bondingRules}
+
+Forbidden Patterns:
+${forbiddenPatterns}
+
+Required Patterns:
+${requiredPatterns}
+*/
+`;
+    }
+    hslToHex(h, s, l) {
+        l /= 100;
+        const a = s * Math.min(l, 1 - l) / 100;
+        const f = (n) => {
+            const k = (n + h / 30) % 12;
+            const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+            return Math.round(255 * color).toString(16).padStart(2, '0');
+        };
+        return `#${f(0)}${f(8)}${f(4)}`;
+    }
+}
