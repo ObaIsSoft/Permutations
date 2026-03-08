@@ -1,3 +1,32 @@
+export interface ContentAnalysis {
+    visualMarkers: {
+        dominantColors: string[];
+        colorTemperature: "warm" | "cool" | "neutral";
+        textureProfile: "smooth" | "grainy" | "high_contrast";
+        imageAspectRatios: ("landscape" | "portrait" | "square")[];
+        visualDensity: "sparse" | "medium" | "dense";
+    };
+    textMarkers: {
+        averageWordLength: number;
+        textVolume: "minimal" | "medium" | "extensive";
+        hierarchyDepth: number;
+        contentTone: "technical" | "narrative" | "commercial";
+        scanVsReadRatio: number;
+    };
+    structuralMarkers: {
+        contentType: "high_frequency_data" | "long_form" | "portfolio" | "commerce" | "dashboard";
+        updateFrequency: "static" | "periodic" | "realtime";
+        itemCount: number;
+        chronology: boolean;
+        taxonomy: boolean;
+    };
+    epigeneticFactors: {
+        existingBrandColors: string[];
+        logoTypography: "serif" | "sans" | "script" | "geometric";
+        spatialQuality: "organic" | "orthogonal" | "chaotic";
+    };
+}
+
 export interface ContentTraits {
     informationDensity: number; // 0.0 - 1.0 (sparse to maximal)
     temporalUrgency: number;    // 0.0 - 1.0 (archival to realtime)

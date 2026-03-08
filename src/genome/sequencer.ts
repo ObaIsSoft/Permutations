@@ -1,8 +1,10 @@
 import * as crypto from "crypto";
 import { ContentTraits, DesignGenome } from "./types.js";
+import { EpigeneticData } from "./epigenetics.js";
+import { ARCHETYPES, detectArchetype, FunctionalArchetype } from "./archetypes.js";
 
 export class GenomeSequencer {
-    generate(seed: string, traits: ContentTraits): DesignGenome {
+    generate(seed: string, traits: ContentTraits, epigenetics?: EpigeneticData): DesignGenome {
         const hash = crypto.createHash("sha256").update(seed).digest("hex");
         const bytes = Buffer.from(hash, 'hex');
 
@@ -76,6 +78,13 @@ export class GenomeSequencer {
         if (traits.playfulness > 0.6) geometry = "organic";
         else if (traits.informationDensity > 0.7) geometry = "fractal";
 
+        // Base Hue from hash
+        let hue = Math.round(b(10) * 360);
+        // Epigenetic Override: Let the uploaded Brand Logo dictate the exact Hue
+        if (epigenetics?.epigeneticHue !== undefined) {
+            hue = epigenetics.epigeneticHue;
+        }
+
         // Assemble Genome
         const genome: DesignGenome = {
             dnaHash: hash,
@@ -85,7 +94,7 @@ export class GenomeSequencer {
                 ch2_rhythm: { density, baseSpacing: Math.floor(b(4) * 16) + 4 },
                 ch3_type_display: { family: this.selectDisplayFont(bytes[5], charge), charge, weight: [400, 700, 900][bytes[6] % 3] },
                 ch4_type_body: { family: this.selectBodyFont(bytes[7], charge), xHeightRatio: 0.5 + b(8) * 0.2, contrast: 0.8 + b(9) * 0.4 },
-                ch5_color_primary: { hue: Math.round(b(10) * 360), saturation: Math.max(0.2, b(11)), lightness: Math.max(0.2, b(12)), temperature: temp },
+                ch5_color_primary: { hue, saturation: Math.max(0.2, b(11)), lightness: Math.max(0.2, b(12)), temperature: temp },
                 ch6_color_temp: { backgroundTemp: temp === "warm" ? "cool" : "neutral", contrastRatio: 4.5 + b(13) * 10 },
                 ch7_edge: { radius, style: radius === 0 ? "sharp" : (radius > 16 ? "organic" : "soft") },
                 ch8_motion: { physics, durationScale: 0.2 + b(14) * 1.8 },
@@ -146,5 +155,61 @@ export class GenomeSequencer {
         }
 
         return genome;
+    }
+
+    /**
+     * Generate genome from functional archetype without requiring API calls.
+     * Uses deterministic hash + archetype constraints for API-free generation.
+     */
+    generateFromArchetype(archetypeName: string, seed: string): DesignGenome {
+        const archetype = ARCHETYPES[archetypeName];
+        if (!archetype) {
+            throw new Error(`Unknown archetype: ${archetypeName}. Available: ${Object.keys(ARCHETYPES).join(", ")}`);
+        }
+
+        // Get base genome from hash
+        const hash = crypto.createHash("sha256").update(seed).digest("hex");
+        const genome = this.hashToGenome(hash);
+
+        // Apply archetype constraints
+        genome.chromosomes.ch1_structure.topology = archetype.constraints.preferredTopology;
+        genome.chromosomes.ch8_motion.physics = archetype.constraints.motionPreference;
+        genome.chromosomes.ch7_edge.style = archetype.constraints.edgePreference;
+
+        if (archetype.constraints.edgePreference === "sharp") {
+            genome.chromosomes.ch7_edge.radius = 0;
+        }
+
+        // Force typography based on archetype
+        if (archetype.constraints.requiredCharge) {
+            genome.chromosomes.ch3_type_display.charge = archetype.constraints.requiredCharge as any;
+        }
+
+        // Add forbidden patterns from archetype
+        archetype.constraints.forbiddenFonts.forEach(font => {
+            genome.constraints.forbiddenPatterns.push(font);
+        });
+
+        // Set viability markers
+        genome.constraints.bondingRules.push(`Archetype: ${archetype.name} - ${archetype.description}`);
+
+        return genome;
+    }
+
+    private hashToGenome(hash: string): DesignGenome {
+        const bytes = Buffer.from(hash, 'hex');
+        const b = (index: number) => bytes[index] / 255;
+
+        // Generate traits from hash
+        const traits: ContentTraits = {
+            informationDensity: b(0),
+            temporalUrgency: b(1),
+            emotionalTemperature: b(2),
+            playfulness: b(3),
+            spatialDependency: b(4),
+        };
+
+        // Use existing generate logic
+        return this.generate(hash, traits);
     }
 }

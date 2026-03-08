@@ -6,25 +6,20 @@ import { Installation } from './components/Installation';
 import { Footer } from './components/Footer';
 
 function App() {
-  return (
-    <div className="min-h-screen flex flex-col items-center bg-background scroll-smooth">
-      {/* EXPLICIT DISCLAIMER */}
-      <div className="w-full bg-black text-white text-center py-2 text-xs font-mono uppercase tracking-widest border-b-2 border-primary z-50 relative">
-        Notice: This UI was programmatically built via Permutations MCP. No human aesthetic bias was explicitly used.
-      </div>
+    return (
+        <div className="min-h-screen flex flex-col items-center bg-background scroll-smooth fx-atmosphere">
+            <Navbar />
 
-      <Navbar />
+            <main className="w-full relative z-10">
+                <Hero />
+                <Architecture />
+                <DNA />
+                <Installation />
+            </main>
 
-      <main className="w-full">
-        <Hero />
-        <Architecture />
-        <DNA />
-        <Installation />
-      </main>
-
-      <Footer />
-    </div>
-  );
+            <Footer />
+        </div>
+    );
 }
 
 export default App;
