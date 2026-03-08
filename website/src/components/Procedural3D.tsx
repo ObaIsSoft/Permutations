@@ -14,10 +14,11 @@ function RotatingBox() {
     });
 
     return (
-        <mesh ref={meshRef} scale={2.5} position={[4, 0, 0]}>
+        <mesh ref={meshRef} scale={2} position={[2, 0, 0]}>
             <boxGeometry args={[2, 2, 2]} />
             <meshStandardMaterial
-                metalness={1}
+                color="#006466"
+                metalness={0.8}
                 roughness={0.3858823529411765}
             />
         </mesh>
@@ -26,8 +27,8 @@ function RotatingBox() {
 
 export function Procedural3D() {
     return (
-        <Canvas>
-            <ambientLight intensity={0.2} />
+        <Canvas camera={{ position: [0, 0, 8], fov: 50 }}>
+            <ambientLight intensity={0.5} />
             <directionalLight position={[10, 10, 5]} intensity={1.5} />
             <Environment preset="studio" />
             <RotatingBox />
