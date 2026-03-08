@@ -3,6 +3,7 @@ export interface ContentTraits {
     temporalUrgency: number;    // 0.0 - 1.0 (archival to realtime)
     emotionalTemperature: number; // 0.0 - 1.0 (clinical/cold to warm/humanist)
     playfulness: number;        // 0.0 - 1.0 (brutal/strict to organic/whimsical)
+    spatialDependency: number;   // 0.0 - 1.0 (flat 2D to deep immersive 3D)
 }
 
 export interface DesignGenome {
@@ -21,6 +22,9 @@ export interface DesignGenome {
         ch10_hierarchy: { depth: "flat" | "overlapping" | "3d-stack"; zIndexBehavior: string };
         ch11_texture: { surface: "flat" | "grain" | "glass" | "chrome"; noiseLevel: number };
         ch12_signature: { entropy: number; uniqueMutation: string };
+        ch13_atmosphere: { fx: "glassmorphism" | "crt_noise" | "fluid_mesh" | "none"; intensity: number };
+        ch14_physics: { material: "neumorphism" | "metallic" | "glass" | "matte"; roughness: number; transmission: number };
+        ch15_biomarker: { geometry: "monolithic" | "organic" | "fractal"; complexity: number };
     };
     constraints: {
         forbiddenPatterns: string[];

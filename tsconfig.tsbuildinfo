@@ -1,0 +1,1 @@
+{"root":["./src/server.ts","./src/generators/css-generator.ts","./src/generators/fx-generator.ts","./src/generators/html-topology.ts","./src/generators/svg-generator.ts","./src/generators/webgl-generator.ts","./src/genome/sequencer.ts","./src/genome/types.ts","./src/semantic/extractor.ts"],"version":"5.9.3"}

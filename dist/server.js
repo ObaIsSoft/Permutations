@@ -5,18 +5,27 @@ import { SemanticTraitExtractor } from "./semantic/extractor.js";
 import { GenomeSequencer } from "./genome/sequencer.js";
 import { CSSGenerator } from "./generators/css-generator.js";
 import { HTMLTopologyGenerator } from "./generators/html-topology.js";
+import { WebGLGenerator } from "./generators/webgl-generator.js";
+import { FXGenerator } from "./generators/fx-generator.js";
+import { SVGGenerator } from "./generators/svg-generator.js";
 class DesignGenomeServer {
     server;
     extractor;
     sequencer;
     cssGen;
     htmlGen;
+    webglGen;
+    fxGen;
+    svgGen;
     constructor() {
         this.server = new Server({ name: "permutations", version: "1.0.0" }, { capabilities: { tools: {} } });
         this.extractor = new SemanticTraitExtractor();
         this.sequencer = new GenomeSequencer();
         this.cssGen = new CSSGenerator();
         this.htmlGen = new HTMLTopologyGenerator();
+        this.webglGen = new WebGLGenerator();
+        this.fxGen = new FXGenerator();
+        this.svgGen = new SVGGenerator();
         this.setupHandlers();
     }
     setupHandlers() {
@@ -49,11 +58,14 @@ class DesignGenomeServer {
                 const genome = this.sequencer.generate(args.seed, traits);
                 const tailwindConfig = this.cssGen.generate(genome, "tailwind");
                 const topology = this.htmlGen.generateTopology(genome);
+                const webglComponents = this.webglGen.generateR3F(genome);
+                const fxAtmosphere = this.fxGen.generateCSSClass(genome);
+                const svgBiomarker = this.svgGen.generateBiomarker(genome);
                 return {
                     content: [
                         {
                             type: "text",
-                            text: JSON.stringify({ genome, topology, tailwindConfig }, null, 2)
+                            text: JSON.stringify({ genome, topology, tailwindConfig, webglComponents, fxAtmosphere, svgBiomarker }, null, 2)
                         }
                     ]
                 };

@@ -5,45 +5,43 @@ export default {
         extend: {
             colors: {
                 primary: {
-                    DEFAULT: '#0a5c12',
-                    hue: 126,
+                    DEFAULT: '#006466',
+                    hue: 181,
                 },
                 background: '#f5f5f5',
                 surface: '#ffffff',
             },
             fontFamily: {
-                // DNA dictates Space Grotesk for display (Geometric/Industrial), Inter for body
                 display: ['Space Grotesk', 'Inter', 'sans-serif'],
                 body: ['Inter', 'Roboto', 'sans-serif'],
             },
             spacing: {
-                'genome-unit': '14px', // From rhythm density
+                'genome-unit': '16px',
             },
             borderRadius: {
-                'genome': '0px', // Playfulness 0.05 forced brutalist
+                'genome': '5px',
                 'none': '0px',
             },
             transitionTimingFunction: {
-                'genome': 'steps(8)', // From low emotional temp
+                'genome': 'steps(8)',
             },
             transitionDuration: {
-                'genome': '200ms',
+                'genome': '743ms',
             },
         },
     },
     plugins: [],
     corePlugins: {
-        // No specific core plugin removals required by this specific DNA
     }
 };
 
 /*
-Design Genome DNA: 3cd02634a22de5029b5359ce0da8003e585a3b45df68559022acf378cb77df77
+Design Genome DNA: 1a6220e0c6030b2c826c80fd119a4db45421cba423dfeac006df24cd920989d4
 Viability Score: 1
 Bonding Rules Applied:
-// - Low Playfulness -> Forced brutalist radius (0px).
 
 Forbidden Patterns:
-// - bounce_animations
-// - comic_sans
+
+Required Patterns:
+
 */

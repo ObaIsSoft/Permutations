@@ -56,6 +56,32 @@ export class GenomeSequencer {
         else if (traits.emotionalTemperature < 0.4) {
             charge = "geometric";
         }
+        // Atmosphere FX (Glassmorphism, noise, etc)
+        let fx = "none";
+        if (traits.spatialDependency > 0.4) {
+            if (traits.emotionalTemperature > 0.5 && traits.informationDensity < 0.6)
+                fx = "glassmorphism";
+            else if (traits.playfulness > 0.7)
+                fx = "fluid_mesh";
+            else if (traits.informationDensity > 0.6)
+                fx = "crt_noise";
+        }
+        // Physics Material (Neumorphism, glass, metallic)
+        let material = "matte";
+        if (traits.spatialDependency > 0.4) {
+            if (traits.emotionalTemperature > 0.6 && traits.playfulness < 0.5)
+                material = "neumorphism";
+            else if (traits.emotionalTemperature < 0.4)
+                material = "metallic";
+            else
+                material = "glass";
+        }
+        // Biomarker Geometry
+        let geometry = "monolithic";
+        if (traits.playfulness > 0.6)
+            geometry = "organic";
+        else if (traits.informationDensity > 0.7)
+            geometry = "fractal";
         // Assemble Genome
         const genome = {
             dnaHash: hash,
@@ -72,7 +98,10 @@ export class GenomeSequencer {
                 ch9_grid: { logic: traits.informationDensity > 0.8 ? "column" : this.selectFromHash(bytes[15], ["column", "masonry", "broken"]), asymmetry },
                 ch10_hierarchy: { depth: traits.informationDensity > 0.7 ? "flat" : "overlapping", zIndexBehavior: "isolation" },
                 ch11_texture: { surface: traits.emotionalTemperature > 0.6 ? "grain" : "flat", noiseLevel: b(16) * 0.5 },
-                ch12_signature: { entropy: b(17), uniqueMutation: hash.slice(0, 8) }
+                ch12_signature: { entropy: b(17), uniqueMutation: hash.slice(0, 8) },
+                ch13_atmosphere: { fx, intensity: b(18) * traits.spatialDependency },
+                ch14_physics: { material, roughness: b(19) * (1 - traits.playfulness), transmission: material === "glass" ? 0.8 + b(20) * 0.2 : 0 },
+                ch15_biomarker: { geometry, complexity: b(21) * traits.informationDensity }
             },
             constraints: {
                 forbiddenPatterns: [],

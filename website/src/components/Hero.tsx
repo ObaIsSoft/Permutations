@@ -1,13 +1,14 @@
-import { ArrowRight, Box } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
+import { Procedural3D } from './Procedural3D';
 
 export function Hero() {
     return (
         <section className="w-full min-h-[90vh] flex flex-col justify-center px-4 md:px-12 border-b-2 border-black bg-surface relative overflow-hidden">
-            {/* Abstract geometric background elements obeying 0px radius */}
-            <div className="absolute top-0 right-0 w-1/3 h-full bg-gray-100 -z-10 border-l border-gray-200" />
-            <div className="absolute top-20 right-20 w-64 h-64 border-4 border-primary opacity-20 hidden md:flex items-center justify-center">
-                <Box size={140} className="text-primary opacity-20" strokeWidth={1} />
+            {/* V2 Procedural Spatial & Atmosphere DNA */}
+            <div className="absolute inset-0 -z-10 opacity-40">
+                <Procedural3D />
             </div>
+            <div className="fx-atmosphere" />
 
             <div className="max-w-7xl w-full mx-auto relative z-10">
                 <div className="inline-flex items-center gap-2 bg-primary text-white font-body text-xs tracking-widest uppercase py-1 px-3 mb-6">
