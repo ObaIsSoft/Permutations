@@ -288,7 +288,7 @@ export class GenomeSequencer {
             ch23_information_architecture,
             ch24_personalization,
             ch25_copy_engine,
-            ch26_copy_intelligence,
+            ch29_copy_intelligence: ch26_copy_intelligence,
             ch26_color_system: this.generateColorSystem(ch5_color_primary, primaryProfile, b)
         };
     }
@@ -327,7 +327,7 @@ export class GenomeSequencer {
             hue: Math.round(accentHue),
             saturation: Math.round(Math.max(0.4, b(215)) * 100) / 100,
             lightness: Math.round(Math.max(0.4, Math.min(0.6, 0.5 + (b(216) - 0.5) * 0.2)) * 100) / 100,
-            hex: this.hslToHex(accentHue, Math.max(0.4, b(215)) * 100, Math.max(0.4, Math.min(0.6, 0.5 + (b(216) - 0.5) * 0.2)) * 100),
+            hex: this.hslToHex(accentHue, Math.max(0.4, b(215) * 100) * 100, Math.max(0.4, Math.min(0.6, 0.5 + (b(216) - 0.5) * 0.2)) * 100),
             usage: ["cta", "highlight", "alert", "success"][Math.floor(b(217) * 4)]
         };
         // Sector-biased semantic colors
@@ -355,7 +355,7 @@ export class GenomeSequencer {
         for (let i = 0; i < 9; i++) {
             const lightness = 5 + i * 11; // 5, 16, 27, 38, 49, 60, 71, 82, 93
             const saturation = tintStrength * (1 - Math.abs(i - 4) / 4); // strongest in middle
-            neutralScale.push(this.hslToHex(primary.hue, saturation * 100, lightness));
+            neutralScale.push(this.hslToHex(primary.hue, saturation * 100, lightness * 100));
         }
         // Dark mode surfaces
         const darkModeSurfaces = [];
@@ -363,7 +363,7 @@ export class GenomeSequencer {
         for (let i = 0; i < 8; i++) {
             const lightness = darkElevations[i];
             const saturation = tintStrength * 0.5;
-            darkModeSurfaces.push(this.hslToHex(primary.hue, saturation * 100, lightness));
+            darkModeSurfaces.push(this.hslToHex(primary.hue, saturation * 100, lightness * 100));
         }
         return {
             secondary,
@@ -402,14 +402,39 @@ export class GenomeSequencer {
         const faq = this.generateFAQFromPatterns(sector, ci, b);
         // Generate features from patterns
         const features = this.generateFeaturesFromPatterns(sector, ci, b);
+        // Generate author name from sector terms + title patterns
+        const nameNouns = COPY_PATTERN_BANKS.industryTerms[sector] || COPY_PATTERN_BANKS.industryTerms.technology;
+        const firstNames = ["Alex", "Jordan", "Morgan", "Taylor", "Casey", "Riley", "Drew", "Quinn", "Avery", "Blake"];
+        const lastNames = ["Williams", "Chen", "Patel", "Thompson", "Garcia", "Kim", "Johnson", "Martinez", "Lee", "Davis"];
+        const titleBySector = {
+            healthcare: ["Chief Medical Officer", "Head of Patient Care", "VP of Clinical Operations", "Medical Director"],
+            fintech: ["VP of Finance", "Chief Risk Officer", "Head of Investments", "Portfolio Manager"],
+            technology: ["CTO", "VP of Engineering", "Head of Product", "Engineering Director"],
+            legal: ["Managing Partner", "Senior Counsel", "Partner", "General Counsel"],
+            commerce: ["Head of Commerce", "VP of Retail", "Chief Merchandising Officer", "Brand Director"],
+            education: ["Dean of Academics", "Head of Curriculum", "VP of Learning", "Academic Director"],
+            automotive: ["VP of Engineering", "Head of Design", "Chief Innovation Officer", "Technical Director"],
+            entertainment: ["Creative Director", "VP of Content", "Head of Production", "Chief Creative Officer"],
+            real_estate: ["Managing Broker", "VP of Development", "Head of Acquisitions", "Investment Director"],
+            travel: ["Chief Experience Officer", "Head of Destinations", "VP of Operations", "Travel Director"],
+            food: ["Executive Chef", "Head of Operations", "Culinary Director", "VP of Brand"],
+            sports: ["Head Coach", "VP of Performance", "Athletic Director", "Training Director"],
+            manufacturing: ["VP of Operations", "Chief Quality Officer", "Head of Engineering", "Production Director"]
+        };
+        const titles = titleBySector[sector] || titleBySector.technology;
+        const authorName = `${firstNames[Math.floor(b(173) * firstNames.length)]} ${lastNames[Math.floor(b(174) * lastNames.length)]}`;
+        const authorTitle = titles[Math.floor(b(175) * titles.length)];
+        const companyPrefixes = ["Apex", "Vertex", "Nexus", "Prism", "Cascade", "Zenith", "Meridian", "Stratum", "Vantage", "Epoch"];
+        const companySuffixes = ["Group", "Solutions", "Partners", "Labs", "Ventures", "Works", "Co", "Inc", "Corp"];
+        const companyName = `${companyPrefixes[Math.floor(b(176) * companyPrefixes.length)]} ${companySuffixes[Math.floor(b(177) * companySuffixes.length)]}`;
         return {
             headline,
             subheadline,
             cta,
-            authorName: `{{AUTHOR_NAME}}`,
-            authorTitle: `{{AUTHOR_TITLE}}`,
+            authorName,
+            authorTitle,
             testimonial,
-            companyName: `{{COMPANY_NAME}}`,
+            companyName,
             tagline,
             stats,
             faq,
@@ -593,10 +618,30 @@ export class GenomeSequencer {
         const banks = COPY_PATTERN_BANKS;
         const nouns = banks.industryTerms[sector] || banks.industryTerms.technology;
         const safeNoun = (idx) => nouns[Math.floor(b(idx) * nouns.length)] || nouns[0] || "solution";
+        // Stats: real numeric values with sector-appropriate labels
+        const statMultipliers = {
+            healthcare: [[100, 5000], [80, 99], [1000, 50000]],
+            fintech: [[1000000, 500000000], [85, 99], [10000, 1000000]],
+            technology: [[100, 10000], [90, 99], [500, 50000]],
+            legal: [[50, 500], [90, 100], [100, 2000]],
+            commerce: [[1000, 100000], [80, 98], [10000, 1000000]],
+            education: [[100, 5000], [85, 99], [1000, 50000]],
+            default: [[100, 10000], [80, 99], [500, 50000]]
+        };
+        const ranges = statMultipliers[sector] || statMultipliers.default;
+        const statValues = ranges.map(([min, max], i) => {
+            const val = min + Math.floor(b(187 + i) * (max - min));
+            if (val >= 1000000)
+                return `${(val / 1000000).toFixed(1)}M`;
+            if (val >= 1000)
+                return `${(val / 1000).toFixed(1)}K`;
+            return `${val}`;
+        });
+        const percentVal = `${80 + Math.floor(b(189) * 19)}%`;
         const statTemplates = [
-            { label: `${safeNoun(186)}s`, value: `{{${Math.floor(b(187) * 1000)}}}` },
-            { label: `${safeNoun(188)} Rate`, value: `{{${Math.floor(b(189) * 100)}}}%` },
-            { label: `${safeNoun(190)}s Delivered`, value: `{{${Math.floor(b(191) * 10000)}}}` }
+            { label: `${safeNoun(186)}s Served`, value: statValues[0] },
+            { label: `${safeNoun(188)} Rating`, value: percentVal },
+            { label: `${safeNoun(190)}s Delivered`, value: statValues[2] }
         ];
         return statTemplates;
     }
@@ -608,16 +653,24 @@ export class GenomeSequencer {
         const nouns = banks.industryTerms[sector] || banks.industryTerms.technology;
         const safeRegister = ci?.emotionalRegister || "professional";
         const verbs = banks.verbs[safeRegister] || banks.verbs.professional;
+        const adjectives = banks.adjectives[safeRegister] || banks.adjectives.professional;
+        const safeAdj = (idx) => adjectives[Math.floor(b(idx) * adjectives.length)] || adjectives[0] || "effective";
         const safeVerb = (idx) => verbs[Math.floor(b(idx) * verbs.length)] || verbs[0] || "use";
         const safeNoun = (idx) => nouns[Math.floor(b(idx) * nouns.length)] || nouns[0] || "service";
+        // Generate real answers from patterns instead of placeholder tokens
+        const answerTemplates = [
+            `Our ${safeNoun(193)} process is straightforward. ${safeAdj(195).charAt(0).toUpperCase() + safeAdj(195).slice(1)} ${safeVerb(196)}s get you started in minutes with no technical expertise required.`,
+            `We provide ${safeAdj(197)} ${safeNoun(194)}s tailored to your needs. Every ${safeNoun(198)} comes with dedicated support and clear outcomes.`,
+            `Getting started is simple: choose your ${safeNoun(199)}, configure your preferences, and ${safeVerb(200)} immediately. Most clients see results within their first session.`
+        ];
         return [
             {
                 question: `How do I ${safeVerb(192)} ${safeNoun(193)}?`,
-                answer: `{{ANSWER_1}}`
+                answer: answerTemplates[Math.floor(b(201) * answerTemplates.length)]
             },
             {
                 question: `What ${safeNoun(194)}s do you offer?`,
-                answer: `{{ANSWER_2}}`
+                answer: `We offer ${safeAdj(202)} ${safeNoun(203)}s designed for every scale. From ${safeAdj(204)} starter options to enterprise-grade ${safeNoun(205)} solutions — each built to ${safeVerb(206)} your goals.`
             }
         ];
     }
@@ -637,15 +690,15 @@ export class GenomeSequencer {
         return [
             {
                 title: `${safeVerb(195).charAt(0).toUpperCase() + safeVerb(195).slice(1)} ${safeNoun(196)}`,
-                description: `{{DESCRIPTION: ${safeAdj(197)} ${safeNoun(198)} that ${safeVerb(199)}s your needs.}}`
+                description: `${safeAdj(197).charAt(0).toUpperCase() + safeAdj(197).slice(1)} ${safeNoun(198)} that ${safeVerb(199)}s your needs with precision and reliability.`
             },
             {
                 title: `${safeAdj(200).charAt(0).toUpperCase() + safeAdj(200).slice(1)} ${safeNoun(201)}`,
-                description: `{{DESCRIPTION: ${safeAdj(202)} approach to ${safeNoun(203)}.}}`
+                description: `A ${safeAdj(202)} approach to ${safeNoun(203)} that scales with your team and adapts to your workflow.`
             },
             {
                 title: `${safeNoun(204).charAt(0).toUpperCase() + safeNoun(204).slice(1)} Excellence`,
-                description: `{{DESCRIPTION: ${safeVerb(205).charAt(0).toUpperCase() + safeVerb(205).slice(1)} ${safeNoun(206)} with ${safeAdj(207)} results.}}`
+                description: `${safeVerb(205).charAt(0).toUpperCase() + safeVerb(205).slice(1)} ${safeNoun(206)} with ${safeAdj(207)} results, backed by industry-leading standards.`
             }
         ];
     }
@@ -664,7 +717,8 @@ export class GenomeSequencer {
         // Use trait combination to select sub-sector deterministically
         const traitSum = traits.informationDensity + traits.temporalUrgency +
             traits.emotionalTemperature + traits.playfulness + traits.spatialDependency;
-        const index = Math.floor((traitSum % 1) * subSectors.length);
+        // M-7: Use full traitSum (not just fractional part) for even distribution across sub-sectors
+        const index = Math.floor(traitSum * 100) % subSectors.length;
         const selectedSubSector = subSectors[index] || subSectors[0];
         // Confidence based on trait clarity (extreme values = higher confidence)
         const extremeTraits = [
@@ -877,7 +931,23 @@ export class GenomeSequencer {
      * Generate body typography
      */
     generateBodyType(traits, b, profile, options) {
-        const charge = profile.defaultTypography;
+        // Apply trait-based charge overrides (same logic as display, but biased toward readability)
+        let charge = profile.defaultTypography;
+        if (traits.temporalUrgency > 0.7 && traits.informationDensity > 0.6) {
+            charge = "monospace"; // Data-heavy: keep scannable
+        }
+        else if (traits.emotionalTemperature > 0.7) {
+            charge = "humanist"; // Warm/empathetic: serif humanist body
+        }
+        else if (traits.playfulness > 0.7) {
+            charge = "geometric"; // Playful display, legible geometric body
+        }
+        else if (traits.trustRequirement > 0.8 && traits.emotionalTemperature < 0.5) {
+            charge = "transitional"; // High trust + clinical: authoritative serif
+        }
+        else if (traits.informationDensity > 0.7) {
+            charge = "grotesque"; // Dense content: high-legibility grotesque
+        }
         const provider = options?.fontProvider || "bunny";
         const fontData = this.selectBodyFont(b(7), charge, provider);
         return {
@@ -965,7 +1035,7 @@ export class GenomeSequencer {
         }
         // Epistasis: Warm primary forces neutral/cool background
         if (primaryTemp === "warm") {
-            backgroundTemp = b(13) > 0.5 ? "neutral" : "cool";
+            backgroundTemp = b(16) > 0.5 ? "neutral" : "cool";
         }
         const isDark = backgroundTemp === "cool";
         // Accent: primary hue +30° rotation
@@ -990,7 +1060,7 @@ export class GenomeSequencer {
             ];
         return {
             backgroundTemp,
-            contrastRatio: 4.5 + b(13) * 10,
+            contrastRatio: 4.5 + b(17) * 10,
             surfaceColor: surfaceStack[1], // Use stack values
             elevatedSurface: surfaceStack[2],
             isDark,
@@ -1604,7 +1674,7 @@ export class GenomeSequencer {
             ],
             grotesque: [
                 "Inter", "Public Sans", "Arimo", "Heebo", "IBM Plex Sans", "Karla",
-                "Public Sans", "Public Sans", "Red Hat Display", "Sora", "Chivo",
+                "Red Hat Display", "Sora", "Chivo",
                 "Figtree", "Instrument Sans", "Schibsted Grotesk", "Hanken Grotesk"
             ],
             transitional: [
@@ -1657,7 +1727,7 @@ export class GenomeSequencer {
             ],
             grotesque: [
                 "Inter", "Public Sans", "IBM Plex Sans", "Karla", "Work Sans",
-                "Figtree", "Hanken Grotesk", "Public Sans"
+                "Figtree", "Hanken Grotesk", "Chivo", "Schibsted Grotesk"
             ],
             transitional: [
                 "Newsreader", "Source Serif 4", "EB Garamond", "Cardo", "Libre Baskerville",
@@ -1694,13 +1764,13 @@ export class GenomeSequencer {
     }
     getFontImportUrl(fontName, provider, weights) {
         const slug = fontName.toLowerCase().replace(/ /g, '-');
-        const weightString = weights.join(',');
+        const weightString = weights.join(';');
         if (provider === "google") {
             const googleName = fontName.replace(/ /g, '+');
-            return `https://fonts.googleapis.com/css2?family=${googleName}:wght@${weightString.replace(',', ';')}&display=swap`;
+            return `https://fonts.googleapis.com/css2?family=${googleName}:wght@${weightString}&display=swap`;
         }
         // Bunny Fonts default
-        return `https://fonts.bunny.net/css?family=${slug}:${weightString}&display=swap`;
+        return `https://fonts.bunny.net/css?family=${slug}:${weights.join(',')}&display=swap`;
     }
     isColorAppropriateForSector(hue, sector) {
         // Simple appropriateness check
@@ -1710,9 +1780,9 @@ export class GenomeSequencer {
         const appropriateRanges = {
             healthcare: [[180, 240], [90, 150]], // Blues, greens
             fintech: [[220, 300]], // Blues, purples
-            automotive: [[0, 360]], // Any (brand dependent)
+            automotive: [[0, 45], [190, 250], [340, 360]], // Red/orange (sport), blues (luxury/electric), wrap-reds
             education: [[200, 280], [100, 140]], // Blues, greens
-            commerce: [[0, 360]], // Any
+            commerce: [[10, 50], [0, 20], [320, 360], [180, 230]], // Appetite oranges/reds, trust blues
             entertainment: [[0, 360]], // Any
             manufacturing: [[200, 240]], // Blues
             legal: [[220, 260]], // Navy blues
@@ -1726,15 +1796,18 @@ export class GenomeSequencer {
         return ranges.some(([min, max]) => hue >= min && hue <= max);
     }
     getTemperatureFromHue(hue) {
-        if (hue >= 0 && hue < 60)
-            return "warm";
-        if (hue >= 60 && hue < 170)
-            return "neutral";
-        if (hue >= 170 && hue < 260)
-            return "cool";
-        if (hue >= 260 && hue < 330)
-            return "neutral";
-        return "warm";
+        // Warm:    0-45 (reds, oranges) + 330-360 (reds wrapping)
+        // Neutral: 45-75 (yellow-greens) + 150-190 (blue-greens / teals)
+        // Cool:    75-150 (greens) + 190-330 (blues, indigos, purples, violet, magenta)
+        if (hue < 45 || hue >= 330)
+            return "warm"; // Reds, oranges wrap
+        if (hue >= 45 && hue < 75)
+            return "neutral"; // Yellow / yellow-green
+        if (hue >= 75 && hue < 190)
+            return "cool"; // Greens and teals
+        if (hue >= 190 && hue < 330)
+            return "cool"; // Blues, purple, violet, magenta
+        return "neutral";
     }
     blendHue(h1, h2, weight) {
         // Handle circular hue blending

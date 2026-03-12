@@ -38,11 +38,11 @@ export async function generateFromContent(
     const startTime = Date.now();
     
     try {
-        // Step 1: Extract traits via LLM
+        // Step 1: Extract traits via LLM (single API call for both traits + sector)
         const extractor = new SemanticTraitExtractor();
-        const traits = await extractor.extractTraits(content);
-        const sectorResult = await extractor.classifySector(content);
-        const sector = { primary: sectorResult.primary as PrimarySector };
+        const analysis = await extractor.analyze(content);
+        const traits = analysis.traits;
+        const sector = { primary: analysis.sector.primary as PrimarySector };
         const subSector = { classification: `${sector.primary}_general` };
         
         // Step 2: Configure sequencer
@@ -59,9 +59,9 @@ export async function generateFromContent(
             }
         };
         
-        // Step 3: Generate genome
+        // Step 3: Generate genome (deterministic seed from content hash)
         const sequencer = new GenomeSequencer();
-        const seed = `${content}-${Date.now()}`;
+        const seed = content; // Deterministic: same content = same genome
         const genome = sequencer.generate(seed, traits, config);
         
         // Step 4: Generate CSS
@@ -148,7 +148,7 @@ export async function generateFromSector(
         };
         
         const sequencer = new GenomeSequencer();
-        const seed = `${sector}-${Date.now()}`;
+        const seed = `${sector}-${JSON.stringify(traits)}`; // Deterministic seed
         const genome = sequencer.generate(seed, traits, config);
         
         const cssGenerator = new CSSGenerator();

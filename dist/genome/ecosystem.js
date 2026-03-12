@@ -57,8 +57,27 @@ export class EcosystemGenerator {
         this.sequencer = new GenomeSequencer();
     }
     generate(seed, traits, options) {
-        // Generate the shared environment (ONE genome)
-        const genome = this.sequencer.generate(seed, traits, { primarySector: "technology" });
+        let inferredSector = "technology";
+        if (options?.primarySector) {
+            inferredSector = options.primarySector;
+        }
+        else if (traits.trustRequirement > 0.7 && traits.emotionalTemperature > 0.6) {
+            inferredSector = "healthcare";
+        }
+        else if (traits.trustRequirement > 0.7 && traits.emotionalTemperature < 0.4) {
+            inferredSector = "fintech";
+        }
+        else if (traits.conversionFocus > 0.7 && traits.visualEmphasis > 0.6) {
+            inferredSector = "commerce";
+        }
+        else if (traits.playfulness > 0.6 && traits.temporalUrgency < 0.4) {
+            inferredSector = "entertainment";
+        }
+        else if (traits.informationDensity > 0.7 && traits.emotionalTemperature < 0.3) {
+            inferredSector = "manufacturing";
+        }
+        // Generate the shared environment (ONE genome for entire ecosystem)
+        const genome = this.sequencer.generate(seed, traits, { primarySector: inferredSector });
         // Calculate how well this environment supports life
         const habitabilityScore = this.calculateHabitability(traits);
         // CHROMOSOME-DRIVEN: Counts determined by genome, not just traits

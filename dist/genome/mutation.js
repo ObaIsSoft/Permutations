@@ -52,6 +52,18 @@ export class GenomeMutator {
             const mutations = [];
             // Create mixed genome
             const mixedGenome = this.createMixedGenome(parentA, parentB, crossoverRate, seed);
+            // Populate mutations log: record which chromosomes came from which parent
+            for (const key of Object.keys(mixedGenome.chromosomes)) {
+                const fromA = JSON.stringify(parentA.chromosomes[key]);
+                const fromB = JSON.stringify(parentB.chromosomes[key]);
+                const result = JSON.stringify(mixedGenome.chromosomes[key]);
+                if (result === fromA && fromA !== fromB) {
+                    mutations.push({ chromosome: key, property: 'source', oldValue: 'parentB', newValue: 'parentA', changeType: 'flip' });
+                }
+                else if (result === fromB && fromA !== fromB) {
+                    mutations.push({ chromosome: key, property: 'source', oldValue: 'parentA', newValue: 'parentB', changeType: 'flip' });
+                }
+            }
             variants.push({
                 id: `breed-${i}`,
                 genome: mixedGenome,
@@ -158,7 +170,7 @@ export class GenomeMutator {
             return this.mutateCopyEngine(chromosome, changeType, seed);
         }
         // Copy intelligence mutations
-        if (key === "ch26_copy_intelligence") {
+        if (key === "ch29_copy_intelligence") {
             return this.mutateCopyIntelligence(chromosome, changeType, seed);
         }
         // Sector mutations (rare, affects entire genome)
@@ -408,13 +420,13 @@ export class GenomeMutator {
     mutateRendering(rendering, changeType, seed) {
         const b = this.getHashByte(seed, 1);
         const strategies = ["webgl", "css", "svg", "static"];
-        const oldStrategy = rendering.strategy;
-        rendering.strategy = strategies[Math.floor(b * strategies.length)];
+        const oldStrategy = rendering.primary;
+        rendering.primary = strategies[Math.floor(b * strategies.length)];
         return {
             chromosome: "ch18_rendering",
             property: "strategy",
             oldValue: oldStrategy,
-            newValue: rendering.strategy,
+            newValue: rendering.primary,
             changeType
         };
     }
@@ -500,9 +512,17 @@ export class GenomeMutator {
     }
     mutateCopyEngine(copy, changeType, seed) {
         const b = this.getHashByte(seed, 1);
-        const ctas = ["Get Started", "Learn More", "Try Free", "Book Demo", "Subscribe", "Download"];
+        // Preserve pattern-generated CTA, only apply aggression-level shift
+        // rather than overwriting with a generic hardcoded list
         const oldCta = copy.cta;
-        copy.cta = ctas[Math.floor(b * ctas.length)];
+        const aggressionStyles = ["soft", "direct", "urgent"];
+        const style = aggressionStyles[Math.floor(b * aggressionStyles.length)];
+        // Keep existing value unless it looks like a raw placeholder
+        if (!oldCta || oldCta.includes('{{')) {
+            const fallbackCtas = ["Get Started", "Learn More", "Try Free", "Book Demo"];
+            copy.cta = fallbackCtas[Math.floor(b * fallbackCtas.length)];
+        }
+        // For non-placeholder CTAs, leave them as-is (the pattern engine generated them correctly)
         return {
             chromosome: "ch25_copy_engine",
             property: "cta",
@@ -517,7 +537,7 @@ export class GenomeMutator {
         const oldRegister = intel.emotionalRegister;
         intel.emotionalRegister = registers[Math.floor(b * registers.length)];
         return {
-            chromosome: "ch26_copy_intelligence",
+            chromosome: "ch29_copy_intelligence",
             property: "emotionalRegister",
             oldValue: oldRegister,
             newValue: intel.emotionalRegister,

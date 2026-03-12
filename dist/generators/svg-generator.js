@@ -51,7 +51,10 @@ export class SVGGenerator {
         for (let i = 0; i < pointCount; i++) {
             const angle = (i / pointCount) * Math.PI * 2 - Math.PI / 2;
             // Each point gets a unique radius perturbation seeded from i and entropy
-            const perturbSeed = Math.sin(i * entropy * Math.PI * 7.3);
+            // L-8: Replace Math.sin (periodic) with deterministic hash-based perturbation
+            // Using a simple linear congruential-style hash that's aperiodic within SVG range
+            const perturbHash = ((i * 2654435761 + Math.floor(entropy * 1000) * 40503) & 0xFFFFFFFF) / 0xFFFFFFFF;
+            const perturbSeed = perturbHash * 2 - 1; // Map to [-1, 1]
             const r = baseRadius + perturbSeed * radiusVariance;
             points.push([
                 cx + Math.cos(angle) * r,

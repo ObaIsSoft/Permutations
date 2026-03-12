@@ -84,13 +84,25 @@ class DesignGenomeServer {
                         properties: {
                             archetype: {
                                 type: "string",
-                                enum: ["dashboard", "portfolio", "documentation", "commerce", "landing", "blog"],
+                                enum: [
+                                    "dashboard", "documentation", "dev-tool",
+                                    "portfolio", "agency-portfolio",
+                                    "commerce", "luxury-commerce",
+                                    "landing", "saas-landing", "fintech-landing", "medical-landing",
+                                    "blog", "magazine",
+                                    "real-estate", "restaurant", "non-profit"
+                                ],
                                 description: "Functional archetype defining the content purpose"
                             },
                             seed: { type: "string", description: "Unique project seed for deterministic generation" },
-                            intent: { type: "string", description: "Optional: Natural language intent for archetype auto-detection" }
+                            intent: { type: "string", description: "Optional: Natural language intent for archetype auto-detection" },
+                            font_provider: {
+                                type: "string",
+                                enum: ["bunny", "google"],
+                                description: "Typography provider (default: bunny)"
+                            }
                         },
-                        required: ["archetype", "seed"]
+                        required: ["seed"]
                     }
                 },
                 {
@@ -432,7 +444,7 @@ class DesignGenomeServer {
                                 copyIntelligence
                             }
                         }, epigeneticData);
-                        // 4. Component Generation
+                        // 5. Component Generation
                         const tailwindConfig = this.cssGen.generate(genome, { format: "compressed" });
                         const topology = this.htmlGen.generateTopology(genome);
                         const webglComponents = this.webglGen.generateR3F(genome);
@@ -446,8 +458,11 @@ class DesignGenomeServer {
                         };
                     }
                     case "generate_from_archetype": {
-                        if (!args.archetype || !args.seed) {
-                            throw new McpError(ErrorCode.InvalidParams, "Missing archetype or seed");
+                        if (!args.seed) {
+                            throw new McpError(ErrorCode.InvalidParams, "Missing seed");
+                        }
+                        if (!args.archetype && !args.intent) {
+                            throw new McpError(ErrorCode.InvalidParams, "Provide either archetype or intent for auto-detection");
                         }
                         // Auto-detect archetype from intent if provided
                         let archetype = args.archetype;
@@ -517,11 +532,26 @@ class DesignGenomeServer {
                         if (!args.intent || !args.seed) {
                             throw new McpError(ErrorCode.InvalidParams, "Missing intent or seed");
                         }
-                        // Extract traits from intent
+                        // M-13: Use analyze() to extract traits AND sector together
+                        // Previously used extractTraits() which discarded sector info,
+                        // then passed args.options (user-supplied) which loses the inferred sector
                         const context = args.project_context || "";
-                        const traits = await this.extractor.extractTraits(args.intent, context);
-                        // Generate ecosystem - all organisms share ONE genome
-                        const ecosystem = ecosystemGenerator.generate(args.seed, traits, args.options);
+                        let ecoTraits;
+                        let ecoSector = "technology";
+                        try {
+                            const ecoAnalysis = await this.extractor.analyze(args.intent, context);
+                            ecoTraits = ecoAnalysis.traits;
+                            ecoSector = ecoAnalysis.sector?.primary || "technology";
+                        }
+                        catch {
+                            // Offline fallback
+                            ecoTraits = await this.extractor.extractTraits(args.intent, context);
+                        }
+                        // Generate ecosystem - pass inferred sector so organisms reflect correct domain
+                        const ecosystem = ecosystemGenerator.generate(args.seed, ecoTraits, {
+                            ...(args.options || {}),
+                            primarySector: ecoSector
+                        });
                         // Generate CSS from the shared genome
                         const css = this.cssGen.generate(ecosystem.environment.genome, { format: "compressed" });
                         const topology = this.htmlGen.generateTopology(ecosystem.environment.genome);
@@ -615,9 +645,19 @@ class DesignGenomeServer {
                         if (!args.intent || !args.seed) {
                             throw new McpError(ErrorCode.InvalidParams, "Missing intent or seed");
                         }
-                        // Extract traits
+                        // M-12: Single LLM call — use analyze() to get both traits AND sector at once
                         const context = args.project_context || "";
-                        const traits = await this.extractor.extractTraits(args.intent, context);
+                        let civTraits;
+                        let civSector = "technology";
+                        try {
+                            const civAnalysis = await this.extractor.analyze(args.intent, context);
+                            civTraits = civAnalysis.traits;
+                            civSector = civAnalysis.sector?.primary || "technology";
+                        }
+                        catch {
+                            // Fallback: extractTraits with default sector
+                            civTraits = await this.extractor.extractTraits(args.intent, context);
+                        }
                         // ECOSYSTEM INTEGRATION: Use provided ecosystem or generate standalone
                         let ecosystem = args.ecosystem;
                         let baseGenome = null;
@@ -627,12 +667,11 @@ class DesignGenomeServer {
                             baseGenome = ecosystem.environment?.genome;
                             organisms = ecosystem.organisms;
                         }
-                        // If no ecosystem or genome, generate new one
+                        // If no ecosystem or genome, generate using already-derived sector (no second LLM call)
                         if (!baseGenome) {
-                            const civContentForSector = [args.intent, context].filter(Boolean).join(" ");
-                            const civSectorResult = await this.extractor.classifySector(civContentForSector);
-                            baseGenome = this.sequencer.generate(args.seed, traits, { primarySector: civSectorResult.primary });
+                            baseGenome = this.sequencer.generate(args.seed, civTraits, { primarySector: civSector });
                         }
+                        const traits = civTraits;
                         // Generate civilization tier
                         const tier = this.civilizationGen.generate(args.intent, context, traits, args.min_tier);
                         // Generate code and structured file outputs
