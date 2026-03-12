@@ -15,6 +15,7 @@ const tests = [
     { name: 'Sequencer', file: 'sequencer.test.mjs' },
     { name: 'Production', file: 'production.test.mjs' },
     { name: 'Ecosystem/Civilization', file: 'ecosystem-civilization.test.mjs' },
+    { name: 'URL Extractor', file: 'url-extractor.test.mjs' },
     { name: 'Intent/Epigenetics', file: 'intent-epigenetics.test.mjs', optional: true }
 ];
 

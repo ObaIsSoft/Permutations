@@ -1,11 +1,11 @@
 {
   "meta": {
     "title": "Permutations MCP: The Complete Journey",
-    "version": "0.0.5",
-    "last_updated": "2026-03-11",
+    "version": "0.0.6",
+    "last_updated": "2026-03-12",
     "author": "ObaIsSoft",
     "repository": "https://github.com/ObaIsSoft/Permutations",
-    "lines_of_code": 8882,
+    "lines_of_code": 12361,
     "test_count": 49
   },
   
@@ -25,7 +25,7 @@
     "the_insight": {
       "realization": "Biological inheritance provides a perfect metaphor",
       "analogy": "Just as every organism has unique DNA but shares the building blocks of life, every design system can be unique while respecting functional constraints",
-      "breakthrough": "SHA-256 hash + 26 chromosomes = infinite unique design systems that are both reproducible (same seed = same output) and guaranteed distinct (different seed = different output)"
+      "breakthrough": "SHA-256 hash + 29 chromosomes = infinite unique design systems that are both reproducible (same seed = same output) and guaranteed distinct (different seed = different output)"
     },
     
     "the_manifesto": {
@@ -86,7 +86,7 @@
         "Complexity tier system (Microbial → Flora → Fauna → Sentient → Civilized → Advanced)",
         "Ecosystem generation: organisms share DNA",
         "Civilization layer for sophisticated applications",
-        "26 chromosomes (expanded from 15)"
+        "29 chromosomes (expanded from 15, full mutation coverage in v0.0.6)"
       ],
       "philosophy": "Finding life (basic design) is common. Finding civilization (advanced design) requires intentional complexity."
     },
@@ -101,6 +101,30 @@
         "Production-hardened: 49 tests, all passing"
       ],
       "optimization": "50% reduction in LLM API usage through unified analysis"
+    },
+    
+    "v0_0_6_production_ready": {
+      "date": "March 2026",
+      "features": [
+        "URL Genome Extractor with triple backend (Playwright + Scrapy + Native Fetch)",
+        "AST Pattern Detector for genome-aware CSS validation using css-tree",
+        "Unified Component Generator (dynamic, replaces 12 hardcoded generators)",
+        "All 29 chromosomes now mutable (added mutation handlers for ch0, ch1, ch2, ch9-ch25)",
+        "Deterministic output: removed Date.now() from seeds, content-hash based",
+        "Double LLM call fix: uses analyze() instead of extractTraits()+classifySector()",
+        "Zero Math.random(): all jitter uses crypto hash for deterministic backoff",
+        "Zero hardcoded values: all colors, sizes, timing derived from genome",
+        "12 MCP tools including validate_design, mutate_genome, extract_genome_from_url",
+        "Production-verified: TypeScript clean build, 49 tests passing"
+      ],
+      "architecture_changes": [
+        "Deleted 790-line hardcoded component generator",
+        "Added constraint-solver with epistasis rules",
+        "Added sector-profiles for industry-specific generation",
+        "Added ecosystem/civilization bridge for organism-based websites"
+      ],
+      "lines_of_code": 12361,
+      "test_coverage": "49 tests: Genome, Sequencer, Production, Ecosystem/Civilization"
     }
   },
 
@@ -108,13 +132,13 @@
     "the_pipeline": {
       "input_layer": "Intent + Context + Brand Assets",
       "extraction_layer": "LLM analyzes content → extracts 8 traits + sector + archetype",
-      "sequencing_layer": "SHA-256 hash + traits → 26 chromosomes",
+      "sequencing_layer": "SHA-256 hash + traits → 29 chromosomes",
       "constraint_layer": "Epistasis rules enforce cross-chromosome consistency",
       "generation_layer": "Tailwind CSS + WebGL + SVG + HTML topology"
     },
     
-    "the_26_chromosomes": {
-      "ch0_sector": "Primary/secondary sector classification",
+    "the_29_chromosomes": {
+      "ch0_sector": "Primary/secondary sector classification with brand weight",
       "ch1_structure": "Layout topology (flat/deep/radial/graph)",
       "ch2_rhythm": "Spacing density and vertical rhythm",
       "ch3_type_display": "Display font family and charge",
@@ -139,7 +163,11 @@
       "ch22_social_proof": "Social validation approach",
       "ch23_content_depth": "Number of sections (minimal/comprehensive)",
       "ch24_personalization": "Dynamic content approach",
-      "ch25_copy_engine": "Tone and messaging strategy"
+      "ch25_copy_engine": "Tone and messaging strategy",
+      "ch26_color_system": "Complete color system with harmonies (v0.0.6)",
+      "ch27_motion_choreography": "Animation timing, stagger patterns (v0.0.6)",
+      "ch28_iconography": "Icon style, stroke weight, set consistency (v0.0.6)",
+      "ch29_copy_intelligence": "Messaging tone, formality, vocabulary (v0.0.6)"
     },
     
     "epistasis_rules": {
@@ -232,6 +260,30 @@
       "problem": "extractTraits() + classifySector() = 2 LLM calls",
       "cost": "Double API usage, double latency",
       "breakthrough": "Single analyze() call returns {traits, sector, archetype} in one JSON response"
+    },
+    
+    "struggle_6_url_extraction_stub": {
+      "problem": "extract_genome_from_url was a stub requiring manual CSS paste",
+      "failure": "Users had to scrape CSS manually—poor UX, not production-ready",
+      "breakthrough": "Triple backend: Playwright for JS sites, Scrapy for pros, Native fetch fallback"
+    },
+    
+    "struggle_7_non_deterministic_seeds": {
+      "problem": "Date.now() in seeds meant same input produced different outputs",
+      "impact": "Unreproducible builds, inconsistent CI/CD",
+      "breakthrough": "Content-hash based seeds—same input = same output forever"
+    },
+    
+    "struggle_8_hardcoded_generators": {
+      "problem": "12 hardcoded component generators (790 lines) for each component type",
+      "failure": "Adding new component types required new generator functions",
+      "breakthrough": "Single unified component generator: generate(purpose, elements, layout, complexity)"
+    },
+    
+    "struggle_9_mutation_gaps": {
+      "problem": "Only 20 of 29 chromosomes had mutation handlers—9 were static",
+      "impact": "Limited design space exploration, constrained breeding",
+      "breakthrough": "Full coverage: mutation handlers for ch0, ch1, ch2, ch9-ch25"
     }
   },
 
@@ -242,7 +294,12 @@
     "sector_coverage": "13 sectors with distinct color psychology, hero types, trust signals",
     "offline_mode": "Archetype generation works without LLM (6 functional archetypes)",
     "multi_provider": "6 LLM providers supported: Groq, OpenAI, Anthropic, Gemini, OpenRouter, HuggingFace",
-    "test_coverage": "49 production tests: determinism, uniqueness, sector-awareness, epistasis, pattern detection"
+    "test_coverage": "49 production tests: determinism, uniqueness, sector-awareness, epistasis, pattern detection",
+    "url_extraction": "Triple backend: Playwright (JS sites), Scrapy (pro crawling), Native fetch (zero deps)",
+    "css_validation": "AST-based genome-aware validation with drift scoring 0-100",
+    "full_mutation_coverage": "All 29 chromosomes mutable with viability scoring",
+    "zero_hardcoding": "All values derived from SHA-256 hash—no magic numbers",
+    "api_optimization": "50% cost reduction through unified analysis calls"
   },
 
   "motivation": {
@@ -260,10 +317,12 @@
   },
 
   "future_roadmap": {
-    "v0_0_6_visual_breeding": "Mutation and crossover between genomes: 'Like this palette but with dashboard structure'",
-    "v0_0_7_component_library": "Full React/Vue/Svelte component generation from ecosystem",
+    "v0_0_7_component_library": "Full React/Vue/Svelte component generation from ecosystem with props/stories",
+    "v0_0_8_visual_editor": "Web UI for breeding genomes: 'warmer colors', 'more density' sliders",
     "v0_1_0_design_to_code": "Figma/Sketch plugin: extract design → generate DNA → export code",
+    "v0_1_5_a11y_auditor": "WCAG 2.2 AA/AAA automated compliance checking with remediation",
     "v0_2_0_real_time_collaboration": "Multiplayer genome editing, versioned design systems",
+    "v0_2_5_perf_budget": "Core Web Vitals optimization—automatic performance tuning",
     "v1_0_0_generative_components": "Components generated on-demand based on content and context"
   },
 
@@ -402,5 +461,5 @@
     }
   },
 
-  "closing_thought": "We didn't build another design tool. We built a genetic framework for digital aesthetics. The 26 chromosomes are the letters of an alphabet. The SHA-256 hash is the seed. The constraints are the grammar. And every website generated is a unique poem—functional, appropriate, and unmistakably itself.\n\nIn the cosmic sense: We created a universe where design systems evolve, ecosystems thrive, and civilization emerges from the mathematical substrate. Every seed is a world. Every genome is a living thing. And every designer using Permutations is an astronomer, discovering new planets in an infinite design space."
+  "closing_thought": "We didn't build another design tool. We built a genetic framework for digital aesthetics. The 29 chromosomes are the letters of an alphabet. The SHA-256 hash is the seed. The constraints are the grammar. And every website generated is a unique poem—functional, appropriate, and unmistakably itself.\n\nIn the cosmic sense: We created a universe where design systems evolve, ecosystems thrive, and civilization emerges from the mathematical substrate. Every seed is a world. Every genome is a living thing. And every designer using Permutations is an astronomer, discovering new planets in an infinite design space."
 }

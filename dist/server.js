@@ -36,7 +36,7 @@ class DesignGenomeServer {
     civilizationGen;
     fileWriter;
     constructor() {
-        this.server = new Server({ name: "permutations", version: "0.0.5" }, { capabilities: { tools: {} } });
+        this.server = new Server({ name: "permutations", version: "0.0.6" }, { capabilities: { tools: {} } });
         this.extractor = new SemanticTraitExtractor();
         this.sequencer = new GenomeSequencer();
         this.cssGen = new CSSGenerator();

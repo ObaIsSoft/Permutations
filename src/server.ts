@@ -48,7 +48,7 @@ class DesignGenomeServer {
 
     constructor() {
         this.server = new Server(
-            { name: "permutations", version: "0.0.5" },
+            { name: "permutations", version: "0.0.6" },
             { capabilities: { tools: {} } }
         );
 
