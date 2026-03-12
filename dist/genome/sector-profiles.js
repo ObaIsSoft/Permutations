@@ -728,36 +728,6 @@ export function selectTrustApproach(sector, hashByte) {
     return Object.keys(weights)[0];
 }
 /**
- * Classify sub-sector based on content keywords
- */
-export function classifySubSector(text, primarySector) {
-    const keywords = SUB_SECTOR_KEYWORDS[primarySector];
-    if (!keywords) {
-        return { subSector: `${primarySector}_general`, confidence: 0.5 };
-    }
-    const textLower = text.toLowerCase();
-    let bestMatch = null;
-    let maxScore = 0;
-    for (const [subSector, terms] of Object.entries(keywords)) {
-        const score = terms.reduce((acc, term) => {
-            const regex = new RegExp(`\\b${term.toLowerCase()}\\b`, 'g');
-            const matches = (textLower.match(regex) || []).length;
-            return acc + matches;
-        }, 0);
-        if (score > maxScore) {
-            maxScore = score;
-            bestMatch = subSector;
-        }
-    }
-    // Calculate confidence based on keyword density
-    const wordCount = text.split(/\s+/).length;
-    const confidence = Math.min(maxScore / Math.max(wordCount * 0.01, 1), 1);
-    const subSector = bestMatch
-        ? `${primarySector}_${bestMatch}`
-        : `${primarySector}_general`;
-    return { subSector, confidence };
-}
-/**
  * Get sector defaults (trait biases, not templates)
  */
 export function getSectorDefaults(sector) {

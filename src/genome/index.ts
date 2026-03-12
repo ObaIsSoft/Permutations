@@ -37,7 +37,6 @@ export {
 // Sector Profiles
 export {
     getSectorProfile,
-    classifySubSector,
     isValidSector,
     SUB_SECTOR_KEYWORDS
 } from './sector-profiles.js';
@@ -46,7 +45,6 @@ export {
 export { GenomeSequencer, SequencerConfig } from './sequencer.js';
 
 // Extractors
-export { ContentExtractor, AnalyzedContent, ExtractionResult } from './extractor.js';
 export { SemanticTraitExtractor } from '../semantic/extractor.js';
 
 // Constraint Solver

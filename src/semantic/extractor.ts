@@ -9,15 +9,54 @@ type LLMProvider = "groq" | "openai" | "anthropic" | "gemini" | "openrouter" | "
 const LLM_TIMEOUT_MS = 30_000;   // 30s timeout per attempt (increased for cold starts)
 const LLM_MAX_RETRIES = 3;       // Retry up to 3 times with exponential backoff + jitter
 
+export interface DesignAnalysis {
+    // 8 trait vectors
+    traits: {
+        informationDensity: number;
+        temporalUrgency: number;
+        emotionalTemperature: number;
+        playfulness: number;
+        spatialDependency: number;
+        trustRequirement: number;
+        visualEmphasis: number;
+        conversionFocus: number;
+    };
+    // Sector classification
+    sector: {
+        primary: string;  // healthcare, fintech, technology, etc.
+        subSector: string; // healthcare_wellness, fintech_trading, etc.
+        confidence: number;
+    };
+    // Functional archetype
+    archetype: {
+        type: string; // dashboard, portfolio, landing, documentation, commerce, blog
+        confidence: number;
+    };
+}
+
+/**
+ * Raw LLM response structure (before normalization)
+ */
 interface LLMResponse {
-    informationDensity: number;
-    temporalUrgency: number;
-    emotionalTemperature: number;
-    playfulness: number;
-    spatialDependency: number;
-    trustRequirement: number;
-    visualEmphasis: number;
-    conversionFocus: number;
+    traits?: {
+        informationDensity?: number;
+        temporalUrgency?: number;
+        emotionalTemperature?: number;
+        playfulness?: number;
+        spatialDependency?: number;
+        trustRequirement?: number;
+        visualEmphasis?: number;
+        conversionFocus?: number;
+    };
+    sector?: {
+        primary?: string;
+        subSector?: string;
+        confidence?: number;
+    };
+    archetype?: {
+        type?: string;
+        confidence?: number;
+    };
 }
 
 export class SemanticTraitExtractor {
@@ -104,7 +143,10 @@ export class SemanticTraitExtractor {
         );
     }
 
-    async extractTraits(intent: string, projectContext?: string): Promise<ContentTraits> {
+    /**
+     * Single-call extraction: traits + sector + subSector + archetype
+     */
+    async analyze(intent: string, projectContext?: string): Promise<DesignAnalysis> {
         const prompt = this.buildPrompt(intent, projectContext);
         let lastError: Error | null = null;
 
@@ -115,34 +157,59 @@ export class SemanticTraitExtractor {
                     LLM_TIMEOUT_MS
                 );
                 return {
-                    informationDensity: this.clamp(result.informationDensity ?? 0.5),
-                    temporalUrgency: this.clamp(result.temporalUrgency ?? 0.5),
-                    emotionalTemperature: this.clamp(result.emotionalTemperature ?? 0.5),
-                    playfulness: this.clamp(result.playfulness ?? 0.5),
-                    spatialDependency: this.clamp(result.spatialDependency ?? 0.5),
-                    trustRequirement: this.clamp(result.trustRequirement ?? 0.3),
-                    visualEmphasis: this.clamp(result.visualEmphasis ?? 0.3),
-                    conversionFocus: this.clamp(result.conversionFocus ?? 0.4),
+                    traits: {
+                        informationDensity: this.clamp(result.traits?.informationDensity ?? 0.5),
+                        temporalUrgency: this.clamp(result.traits?.temporalUrgency ?? 0.5),
+                        emotionalTemperature: this.clamp(result.traits?.emotionalTemperature ?? 0.5),
+                        playfulness: this.clamp(result.traits?.playfulness ?? 0.5),
+                        spatialDependency: this.clamp(result.traits?.spatialDependency ?? 0.5),
+                        trustRequirement: this.clamp(result.traits?.trustRequirement ?? 0.5),
+                        visualEmphasis: this.clamp(result.traits?.visualEmphasis ?? 0.5),
+                        conversionFocus: this.clamp(result.traits?.conversionFocus ?? 0.5),
+                    },
+                    sector: {
+                        primary: result.sector?.primary || "technology",
+                        subSector: result.sector?.subSector || "technology_general",
+                        confidence: this.clamp(result.sector?.confidence ?? 0.5),
+                    },
+                    archetype: {
+                        type: result.archetype?.type || "landing",
+                        confidence: this.clamp(result.archetype?.confidence ?? 0.5),
+                    },
                 };
             } catch (e: any) {
                 lastError = e;
                 if (attempt < LLM_MAX_RETRIES) {
-                    const baseDelay = 500 * Math.pow(2, attempt - 1); // 500ms, 1000ms, 2000ms
-                    const jitter = Math.random() * 500; // Add 0-500ms random jitter
+                    const baseDelay = 500 * Math.pow(2, attempt - 1);
+                    const jitter = Math.random() * 500;
                     const delay = baseDelay + jitter;
-                    // Retry attempt failed, will retry
                     await new Promise(r => setTimeout(r, delay));
                 }
             }
         }
 
-        // All retries failed - LLM is required, no fallback
         throw new Error(
             `LLM extraction failed after ${LLM_MAX_RETRIES} attempts. ` +
             `Provider: ${this.provider}. ` +
             `Last error: ${lastError?.message || "Unknown error"}. ` +
             `Set a valid API key (GROQ_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY, or HUGGINGFACE_API_KEY).`
         );
+    }
+
+    /**
+     * Backward compatibility: extract traits only
+     */
+    async extractTraits(intent: string, projectContext?: string): Promise<ContentTraits> {
+        const analysis = await this.analyze(intent, projectContext);
+        return analysis.traits;
+    }
+
+    /**
+     * Backward compatibility: classify sector
+     */
+    async classifySector(content: string): Promise<{ primary: string; confidence: number }> {
+        const analysis = await this.analyze(content);
+        return { primary: analysis.sector.primary, confidence: analysis.sector.confidence };
     }
 
     /** Race a promise against a timeout */
@@ -302,24 +369,64 @@ Immediate Intent: "${intent}"
 Overarching Project Context: "${projectContext || "No additional context provided."}"
 
 ═══════════════════════════════════════════════════════════════
+SECTOR & ARCHETYPE CLASSIFICATION
+═══════════════════════════════════════════════════════════════
+
+PRIMARY SECTORS (pick one):
+- healthcare (medical, wellness, diagnostic, dental)
+- fintech (banking, trading, payments, wealth)
+- automotive (luxury, electric, commercial)
+- education (k12, higher, corporate training)
+- commerce (retail, ecommerce, marketplace)
+- entertainment (streaming, gaming, media)
+- manufacturing (industrial, aerospace, pharmaceutical)
+- legal (litigation, corporate, immigration)
+- real_estate (residential, commercial, rental)
+- travel (luxury, budget, adventure)
+- food (restaurant, delivery, catering)
+- sports (fitness, professional, amateur)
+- technology (saas, developer tools, infrastructure, ai)
+
+FUNCTIONAL ARCHETYPES (pick one):
+- dashboard: Data-heavy, scannable, real-time updates
+- portfolio: Visual showcase, image-forward, storytelling
+- documentation: Reading-focused, hierarchical, searchable
+- commerce: Product browsing, conversion-optimized, trust signals
+- landing: Single-page, conversion-focused, hero-driven
+- blog: Content-heavy, reading flow, editorial
+
+═══════════════════════════════════════════════════════════════
 OUTPUT INSTRUCTIONS
 ═══════════════════════════════════════════════════════════════
 
-1. Apply the EPISTASIS RULES to constrain trait combinations
-2. Check for COMPLEXITY KEYWORDS and adjust toward appropriate tier
-3. Apply SECTOR DEFAULTS if context suggests a specific industry
-4. Output EXACTLY this JSON structure (no markdown, no explanation):
+1. Apply EPISTASIS RULES to constrain traits
+2. Detect SECTOR from intent keywords and context
+3. Detect SUB-SECTOR (e.g., "healthcare_wellness", "fintech_trading")
+4. Detect ARCHETYPE from functional purpose
+5. Output EXACTLY this JSON (no markdown, no explanation):
 
 {
-  "informationDensity": 0.0-1.0,
-  "temporalUrgency": 0.0-1.0,
-  "emotionalTemperature": 0.0-1.0,
-  "playfulness": 0.0-1.0,
-  "spatialDependency": 0.0-1.0,
-  "trustRequirement": 0.0-1.0,
-  "visualEmphasis": 0.0-1.0,
-  "conversionFocus": 0.0-1.0
-}`;
+  "traits": {
+    "informationDensity": 0.0-1.0,
+    "temporalUrgency": 0.0-1.0,
+    "emotionalTemperature": 0.0-1.0,
+    "playfulness": 0.0-1.0,
+    "spatialDependency": 0.0-1.0,
+    "trustRequirement": 0.0-1.0,
+    "visualEmphasis": 0.0-1.0,
+    "conversionFocus": 0.0-1.0
+  },
+  "sector": {
+    "primary": "one_of_13_sectors",
+    "subSector": "sector_subcategory",
+    "confidence": 0.0-1.0
+  },
+  "archetype": {
+    "type": "dashboard|portfolio|documentation|commerce|landing|blog",
+    "confidence": 0.0-1.0
+  }
+}
+`;
     }
 
     private async extractWithGroq(prompt: string): Promise<LLMResponse> {
@@ -428,79 +535,5 @@ OUTPUT INSTRUCTIONS
 
     getProvider(): LLMProvider {
         return this.provider;
-    }
-
-    /**
-     * Classify sector from content using LLM
-     */
-    async classifySector(content: string): Promise<{ primary: string; confidence: number }> {
-        const prompt = `Analyze this content and classify it into ONE primary sector.
-
-Available sectors: healthcare, fintech, automotive, education, commerce, entertainment, manufacturing, legal, real_estate, travel, food, sports, technology
-
-Content: "${content.slice(0, 2000)}"
-
-Respond with EXACTLY this JSON (no markdown):
-{
-  "sector": "one_of_the_above",
-  "confidence": 0.0-1.0
-}`;
-
-        try {
-            const response = await this.withTimeout(
-                this.callProviderForSector(prompt),
-                LLM_TIMEOUT_MS
-            );
-            return {
-                primary: response.seector || response.sector || "technology",
-                confidence: this.clamp(response.confidence ?? 0.5)
-            };
-        } catch {
-            return { primary: "technology", confidence: 0.3 };
-        }
-    }
-
-    private async callProviderForSector(prompt: string): Promise<{ sector?: string; seector?: string; confidence: number }> {
-        switch (this.provider) {
-            case "groq":
-                if (!this.groq) throw new Error("Groq not initialized");
-                const groqRes = await this.groq.chat.completions.create({
-                    model: "llama-4-scout-17b-16e-instruct",
-                    messages: [{ role: "user", content: prompt }],
-                    response_format: { type: "json_object" },
-                    temperature: 0.2,
-                });
-                return JSON.parse(groqRes.choices[0].message.content || "{}");
-            case "openai":
-                if (!this.openai) throw new Error("OpenAI not initialized");
-                const openaiRes = await this.openai.chat.completions.create({
-                    model: "gpt-4.1",
-                    messages: [{ role: "user", content: prompt }],
-                    response_format: { type: "json_object" },
-                    temperature: 0.2,
-                });
-                return JSON.parse(openaiRes.choices[0].message.content || "{}");
-            case "anthropic":
-                if (!this.anthropic) throw new Error("Anthropic not initialized");
-                const anthropicRes = await this.anthropic.messages.create({
-                    model: "claude-3-7-sonnet-latest",
-                    max_tokens: 256,
-                    messages: [{ role: "user", content: prompt }],
-                });
-                const text = anthropicRes.content[0].type === "text" ? anthropicRes.content[0].text : "";
-                const match = text.match(/\{[\s\S]*\}/);
-                return match ? JSON.parse(match[0]) : { sector: "technology", confidence: 0.3 };
-            case "gemini":
-                if (!this.gemini) throw new Error("Gemini not initialized");
-                const geminiRes = await this.gemini.generateContent({
-                    contents: [{ role: "user", parts: [{ text: prompt }] }],
-                    generationConfig: { temperature: 0.2, responseMimeType: "application/json" },
-                });
-                const geminiText = geminiRes.response.text();
-                const geminiMatch = geminiText.match(/\{[\s\S]*\}/);
-                return geminiMatch ? JSON.parse(geminiMatch[0]) : { sector: "technology", confidence: 0.3 };
-            default:
-                return { sector: "technology", confidence: 0.3 };
-        }
     }
 }

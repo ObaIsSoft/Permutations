@@ -312,13 +312,11 @@ class DesignGenomeServer {
                             epigeneticData = await this.epigeneticParser.parseAssets(args.brand_asset_paths.slice(0, 10) // cap at 10 files
                             );
                         }
-                        // 2. Semantic Extraction
+                        // 2. Semantic Extraction (single LLM call: traits + sector + archetype)
                         const finalContext = epigeneticData?.brandContext || context;
-                        const traits = await this.extractor.extractTraits(intent, finalContext);
-                        // 3. Sector Detection (LLM-based)
-                        const contentForSector = [intent, finalContext].filter(Boolean).join(" ");
-                        const sectorResult = await this.extractor.classifySector(contentForSector);
-                        const detectedSector = sectorResult.primary;
+                        const analysis = await this.extractor.analyze(intent, finalContext);
+                        const { traits, sector } = analysis;
+                        const detectedSector = sector.primary;
                         // 4. DNA Sequencing
                         const genome = this.sequencer.generate(seed, traits, {
                             primarySector: detectedSector,
