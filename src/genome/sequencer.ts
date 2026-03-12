@@ -459,7 +459,7 @@ export class GenomeSequencer {
             hue: Math.round(accentHue),
             saturation: Math.round(Math.max(0.4, b(215)) * 100) / 100,
             lightness: Math.round(Math.max(0.4, Math.min(0.6, 0.5 + (b(216) - 0.5) * 0.2)) * 100) / 100,
-            hex: this.hslToHex(accentHue, Math.max(0.4, b(215)) * 100, Math.max(0.4, Math.min(0.6, 0.5 + (b(216) - 0.5) * 0.2)) * 100),
+            hex: this.hslToHex(accentHue, Math.max(0.4, b(215) * 100) * 100, Math.max(0.4, Math.min(0.6, 0.5 + (b(216) - 0.5) * 0.2)) * 100),
             usage: ["cta", "highlight", "alert", "success"][Math.floor(b(217) * 4)] as "cta" | "highlight" | "alert" | "success"
         };
         
@@ -489,7 +489,7 @@ export class GenomeSequencer {
         for (let i = 0; i < 9; i++) {
             const lightness = 5 + i * 11; // 5, 16, 27, 38, 49, 60, 71, 82, 93
             const saturation = tintStrength * (1 - Math.abs(i - 4) / 4); // strongest in middle
-            neutralScale.push(this.hslToHex(primary.hue, saturation * 100, lightness));
+            neutralScale.push(this.hslToHex(primary.hue, saturation * 100, lightness * 100));
         }
         
         // Dark mode surfaces
@@ -498,7 +498,7 @@ export class GenomeSequencer {
         for (let i = 0; i < 8; i++) {
             const lightness = darkElevations[i];
             const saturation = tintStrength * 0.5;
-            darkModeSurfaces.push(this.hslToHex(primary.hue, saturation * 100, lightness));
+            darkModeSurfaces.push(this.hslToHex(primary.hue, saturation * 100, lightness * 100));
         }
         
         return {
@@ -904,7 +904,8 @@ export class GenomeSequencer {
         // Use trait combination to select sub-sector deterministically
         const traitSum = traits.informationDensity + traits.temporalUrgency +
             traits.emotionalTemperature + traits.playfulness + traits.spatialDependency;
-        const index = Math.floor((traitSum % 1) * subSectors.length);
+        // M-7: Use full traitSum (not just fractional part) for even distribution across sub-sectors
+        const index = Math.floor(traitSum * 100) % subSectors.length;
         const selectedSubSector = subSectors[index] || subSectors[0];
 
         // Confidence based on trait clarity (extreme values = higher confidence)
@@ -1226,7 +1227,7 @@ export class GenomeSequencer {
 
         // Epistasis: Warm primary forces neutral/cool background
         if (primaryTemp === "warm") {
-            backgroundTemp = b(13) > 0.5 ? "neutral" : "cool";
+            backgroundTemp = b(16) > 0.5 ? "neutral" : "cool";
         }
 
         const isDark = backgroundTemp === "cool";
@@ -1253,7 +1254,7 @@ export class GenomeSequencer {
 
         return {
             backgroundTemp,
-            contrastRatio: 4.5 + b(13) * 10,
+            contrastRatio: 4.5 + b(17) * 10,
             surfaceColor: surfaceStack[1], // Use stack values
             elevatedSurface: surfaceStack[2],
             isDark,
@@ -2057,9 +2058,9 @@ export class GenomeSequencer {
         const appropriateRanges: Record<PrimarySector, [number, number][]> = {
             healthcare: [[180, 240], [90, 150]], // Blues, greens
             fintech: [[220, 300]], // Blues, purples
-            automotive: [[0, 360]], // Any (brand dependent)
+            automotive: [[0, 45], [190, 250], [340, 360]], // Red/orange (sport), blues (luxury/electric), wrap-reds
             education: [[200, 280], [100, 140]], // Blues, greens
-            commerce: [[0, 360]], // Any
+            commerce: [[10, 50], [0, 20], [320, 360], [180, 230]], // Appetite oranges/reds, trust blues
             entertainment: [[0, 360]], // Any
             manufacturing: [[200, 240]], // Blues
             legal: [[220, 260]], // Navy blues
@@ -2075,11 +2076,14 @@ export class GenomeSequencer {
     }
 
     private getTemperatureFromHue(hue: number): "warm" | "cool" | "neutral" {
-        if (hue >= 0 && hue < 60) return "warm";
-        if (hue >= 60 && hue < 170) return "neutral";
-        if (hue >= 170 && hue < 260) return "cool";
-        if (hue >= 260 && hue < 330) return "neutral";
-        return "warm";
+        // Warm:    0-45 (reds, oranges) + 330-360 (reds wrapping)
+        // Neutral: 45-75 (yellow-greens) + 150-190 (blue-greens / teals)
+        // Cool:    75-150 (greens) + 190-330 (blues, indigos, purples, violet, magenta)
+        if (hue < 45 || hue >= 330) return "warm";         // Reds, oranges wrap
+        if (hue >= 45 && hue < 75) return "neutral";        // Yellow / yellow-green
+        if (hue >= 75 && hue < 190) return "cool";          // Greens and teals
+        if (hue >= 190 && hue < 330) return "cool";         // Blues, purple, violet, magenta
+        return "neutral";
     }
 
     private blendHue(h1: number, h2: number, weight: number): number {

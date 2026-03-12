@@ -479,7 +479,7 @@ class DesignGenomeServer {
                             }
                         }, epigeneticData);
 
-                        // 4. Component Generation
+                        // 5. Component Generation
                         const tailwindConfig = this.cssGen.generate(genome, { format: "compressed" });
                         const topology = this.htmlGen.generateTopology(genome);
                         const webglComponents = this.webglGen.generateR3F(genome);
@@ -584,12 +584,26 @@ class DesignGenomeServer {
                             throw new McpError(ErrorCode.InvalidParams, "Missing intent or seed");
                         }
 
-                        // Extract traits from intent
+                        // M-13: Use analyze() to extract traits AND sector together
+                        // Previously used extractTraits() which discarded sector info,
+                        // then passed args.options (user-supplied) which loses the inferred sector
                         const context = args.project_context || "";
-                        const traits = await this.extractor.extractTraits(args.intent, context);
+                        let ecoTraits: any;
+                        let ecoSector: string = "technology";
+                        try {
+                            const ecoAnalysis = await this.extractor.analyze(args.intent, context);
+                            ecoTraits = ecoAnalysis.traits;
+                            ecoSector = ecoAnalysis.sector?.primary || "technology";
+                        } catch {
+                            // Offline fallback
+                            ecoTraits = await this.extractor.extractTraits(args.intent, context);
+                        }
 
-                        // Generate ecosystem - all organisms share ONE genome
-                        const ecosystem = ecosystemGenerator.generate(args.seed, traits, args.options);
+                        // Generate ecosystem - pass inferred sector so organisms reflect correct domain
+                        const ecosystem = ecosystemGenerator.generate(args.seed, ecoTraits, {
+                            ...(args.options || {}),
+                            primarySector: ecoSector
+                        });
 
                         // Generate CSS from the shared genome
                         const css = this.cssGen.generate(ecosystem.environment.genome, { format: "compressed" });
