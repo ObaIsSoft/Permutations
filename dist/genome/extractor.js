@@ -283,6 +283,7 @@ export class ContentExtractor {
     }
     /**
      * Suggest statistics based on sector
+     * @deprecated Hardcoded sector-to-stats mapping will be replaced with hash-derived generation
      */
     suggestStats(sector) {
         const statsMap = {
@@ -325,8 +326,8 @@ export class ContentExtractor {
         return signals;
     }
     /**
-     * Extract brand colors from content (placeholder for now)
-     * In production, this would analyze images, logos, and brand assets
+     * Extract brand colors from text content by finding hex codes
+     * For image-based color extraction, see epigenetics.ts
      */
     extractBrandColors(content) {
         // Look for hex codes

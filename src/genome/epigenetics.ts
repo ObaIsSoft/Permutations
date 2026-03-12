@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import sharp from 'sharp';
-import pdfParse from 'pdf-parse';
+// pdf-parse is imported dynamically inside parseAssets to avoid startup crashes due to missing test files in the library itself.
 
 export interface EpigeneticData {
     epigeneticHue?: number; // Overrides the randomly generated primary hue
@@ -57,6 +57,48 @@ export class EpigeneticParser {
         return data;
     }
 
+    private async extractTextFromPDF(filePath: string): Promise<string | undefined> {
+        try {
+            // Use pdf2json instead of pdf-parse (pdf-parse has a bug with missing test files)
+            const PDFParser = (await import('pdf2json')).default;
+            
+            return new Promise((resolve, reject) => {
+                const pdfParser = new PDFParser();
+                
+                pdfParser.on('pdfParser_dataReady', (pdfData) => {
+                    // Extract text from all pages
+                    let fullText = '';
+                    if (pdfData.Pages) {
+                        for (const page of pdfData.Pages) {
+                            if (page.Texts) {
+                                for (const textItem of page.Texts) {
+                                    if (textItem.R) {
+                                        for (const r of textItem.R) {
+                                            if (r.T) {
+                                                // URL decode the text (pdf2json encodes it)
+                                                fullText += decodeURIComponent(r.T) + ' ';
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    resolve(fullText.trim() || undefined);
+                });
+                
+                pdfParser.on('pdfParser_dataError', (err) => {
+                    reject(err);
+                });
+                
+                pdfParser.loadPDF(filePath);
+            });
+        } catch (e) {
+            console.error(`Error analyzing PDF ${filePath}:`, e);
+            return undefined;
+        }
+    }
+
     private async extractHueFromImage(filePath: string): Promise<number | undefined> {
         try {
             const stats = await sharp(filePath).stats();
@@ -66,17 +108,6 @@ export class EpigeneticParser {
             return this.rgbToHue(dominant.r, dominant.g, dominant.b);
         } catch (e) {
             console.error(`Error analyzing image ${filePath}:`, e);
-            return undefined;
-        }
-    }
-
-    private async extractTextFromPDF(filePath: string): Promise<string | undefined> {
-        try {
-            const dataBuffer = fs.readFileSync(filePath);
-            const result = await pdfParse(dataBuffer);
-            return result.text.trim();
-        } catch (e) {
-            console.error(`Error analyzing PDF ${filePath}:`, e);
             return undefined;
         }
     }

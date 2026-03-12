@@ -6,7 +6,7 @@
  */
 
 import { PrimarySector, SubSector, ContentTraits, BrandConfiguration } from "./types.js";
-import { SECTOR_PROFILES, classifySubSector } from "./sector-profiles.js";
+import { classifySubSector } from "./sector-profiles.js";
 
 export interface AnalyzedContent {
     traits: ContentTraits;
@@ -367,6 +367,7 @@ export class ContentExtractor {
     
     /**
      * Suggest statistics based on sector
+     * @deprecated Hardcoded sector-to-stats mapping will be replaced with hash-derived generation
      */
     private suggestStats(sector: PrimarySector): string[] {
         const statsMap: Record<PrimarySector, string[]> = {
@@ -407,8 +408,8 @@ export class ContentExtractor {
     }
     
     /**
-     * Extract brand colors from content (placeholder for now)
-     * In production, this would analyze images, logos, and brand assets
+     * Extract brand colors from text content by finding hex codes
+     * For image-based color extraction, see epigenetics.ts
      */
     extractBrandColors(content: string): { primary?: string; secondary?: string; accent?: string } {
         // Look for hex codes

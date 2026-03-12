@@ -18,7 +18,7 @@ Every AI-generated website looks the same:
 
 ## The Solution
 
-Permutations treats design like **biological inheritance**. Each project gets a unique 15-chromosome DNA that:
+Permutations treats design like **biological inheritance**. Each project gets a unique 25-chromosome DNA that:
 - ✅ Guarantees unique output (different seed = different design)
 - ✅ Guarantees reproducibility (same seed = same design forever)
 - ✅ Forbids generic patterns (no Inter font, no blue-purple gradients)
@@ -123,6 +123,12 @@ No API key? No problem. Use functional archetypes:
 
 ### `generate_design_genome`
 Full pipeline: content analysis → LLM extraction → DNA sequencing.
+
+### `generate_ecosystem`
+Generates a complete component ecosystem: microbial (atomic), flora (growing), fauna (complex) - all sharing ONE genome with chromosome-derived properties.
+
+### `generate_civilization`
+Architecture layer for sophisticated applications. Takes ecosystem organisms and adds state management, routing, and advanced patterns. Complexity threshold: 0.70+.
 
 ### `generate_from_archetype`
 Offline generation using functional archetypes. No API calls.

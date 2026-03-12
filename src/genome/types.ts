@@ -290,6 +290,7 @@ export interface GenerationOptions {
     sectorWeight?: number;               // Override sector influence
     contentWeight?: number;              // Override content analysis influence
     enable3D?: boolean;                  // Global 3D toggle (default: context-appropriate)
+    fontProvider?: FontProvider;         // "bunny" | "google" (default: "bunny")
 }
 
 // ============================================================================
@@ -301,7 +302,8 @@ export type ScrollBehavior = "paginated" | "continuous" | "snap";
 export type BreakpointStrategy = "mobile_first" | "desktop_first" | "fluid";
 export type ContentFlow = "reading_order" | "z_pattern" | "f_pattern";
 export type RhythmDensity = "airtight" | "breathing" | "maximal" | "empty";
-export type TypeCharge = "geometric" | "humanist" | "monospace" | "transitional";
+export type TypeCharge = "geometric" | "humanist" | "monospace" | "transitional" | "grotesque" | "slab_serif" | "expressive";
+export type FontProvider = "bunny" | "google";
 export type TypeTracking = "tight" | "normal" | "wide" | "ultra";
 export type TypeCasing = "normal" | "uppercase" | "small_caps";
 export type ColorTemp = "warm" | "cool" | "neutral";
@@ -390,6 +392,9 @@ export interface DesignGenome {
         };
         ch3_type_display: {
             family: string;
+            displayName: string;
+            importUrl: string;
+            provider: FontProvider;
             charge: TypeCharge;
             weight: number;
             fallback: string;              // fallback font stack
@@ -398,6 +403,10 @@ export interface DesignGenome {
         };
         ch4_type_body: {
             family: string;
+            displayName: string;
+            importUrl: string;
+            provider: FontProvider;
+            charge: TypeCharge;
             xHeightRatio: number;
             contrast: number;
             fallback: string;
@@ -575,6 +584,21 @@ export interface DesignGenome {
             userSegmentation: boolean;
             abTestingReady: boolean;
             segmentCount: 2 | 3 | 4;
+        };
+
+        // Copy & Content Chromosomes (25)
+        ch25_copy_engine: {
+            headline: string;
+            subheadline: string;
+            cta: string;
+            authorName: string;
+            authorTitle: string;
+            testimonial: string;
+            companyName: string;
+            tagline: string;
+            stats: { label: string; value: string }[];
+            faq: { question: string; answer: string }[];
+            features: { title: string; description: string }[];
         };
     };
 

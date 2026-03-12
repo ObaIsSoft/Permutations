@@ -160,23 +160,41 @@ console.log("\nTest 6: Pattern Detection");
     assert(violations.some(v => v.pattern === "tailwind_gradient"), "Detects Tailwind gradient");
 }
 
-// ─── Test 7: Color Range / Distribution ──────────────────────────────────────
-console.log("\nTest 7: Color Distribution");
+// ─── Test 7: Color Range / Distribution (Sector-Biased) ───────────────────────
+console.log("\nTest 7: Color Distribution (Sector-Biased)");
 {
     const seq = new GenomeSequencer();
-    const hues = [];
-
+    
+    // Test technology sector (hue range: 240-270)
+    const techHues = [];
     for (let i = 0; i < 30; i++) {
-        const genome = seq.generate(`color-test-${i}`, baseTraits, baseConfig);
-        hues.push(genome.chromosomes.ch5_color_primary.hue);
+        const genome = seq.generate(`color-test-${i}`, baseTraits, { primarySector: "technology" });
+        techHues.push(genome.chromosomes.ch5_color_primary.hue);
     }
 
-    const minHue = Math.min(...hues);
-    const maxHue = Math.max(...hues);
-    const range = maxHue - minHue;
-
-    assert(range > 200, `Color range spans ${range}° (good distribution)`);
-    assert(hues.every(h => h >= 0 && h <= 360), "All hues are valid (0-360)");
+    const minTechHue = Math.min(...techHues);
+    const maxTechHue = Math.max(...techHues);
+    
+    // Technology sector hue range is 240-270, but with variance can extend ±15
+    assert(minTechHue >= 210 && maxTechHue <= 300, `Technology hues within sector range (${minTechHue}-${maxTechHue})`);
+    assert(techHues.every(h => h >= 0 && h <= 360), "All hues are valid (0-360)");
+    
+    // Test cross-sector diversity
+    const sectorHues = [];
+    const sectors = ["healthcare", "fintech", "food", "technology"];
+    for (const sector of sectors) {
+        for (let i = 0; i < 10; i++) {
+            const genome = seq.generate(`sector-${sector}-${i}`, baseTraits, { primarySector: sector });
+            sectorHues.push(genome.chromosomes.ch5_color_primary.hue);
+        }
+    }
+    
+    const minSectorHue = Math.min(...sectorHues);
+    const maxSectorHue = Math.max(...sectorHues);
+    const sectorRange = maxSectorHue - minSectorHue;
+    
+    // Cross-sector should have good distribution (>100° minimum)
+    assert(sectorRange > 100, `Cross-sector color range spans ${sectorRange}° (good distribution)`);
 }
 
 // ─── Test 8: New Chromosomes (ch19-ch24) ─────────────────────────────────────

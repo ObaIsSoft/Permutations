@@ -39,8 +39,6 @@ export {
     SECTOR_PROFILES,
     getSectorProfile,
     classifySubSector,
-    selectColorFromProfile,
-    colorNameToHSL,
     isValidSector
 } from './sector-profiles.js';
 
@@ -62,3 +60,9 @@ export { ARCHETYPES, detectArchetype, FunctionalArchetype } from './archetypes.j
 // Generators
 export { CSSGenerator, CSSGenerationOptions } from '../css-generator.js';
 export { HTMLGenerator, HTMLGenerationOptions } from '../html-generator.js';
+
+// File Writer
+export { DesignFileWriter, WriteOptions, WrittenFiles, FileOutput } from '../generators/file-writer.js';
+
+// Format Generators
+export { FormatGenerator, FormatOptions, GeneratedFormat } from '../generators/format-generators.js';

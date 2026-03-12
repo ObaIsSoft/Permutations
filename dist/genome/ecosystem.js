@@ -1,261 +1,516 @@
+/**
+ * Permutations MCP - Ecosystem V2
+ *
+ * A living design system where components are organisms in a shared environment.
+ *
+ * Architecture:
+ * - ONE shared genome (the environment/DNA)
+ * - Microbial = Atomic components (topology-derived, not named templates)
+ * - Flora = Growing components (containers with nested relationships)
+ * - Fauna = Complex moving components (orchestrators)
+ * - Relationships = How organisms interact (composition patterns, communication)
+ *
+ * Civilization emerges when ecosystem complexity crosses threshold (0.85)
+ *
+ * NOTE: Names are DERIVED from topology, not hardcoded. A developer might look at
+ * the topology signature and say "this looks like a button" - but the system
+ * generates the topology, not the name.
+ */
 import { GenomeSequencer } from "./sequencer.js";
+/**
+ * Topology-derived organism descriptors
+ * NOT templates - these describe mathematical patterns that emerge from chromosomes
+ */
+const TOPOLOGY_PATTERNS = {
+    microbial: [
+        { prefix: 'action', patterns: ['clickable', 'trigger', 'toggle'] },
+        { prefix: 'indicator', patterns: ['status', 'badge', 'signal'] },
+        { prefix: 'token', patterns: ['chip', 'tag', 'pill'] },
+        { prefix: 'identity', patterns: ['avatar', 'icon', 'glyph'] },
+        { prefix: 'loader', patterns: ['spinner', 'skeleton', 'progress'] },
+        { prefix: 'separator', patterns: ['divider', 'spacer', 'rule'] }
+    ],
+    flora: [
+        { prefix: 'input', patterns: ['field', 'control', 'selector'] },
+        { prefix: 'container', patterns: ['card', 'panel', 'section'] },
+        { prefix: 'navigation', patterns: ['menu', 'tabs', 'breadcrumb'] },
+        { prefix: 'reveal', patterns: ['dropdown', 'tooltip', 'popover'] },
+        { prefix: 'organization', patterns: ['list', 'accordion', 'tree'] },
+        { prefix: 'selection', patterns: ['toggle', 'switch', 'radio'] }
+    ],
+    fauna: [
+        { prefix: 'overlay', patterns: ['modal', 'dialog', 'drawer'] },
+        { prefix: 'data', patterns: ['table', 'chart', 'grid'] },
+        { prefix: 'media', patterns: ['carousel', 'gallery', 'player'] },
+        { prefix: 'search', patterns: ['finder', 'explorer', 'filter'] },
+        { prefix: 'structure', patterns: ['layout', 'shell', 'frame'] },
+        { prefix: 'input', patterns: ['form', 'wizard', 'editor'] }
+    ]
+};
+/**
+ * Generates a complete ecosystem of design components
+ * All organisms share ONE genome (the environment)
+ */
 export class EcosystemGenerator {
     sequencer;
     constructor() {
         this.sequencer = new GenomeSequencer();
     }
     generate(seed, traits, options) {
-        const opts = {
-            microbialCount: 8,
-            floraCount: 4,
-            faunaCount: 2,
-            generations: 3,
-            ...options
-        };
-        // Generate base planet DNA
-        const baseGenome = this.sequencer.generate(seed, traits, { primarySector: "technology" });
-        // Calculate habitability
+        // Generate the shared environment (ONE genome)
+        const genome = this.sequencer.generate(seed, traits, { primarySector: "technology" });
+        // Calculate how well this environment supports life
         const habitabilityScore = this.calculateHabitability(traits);
-        // Generate divergent life forms
-        const microbial = this.generateMicrobialColony(seed, traits, opts.microbialCount);
-        const flora = this.generateFloraEcosystem(seed, traits, microbial, opts.floraCount);
-        const fauna = this.generateFaunaPopulation(seed, traits, flora, opts.faunaCount);
-        // Determine dominant life form
-        const dominant = this.determineDominantLifeForm(microbial, flora, fauna, baseGenome);
-        // Check for civilization
-        const civilization = this.detectCivilization(baseGenome, fauna);
+        // CHROMOSOME-DRIVEN: Counts determined by genome, not just traits
+        const counts = this.calculateOrganismCounts(genome, options);
+        // Generate organisms from the shared environment
+        const microbial = this.generateMicrobialColony(genome, counts.microbial);
+        const flora = this.generateFloraEcosystem(genome, microbial, counts.flora);
+        const fauna = this.generateFaunaPopulation(genome, flora, counts.fauna);
+        // Calculate ecosystem complexity
+        const complexity = this.calculateComplexity(genome, microbial, flora, fauna);
+        const diversity = this.calculateDiversity(microbial, flora, fauna);
+        const stability = this.calculateStability(traits, complexity);
+        // Determine relationships between organisms
+        const relationships = this.generateRelationships(microbial, flora, fauna);
+        // CHROMOSOME-DRIVEN: Counts already calculated above
+        const { carryingCapacity } = counts;
         return {
-            planet: {
-                seed,
-                conditions: traits,
-                baseGenome,
-                habitabilityScore
+            environment: {
+                genome,
+                habitabilityScore,
+                carryingCapacity
             },
-            lifeForms: {
+            organisms: {
                 microbial,
                 flora,
                 fauna,
-                dominant
+                total: microbial.length + flora.length + fauna.length
             },
-            civilization,
+            relationships,
             evolution: {
-                generations: opts.generations,
-                divergenceRate: this.calculateDivergence(microbial, flora),
-                extinctionEvents: this.calculateExtinctions(traits)
+                complexity,
+                diversity,
+                stability,
+                generations: Math.floor(complexity * 10)
+            },
+            civilizationReady: complexity >= 0.85,
+            civilizationThreshold: 0.85
+        };
+    }
+    // === MICROBIAL COLONY ===
+    // Atomic components: topology-derived, not named templates
+    generateMicrobialColony(genome, count) {
+        const organisms = [];
+        const baseEntropy = genome.chromosomes.ch12_signature.entropy;
+        const patterns = TOPOLOGY_PATTERNS.microbial;
+        for (let i = 0; i < count; i++) {
+            const mutation = this.generateMutation(genome, i);
+            // CHROMOSOME-DRIVEN: Select pattern based on hash entropy
+            const patternIndex = Math.floor(this.deriveFromHash(mutation, patterns.length));
+            const pattern = patterns[patternIndex % patterns.length];
+            // CHROMOSOME-DRIVEN: Generate variants based on genome, not hardcoded list
+            const variantCount = Math.floor(this.deriveFromHash(mutation, 4)) + 2; // 2-5 variants
+            const variants = this.generateVariantNames(pattern.patterns, variantCount, mutation);
+            // CHROMOSOME-DRIVEN: Derive name from topology
+            const name = this.deriveOrganismName(pattern.prefix, mutation, i, 'microbial');
+            organisms.push({
+                id: `M-${i}`,
+                name,
+                category: 'microbial',
+                spec: this.createComponentSpec(name, variants, 'microbial', genome),
+                adaptation: {
+                    mutation,
+                    entropy: baseEntropy * (1 + i * 0.05),
+                    generation: 1
+                },
+                characteristics: {
+                    colorTreatment: this.deriveColorTreatment(genome, i),
+                    motionStyle: this.deriveMotionStyle(genome, 'microbial'),
+                    scale: this.deriveScale(genome, 'micro', 'microbial'),
+                    texture: this.deriveTexture(genome)
+                },
+                topology: {
+                    containmentDepth: 0, // Microbes have no children
+                    edgeProfile: genome.chromosomes.ch7_edge.componentRadius / 32,
+                    motionComplexity: genome.chromosomes.ch8_motion.physics === 'none' ? 0 :
+                        genome.chromosomes.ch8_motion.physics === 'spring' ? 0.8 : 0.4,
+                    interactionPattern: genome.chromosomes.ch8_motion.physics
+                },
+                relationships: {
+                    symbiosis: this.findSymbioticMicrobes(i, count),
+                    prey: undefined,
+                    predator: i < 3 ? undefined : `F-${Math.floor(i / 3)}`
+                }
+            });
+        }
+        return organisms;
+    }
+    // === FLORA ECOSYSTEM ===
+    // Growing components: containers with containment relationships
+    generateFloraEcosystem(genome, microbial, count) {
+        const organisms = [];
+        const baseEntropy = genome.chromosomes.ch12_signature.entropy;
+        const patterns = TOPOLOGY_PATTERNS.flora;
+        for (let i = 0; i < count; i++) {
+            const mutation = this.generateMutation(genome, i + 100);
+            // CHROMOSOME-DRIVEN: Select pattern
+            const patternIndex = Math.floor(this.deriveFromHash(mutation, patterns.length));
+            const pattern = patterns[patternIndex % patterns.length];
+            // CHROMOSOME-DRIVEN: Generate variants
+            const variantCount = Math.floor(this.deriveFromHash(mutation, 5)) + 2;
+            const variants = this.generateVariantNames(pattern.patterns, variantCount, mutation);
+            // CHROMOSOME-DRIVEN: Derive name from topology
+            const name = this.deriveOrganismName(pattern.prefix, mutation, i, 'flora');
+            // CHROMOSOME-DRIVEN: Which microbes this flora contains
+            const preyCount = Math.min(4, Math.floor(this.deriveFromHash(mutation, 4)) + 1);
+            const prey = [];
+            for (let p = 0; p < preyCount && p < microbial.length; p++) {
+                const microIndex = Math.floor(this.deriveFromHash(mutation + p, microbial.length));
+                prey.push(microbial[microIndex]?.id || `M-${p}`);
+            }
+            organisms.push({
+                id: `F-${i}`,
+                name,
+                category: 'flora',
+                spec: this.createComponentSpec(name, variants, 'flora', genome),
+                adaptation: {
+                    mutation,
+                    entropy: baseEntropy * (1.2 + i * 0.08),
+                    generation: 2
+                },
+                characteristics: {
+                    colorTreatment: this.deriveColorTreatment(genome, i + 100),
+                    motionStyle: this.deriveMotionStyle(genome, 'flora'),
+                    scale: this.deriveScale(genome, 'medium', 'flora'),
+                    texture: this.deriveTexture(genome)
+                },
+                topology: {
+                    containmentDepth: 1, // Flora contain microbes
+                    edgeProfile: genome.chromosomes.ch7_edge.radius / 32,
+                    motionComplexity: genome.chromosomes.ch8_motion.physics === 'spring' ? 0.6 : 0.3,
+                    interactionPattern: `${genome.chromosomes.ch8_motion.physics}-container`
+                },
+                relationships: {
+                    symbiosis: this.findSymbioticFlora(i, count),
+                    prey: [...new Set(prey)], // Deduplicate
+                    predator: i < 4 ? `A-${Math.floor(i / 2)}` : undefined
+                }
+            });
+        }
+        return organisms;
+    }
+    // === FAUNA POPULATION ===
+    // Complex moving components: orchestrators
+    generateFaunaPopulation(genome, flora, count) {
+        const organisms = [];
+        const baseEntropy = genome.chromosomes.ch12_signature.entropy;
+        const patterns = TOPOLOGY_PATTERNS.fauna;
+        for (let i = 0; i < count; i++) {
+            const mutation = this.generateMutation(genome, i + 200);
+            // CHROMOSOME-DRIVEN: Select pattern
+            const patternIndex = Math.floor(this.deriveFromHash(mutation, patterns.length));
+            const pattern = patterns[patternIndex % patterns.length];
+            // CHROMOSOME-DRIVEN: Generate variants
+            const variantCount = Math.floor(this.deriveFromHash(mutation, 5)) + 2;
+            const variants = this.generateVariantNames(pattern.patterns, variantCount, mutation);
+            // CHROMOSOME-DRIVEN: Derive name from topology
+            const name = this.deriveOrganismName(pattern.prefix, mutation, i, 'fauna');
+            // CHROMOSOME-DRIVEN: Which flora this fauna contains
+            const preyCount = Math.min(5, Math.floor(this.deriveFromHash(mutation, 5)) + 2);
+            const prey = [];
+            for (let p = 0; p < preyCount && p < flora.length; p++) {
+                const floraIndex = Math.floor(this.deriveFromHash(mutation + p, flora.length));
+                prey.push(flora[floraIndex]?.id || `F-${p}`);
+            }
+            organisms.push({
+                id: `A-${i}`,
+                name,
+                category: 'fauna',
+                spec: this.createComponentSpec(name, variants, 'fauna', genome),
+                adaptation: {
+                    mutation,
+                    entropy: baseEntropy * (1.5 + i * 0.1),
+                    generation: 3
+                },
+                characteristics: {
+                    colorTreatment: 'neutral',
+                    motionStyle: this.deriveMotionStyle(genome, 'fauna'),
+                    scale: this.deriveScale(genome, 'large', 'fauna'),
+                    texture: this.deriveTexture(genome)
+                },
+                topology: {
+                    containmentDepth: 2, // Fauna contain flora which contain microbes
+                    edgeProfile: genome.chromosomes.ch7_edge.radius / 32,
+                    motionComplexity: genome.chromosomes.ch15_biomarker.complexity > 0.7 ? 0.9 : 0.6,
+                    interactionPattern: `${genome.chromosomes.ch8_motion.physics}-orchestrator`
+                },
+                relationships: {
+                    symbiosis: this.findSymbioticFauna(i, count),
+                    prey: [...new Set(prey)],
+                    predator: undefined
+                }
+            });
+        }
+        return organisms;
+    }
+    // === TOPOLOGY-DERIVED NAMING ===
+    /**
+     * Derive organism name from topology signature
+     * NOT from a hardcoded template list
+     */
+    deriveOrganismName(prefix, mutation, index, category) {
+        // Use mutation hash to select suffix
+        const suffixes = {
+            microbial: ['Atom', 'Bit', 'Unit', 'Cell', 'Node', 'Point'],
+            flora: ['Pod', 'Cluster', 'Group', 'Set', 'Bundle', 'Block'],
+            fauna: ['Stack', 'Flow', 'Chain', 'Array', 'Grid', 'Tree']
+        };
+        const hash = parseInt(mutation.slice(0, 4), 16);
+        const suffix = suffixes[category][hash % suffixes[category].length];
+        // Capitalize prefix + suffix
+        const capitalizedPrefix = prefix.charAt(0).toUpperCase() + prefix.slice(1);
+        return `${capitalizedPrefix}${suffix}`;
+    }
+    /**
+     * Generate variant names from pattern pool
+     * NOT from hardcoded arrays
+     */
+    generateVariantNames(patterns, count, mutation) {
+        const variants = [];
+        const hash = parseInt(mutation.slice(0, 8), 16);
+        for (let i = 0; i < count && i < patterns.length; i++) {
+            const index = (hash + i) % patterns.length;
+            variants.push(patterns[index]);
+        }
+        // Add state variants based on mutation
+        const states = ['default', 'active', 'disabled', 'loading'];
+        const stateIndex = hash % states.length;
+        if (!variants.includes(states[stateIndex])) {
+            variants.push(states[stateIndex]);
+        }
+        return variants;
+    }
+    /**
+     * Derive value from hash string (0-1 range)
+     */
+    deriveFromHash(hash, max) {
+        const num = parseInt(hash.slice(0, 4), 16);
+        return (num / 65536) * max;
+    }
+    // === RELATIONSHIP GENERATION ===
+    generateRelationships(microbial, flora, fauna) {
+        const relationships = [];
+        // Containment relationships (already defined in organisms)
+        for (const org of [...microbial, ...flora, ...fauna]) {
+            if (org.relationships.prey) {
+                for (const preyId of org.relationships.prey) {
+                    relationships.push({
+                        type: 'containment',
+                        organisms: [org.id, preyId],
+                        pattern: `${org.name} contains ${preyId}`,
+                        example: `<${org.name}><${preyId} /></${org.name}>`
+                    });
+                }
+            }
+        }
+        // Symbiosis relationships
+        for (const org of [...microbial, ...flora, ...fauna]) {
+            for (const symId of org.relationships.symbiosis) {
+                relationships.push({
+                    type: 'symbiosis',
+                    organisms: [org.id, symId],
+                    pattern: `${org.name} + ${symId} work together`,
+                    example: `<${org.name} /><${symId} />`
+                });
+            }
+        }
+        // Sequence patterns
+        if (microbial.length > 0 && flora.length > 0) {
+            relationships.push({
+                type: 'sequence',
+                organisms: [microbial[0].id, flora[0].id],
+                pattern: 'Action triggers input',
+                example: `<${microbial[0].name} onClick={() => ${flora[0].name}Ref.focus()} />`
+            });
+        }
+        if (flora.length > 2) {
+            relationships.push({
+                type: 'sequence',
+                organisms: [flora[2].id, flora[5].id],
+                pattern: 'Selection populates list',
+                example: `<${flora[2].name} onSelect={item => setList([...list, item])} />`
+            });
+        }
+        return relationships;
+    }
+    // === HELPER METHODS ===
+    createComponentSpec(name, variants, category, genome) {
+        const baseProps = [
+            { name: 'className', type: 'string', required: false },
+            { name: 'style', type: 'CSSProperties', required: false }
+        ];
+        // Add category-specific props
+        const categoryProps = {
+            microbial: [
+                { name: 'onClick', type: '() => void', required: false },
+                { name: 'disabled', type: 'boolean', required: false, default: false }
+            ],
+            flora: [
+                { name: 'value', type: 'string | string[]', required: true },
+                { name: 'onChange', type: '(value: any) => void', required: true },
+                { name: 'error', type: 'string', required: false }
+            ],
+            fauna: [
+                { name: 'isOpen', type: 'boolean', required: true },
+                { name: 'onClose', type: '() => void', required: true },
+                { name: 'title', type: 'string', required: false }
+            ]
+        };
+        const ariaProps = {
+            microbial: ['aria-label', 'aria-pressed', 'aria-disabled'],
+            flora: ['aria-expanded', 'aria-haspopup', 'aria-activedescendant'],
+            fauna: ['aria-modal', 'aria-labelledby', 'aria-describedby']
+        };
+        const keyboard = {
+            microbial: ['Enter', 'Space'],
+            flora: ['Tab', 'ArrowKeys', 'Enter', 'Escape'],
+            fauna: ['Tab', 'Escape', 'ArrowKeys']
+        };
+        return {
+            name,
+            category: category === 'microbial' ? 'input' : category === 'flora' ? 'feedback' : 'overlay',
+            props: [...baseProps, ...categoryProps[category]],
+            variants,
+            accessibility: {
+                role: category === 'microbial' ? 'button' : category === 'flora' ? 'region' : 'dialog',
+                ariaProps: ariaProps[category],
+                keyboard: keyboard[category]
             }
         };
     }
+    generateMutation(genome, index) {
+        const baseMutation = genome.chromosomes.ch12_signature.uniqueMutation;
+        const variantSeed = `${genome.dnaHash}-${index}`;
+        let hash = 0;
+        for (let i = 0; i < variantSeed.length; i++) {
+            const char = variantSeed.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash;
+        }
+        return Math.abs(hash).toString(16).slice(0, 8);
+    }
+    deriveColorTreatment(genome, index) {
+        const hue = genome.chromosomes.ch5_color_primary.hue;
+        const treatments = ['primary', 'secondary', 'accent', 'neutral'];
+        const quadrant = Math.floor(hue / 90);
+        const offset = index % 4;
+        return treatments[(quadrant + offset) % 4];
+    }
+    deriveMotionStyle(genome, category) {
+        const physics = genome.chromosomes.ch8_motion.physics;
+        const complexity = genome.chromosomes.ch15_biomarker.complexity;
+        if (physics === 'none')
+            return 'none';
+        if (category === 'microbial')
+            return 'subtle';
+        if (category === 'flora' && physics === 'spring')
+            return 'subtle';
+        if (category === 'fauna' && complexity > 0.7)
+            return 'complex';
+        return 'active';
+    }
+    deriveScale(genome, baseScale, category) {
+        const density = genome.chromosomes.ch2_rhythm.density;
+        const radius = genome.chromosomes.ch7_edge.radius;
+        if (density === 'airtight' && radius < 5)
+            return 'micro';
+        if (density === 'maximal' && radius > 15)
+            return 'large';
+        if (category === 'fauna')
+            return 'large';
+        if (category === 'microbial' && density === 'empty')
+            return 'micro';
+        return baseScale;
+    }
+    deriveTexture(genome) {
+        const material = genome.chromosomes.ch14_physics.material;
+        const elevation = genome.chromosomes.ch10_hierarchy.elevationSystem;
+        if (material === 'glass')
+            return 'glass';
+        if (material === 'neumorphism' || elevation === 'neumorphic')
+            return 'elevated';
+        if (material === 'metallic')
+            return 'material';
+        return 'flat';
+    }
+    findSymbioticMicrobes(index, total) {
+        const symbiosis = [];
+        // Each microbe symbioses with 1-2 neighbors
+        if (index > 0)
+            symbiosis.push(`M-${index - 1}`);
+        if (index < total - 1)
+            symbiosis.push(`M-${index + 1}`);
+        return symbiosis;
+    }
+    findSymbioticFlora(index, total) {
+        const symbiosis = [];
+        // Flora symbioses with adjacent flora
+        if (index > 0)
+            symbiosis.push(`F-${index - 1}`);
+        if (index < total - 1)
+            symbiosis.push(`F-${index + 1}`);
+        return symbiosis;
+    }
+    findSymbioticFauna(index, total) {
+        const symbiosis = [];
+        // Fauna symbioses with adjacent fauna
+        if (index > 0)
+            symbiosis.push(`A-${index - 1}`);
+        if (index < total - 1)
+            symbiosis.push(`A-${index + 1}`);
+        return symbiosis;
+    }
     calculateHabitability(traits) {
-        // Goldilocks zone calculation
-        const density = 1 - Math.abs(traits.informationDensity - 0.7); // Optimal around 0.7
-        const temperature = 1 - Math.abs(traits.emotionalTemperature - 0.5); // Optimal around 0.5
-        const stability = 1 - traits.playfulness; // Lower playfulness = more stable
+        const density = 1 - Math.abs(traits.informationDensity - 0.7);
+        const temperature = 1 - Math.abs(traits.emotionalTemperature - 0.5);
+        const stability = 1 - traits.playfulness;
         return (density * 0.4 + temperature * 0.3 + stability * 0.3);
     }
-    generateMicrobialColony(seed, traits, count) {
-        const variants = [];
-        for (let i = 0; i < count; i++) {
-            // Each microbe has slight trait variations
-            const variantTraits = {
-                informationDensity: this.mutate(traits.informationDensity, 0.1),
-                temporalUrgency: this.mutate(traits.temporalUrgency, 0.05),
-                emotionalTemperature: this.mutate(traits.emotionalTemperature, 0.08),
-                playfulness: Math.max(0, traits.playfulness - (i * 0.05)), // Stabilize over generations
-                spatialDependency: this.mutate(traits.spatialDependency, 0.1),
-                trustRequirement: traits.trustRequirement,
-                visualEmphasis: traits.visualEmphasis,
-                conversionFocus: traits.conversionFocus
-            };
-            const variantSeed = `${seed}-microbe-${i}`;
-            const genome = this.sequencer.generate(variantSeed, variantTraits, { primarySector: "technology" });
-            variants.push({
-                id: `M-${i}`,
-                genome,
-                mutation: genome.chromosomes.ch12_signature.uniqueMutation,
-                entropy: genome.chromosomes.ch12_signature.entropy,
-                generation: 1
-            });
-        }
-        return variants;
-    }
-    generateFloraEcosystem(seed, traits, microbial, count) {
-        const variants = [];
-        // Flora evolves from microbial base with structural adaptations
-        for (let i = 0; i < count; i++) {
-            const parentMicrobe = microbial[i % microbial.length];
-            // Flora has reduced temporal urgency (plants don't move fast)
-            const floraTraits = {
-                ...traits,
-                temporalUrgency: Math.max(0.1, traits.temporalUrgency - 0.3),
-                spatialDependency: Math.min(1, traits.spatialDependency + 0.1), // Need space to grow
-                playfulness: Math.min(1, traits.playfulness + 0.1) // Organic growth adds chaos
-            };
-            const variantSeed = `${seed}-flora-${i}`;
-            const genome = this.sequencer.generate(variantSeed, floraTraits, { primarySector: "technology" });
-            variants.push({
-                id: `F-${i}`,
-                genome,
-                topology: genome.chromosomes.ch1_structure.topology,
-                geometry: genome.chromosomes.ch15_biomarker.geometry,
-                atmosphere: genome.chromosomes.ch13_atmosphere.fx,
-                adaptation: this.determineFloraAdaptation(genome, traits)
-            });
-        }
-        return variants;
-    }
-    generateFaunaPopulation(seed, traits, flora, count) {
-        const variants = [];
-        for (let i = 0; i < count; i++) {
-            // Fauna requires higher complexity
-            const faunaTraits = {
-                ...traits,
-                temporalUrgency: Math.min(1, traits.temporalUrgency + 0.2), // Animals move
-                playfulness: Math.min(1, traits.playfulness + 0.15), // Behavior variance
-                spatialDependency: Math.min(1, traits.spatialDependency + 0.2) // Navigation needs
-            };
-            const variantSeed = `${seed}-fauna-${i}`;
-            const genome = this.sequencer.generate(variantSeed, faunaTraits, { primarySector: "technology" });
-            variants.push({
-                id: `A-${i}`,
-                genome,
-                behavior: this.determineBehavior(genome),
-                movement: genome.chromosomes.ch8_motion.physics,
-                complexity: genome.chromosomes.ch15_biomarker.complexity
-            });
-        }
-        return variants;
-    }
-    detectCivilization(baseGenome, fauna) {
-        const complexity = baseGenome.chromosomes.ch15_biomarker.complexity;
-        const threshold = 0.85;
-        if (complexity < threshold) {
-            return null;
-        }
-        // Determine sentience level
-        let sentienceLevel = 'sentient';
-        if (complexity > 0.95)
-            sentienceLevel = 'advanced';
-        else if (complexity > 0.9)
-            sentienceLevel = 'civilized';
-        // Generate technology tree
-        const technologyTree = this.generateTechnologyTree(baseGenome, complexity);
-        // Determine social structure
-        const socialStructure = this.determineSocialStructure(baseGenome);
+    calculateOrganismCounts(genome, options) {
+        const ch = genome.chromosomes;
+        const entropy = ch.ch12_signature.entropy;
+        const density = ch.ch2_rhythm.density === 'maximal' ? 1 :
+            ch.ch2_rhythm.density === 'breathing' ? 0.7 : 0.4;
+        const complexity = ch.ch15_biomarker.complexity;
+        const structureDepth = ch.ch1_structure.maxNesting > 3 ? 1 : 0.7;
+        const topologyMultiplier = ch.ch1_structure.topology === 'graph' ? 1.3 :
+            ch.ch1_structure.topology === 'radial' ? 1.2 : 1.0;
+        const baseMicrobial = Math.floor(12 + (entropy * 4));
+        const baseFlora = Math.floor(8 + (density * 4));
+        const baseFauna = Math.floor(6 + (complexity * 4));
+        const carryingCapacity = Math.min(1, (baseMicrobial + baseFlora + baseFauna) / 38 * topologyMultiplier);
         return {
-            complexity,
-            sentienceLevel,
-            technologyTree,
-            socialStructure,
-            designSophistication: Math.min(1, complexity * 1.2)
+            microbial: options?.microbialCount ?? Math.min(16, baseMicrobial),
+            flora: options?.floraCount ?? Math.min(12, baseFlora),
+            fauna: options?.faunaCount ?? Math.min(10, baseFauna),
+            carryingCapacity
         };
     }
-    generateTechnologyTree(genome, complexity) {
-        const material = genome.chromosomes.ch14_physics.material;
-        const tree = [];
-        // Era 1: Primitive
-        tree.push({
-            era: 'Primitive',
-            materials: ['organic', material],
-            architecture: [genome.chromosomes.ch1_structure.topology],
-            communication: ['chemical', 'visual'],
-            designPatterns: ['flat', 'minimal']
-        });
-        // Era 2: Industrial (if complexity > 0.7)
-        if (complexity > 0.7) {
-            tree.push({
-                era: 'Industrial',
-                materials: [material, 'metallic', 'composite'],
-                architecture: ['column', 'grid'],
-                communication: ['electrical', 'mechanical'],
-                designPatterns: ['structured', 'hierarchical']
-            });
-        }
-        // Era 3: Information Age (if complexity > 0.85)
-        if (complexity > 0.85) {
-            tree.push({
-                era: 'Information',
-                materials: ['glass', 'silicon', 'light'],
-                architecture: ['radial', 'network'],
-                communication: ['digital', 'instant'],
-                designPatterns: ['fluid', 'responsive']
-            });
-        }
-        // Era 4: Post-Singularity (if complexity > 0.95)
-        if (complexity > 0.95) {
-            tree.push({
-                era: 'Transcendent',
-                materials: ['quantum', 'conscious', 'energy'],
-                architecture: ['fractal', 'infinite'],
-                communication: ['telepathic', 'holographic'],
-                designPatterns: ['generative', 'alive']
-            });
-        }
-        return tree;
+    calculateComplexity(genome, microbial, flora, fauna) {
+        const baseComplexity = genome.chromosomes.ch15_biomarker.complexity;
+        const organismCount = (microbial.length + flora.length + fauna.length) / 30;
+        const entropyFactor = genome.chromosomes.ch12_signature.entropy;
+        return Math.min(1, baseComplexity * 0.4 + organismCount * 0.4 + entropyFactor * 0.2);
     }
-    determineDominantLifeForm(microbial, flora, fauna, baseGenome) {
-        const complexity = baseGenome.chromosomes.ch15_biomarker.complexity;
-        if (complexity > 0.85)
-            return 'civilization';
-        if (complexity > 0.6)
-            return 'fauna';
-        if (complexity > 0.4)
-            return 'flora';
-        return 'microbial';
+    calculateDiversity(microbial, flora, fauna) {
+        const totalVariants = [...microbial, ...flora, ...fauna]
+            .reduce((sum, org) => sum + org.spec.variants.length, 0);
+        return Math.min(1, totalVariants / 100);
     }
-    determineFloraAdaptation(genome, traits) {
-        const adaptations = [];
-        if (traits.spatialDependency > 0.6)
-            adaptations.push('aerial');
-        if (traits.emotionalTemperature > 0.6)
-            adaptations.push('flowering');
-        if (traits.informationDensity > 0.7)
-            adaptations.push('crystalline');
-        if (traits.temporalUrgency < 0.3)
-            adaptations.push('ancient');
-        return adaptations.join(', ') || 'standard';
-    }
-    determineBehavior(genome) {
-        const physics = genome.chromosomes.ch8_motion.physics;
-        const playfulness = genome.chromosomes.ch15_biomarker.complexity;
-        if (playfulness > 0.7)
-            return 'playful';
-        if (physics === 'none')
-            return 'static';
-        if (physics === 'spring')
-            return 'energetic';
-        if (physics === 'glitch')
-            return 'erratic';
-        return 'balanced';
-    }
-    determineSocialStructure(genome) {
-        const topology = genome.chromosomes.ch1_structure.topology;
-        const density = genome.chromosomes.ch2_rhythm.density;
-        if (topology === 'radial')
-            return 'hive';
-        if (density === 'airtight')
-            return 'collective';
-        if (density === 'empty')
-            return 'individualist';
-        if (topology === 'graph')
-            return 'networked';
-        return 'tribal';
-    }
-    mutate(value, rate) {
-        const mutation = (Math.random() - 0.5) * 2 * rate;
-        return Math.max(0, Math.min(1, value + mutation));
-    }
-    calculateDivergence(microbial, flora) {
-        if (microbial.length < 2)
-            return 0;
-        // Calculate average entropy difference
-        const entropies = microbial.map(m => m.entropy);
-        const avg = entropies.reduce((a, b) => a + b, 0) / entropies.length;
-        const variance = entropies.reduce((sum, e) => sum + Math.pow(e - avg, 2), 0) / entropies.length;
-        return Math.sqrt(variance);
-    }
-    calculateExtinctions(traits) {
-        // High playfulness + low temporal urgency = more extinction events
-        const volatility = traits.playfulness * (1 - traits.temporalUrgency);
-        return Math.floor(volatility * 5);
+    calculateStability(traits, complexity) {
+        const volatility = traits.playfulness * complexity;
+        return Math.max(0, 1 - volatility);
     }
 }
+export const ecosystemGenerator = new EcosystemGenerator();

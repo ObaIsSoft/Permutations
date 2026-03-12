@@ -2,19 +2,23 @@ import Groq from "groq-sdk";
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-const LLM_TIMEOUT_MS = 15_000; // 15s hard timeout per attempt
-const LLM_MAX_RETRIES = 3; // Retry up to 3 times with backoff
+const LLM_TIMEOUT_MS = 30_000; // 30s timeout per attempt (increased for cold starts)
+const LLM_MAX_RETRIES = 3; // Retry up to 3 times with exponential backoff + jitter
 export class SemanticTraitExtractor {
     groq;
     openai;
     anthropic;
     gemini;
+    openrouter; // OpenRouter uses OpenAI-compatible API
+    huggingface;
     provider;
     constructor(apiKey, provider) {
         const groqKey = process.env.GROQ_API_KEY;
         const openaiKey = process.env.OPENAI_API_KEY;
         const anthropicKey = process.env.ANTHROPIC_API_KEY;
         const geminiKey = process.env.GEMINI_API_KEY;
+        const openrouterKey = process.env.OPENROUTER_API_KEY;
+        const huggingfaceKey = process.env.HUGGINGFACE_API_KEY;
         if (provider) {
             this.provider = provider;
         }
@@ -30,12 +34,18 @@ export class SemanticTraitExtractor {
         else if (geminiKey) {
             this.provider = "gemini";
         }
+        else if (openrouterKey) {
+            this.provider = "openrouter";
+        }
+        else if (huggingfaceKey) {
+            this.provider = "huggingface";
+        }
         else {
             this.provider = "groq";
         }
-        const key = apiKey || groqKey || openaiKey || anthropicKey || geminiKey;
+        const key = apiKey || groqKey || openaiKey || anthropicKey || geminiKey || openrouterKey || huggingfaceKey;
         if (!key) {
-            throw new Error("No API key provided. Set one of: GROQ_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, or GEMINI_API_KEY");
+            throw new Error("No API key provided. Set one of: GROQ_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY, or HUGGINGFACE_API_KEY");
         }
         switch (this.provider) {
             case "groq":
@@ -51,6 +61,16 @@ export class SemanticTraitExtractor {
                 const genAI = new GoogleGenerativeAI(key);
                 this.gemini = genAI.getGenerativeModel({ model: "gemini-2.5-pro-latest" });
                 break;
+            case "openrouter":
+                // OpenRouter uses OpenAI-compatible API
+                this.openrouter = new OpenAI({
+                    apiKey: key,
+                    baseURL: "https://openrouter.ai/api/v1",
+                });
+                break;
+            case "huggingface":
+                this.huggingface = key; // Just store the key, we'll use fetch
+                break;
         }
     }
     /**
@@ -60,7 +80,9 @@ export class SemanticTraitExtractor {
         return !!(process.env.GROQ_API_KEY ||
             process.env.OPENAI_API_KEY ||
             process.env.ANTHROPIC_API_KEY ||
-            process.env.GEMINI_API_KEY);
+            process.env.GEMINI_API_KEY ||
+            process.env.OPENROUTER_API_KEY ||
+            process.env.HUGGINGFACE_API_KEY);
     }
     async extractTraits(intent, projectContext) {
         const prompt = this.buildPrompt(intent, projectContext);
@@ -82,7 +104,9 @@ export class SemanticTraitExtractor {
             catch (e) {
                 lastError = e;
                 if (attempt < LLM_MAX_RETRIES) {
-                    const delay = 500 * Math.pow(2, attempt - 1); // 500ms, 1000ms, 2000ms
+                    const baseDelay = 500 * Math.pow(2, attempt - 1); // 500ms, 1000ms, 2000ms
+                    const jitter = Math.random() * 500; // Add 0-500ms random jitter
+                    const delay = baseDelay + jitter;
                     console.error(`[extractor] Attempt ${attempt}/${LLM_MAX_RETRIES} failed, retrying in ${delay}ms:`, e?.message);
                     await new Promise(r => setTimeout(r, delay));
                 }
@@ -113,38 +137,164 @@ export class SemanticTraitExtractor {
             case "openai": return this.extractWithOpenAI(prompt);
             case "anthropic": return this.extractWithAnthropic(prompt);
             case "gemini": return this.extractWithGemini(prompt);
+            case "openrouter": return this.extractWithOpenRouter(prompt);
+            case "huggingface": return this.extractWithHuggingFace(prompt);
             default: throw new Error(`Unknown provider: ${this.provider}`);
         }
     }
     buildPrompt(intent, projectContext) {
-        return `You are a Semantic Trait Extractor for a parametric design system.
-Analyze the following design intent and overarching project context, then map it to eight continuous trait vectors between 0.0 and 1.0.
+        return `You are a Semantic Trait Extractor for a parametric design system with 25-chromosome DNA generation.
 
-Traits:
-1. informationDensity: 0.1 (sparse, luxurious, minimal) to 0.9 (chaotic, data-heavy, dashboard)
-2. temporalUrgency: 0.1 (timeless, archival, deep reading) to 0.9 (real-time, scanning, high-frequency)
-3. emotionalTemperature: 0.1 (clinical, technical, brutalist) to 0.9 (warm, humanist, empathetic)
-4. playfulness: 0.1 (strict, rigid, enterprise) to 0.9 (organic, whimsical, experimental)
-5. spatialDependency: 0.1 (flat, Cartesian CSS, text-heavy) to 0.9 (immersive, WebGL, 3D particles, z-depth)
-6. trustRequirement: 0.1 (casual, no credentials needed) to 0.9 (high-stakes, security-critical, requires proof)
-7. visualEmphasis: 0.1 (text-first, minimal imagery) to 0.9 (image-dominant, photography-heavy, visual storytelling)
-8. conversionFocus: 0.1 (purely informational, no CTA) to 0.9 (sales-heavy, e-commerce, aggressive CTA)
+Analyze the design intent and map to 8 trait vectors (0.0-1.0). Your output directly generates the design genome.
+
+═══════════════════════════════════════════════════════════════
+TRAIT DEFINITIONS (with real-world anchors)
+═══════════════════════════════════════════════════════════════
+
+1. informationDensity: Data presentation density
+   0.1 = Luxury brand homepage (single hero image, minimal text)
+   0.5 = Standard landing page (balanced content)
+   0.9 = Bloomberg Terminal (dense data, multiple widgets, real-time feeds)
+
+2. temporalUrgency: Time sensitivity and update frequency
+   0.1 = Museum archive (permanent, timeless content)
+   0.5 = Blog/news site (daily updates)
+   0.9 = Stock trading dashboard (milliseconds matter, live ticker)
+
+3. emotionalTemperature: Human warmth vs clinical precision
+   0.1 = Government form, medical diagnostic tool (cold, precise)
+   0.5 = Corporate SaaS (neutral professionalism)
+   0.9 = Wellness brand, nonprofit (warm, empathetic, humanist)
+
+4. playfulness: Experimental creativity vs strict structure
+   0.1 = Legal document, compliance dashboard (rigid, formal)
+   0.5 = Standard business site (structured but approachable)
+   0.9 = Creative agency, game, children app (whimsical, organic shapes)
+
+5. spatialDependency: Depth and dimensionality
+   0.1 = Wikipedia page (flat text, no depth)
+   0.5 = Modern marketing site (subtle parallax, layers)
+   0.9 = 3D product configurator, metaverse experience (WebGL, immersive)
+
+6. trustRequirement: Need for credibility and security signals
+   0.1 = Personal blog, casual social (no credentials needed)
+   0.5 = E-commerce (standard trust badges)
+   0.9 = Healthcare portal, bank, legal (HIPAA, SOC2, certifications)
+
+7. visualEmphasis: Image-to-text ratio
+   0.1 = Documentation, technical manual (text-heavy)
+   0.5 = Balanced content site
+   0.9 = Photography portfolio, fashion lookbook (image-dominant)
+
+8. conversionFocus: Sales pressure and CTA prominence
+   0.1 = Educational resource, nonprofit awareness (pure information)
+   0.5 = Standard business (contact forms, newsletter signup)
+  0.9 = E-commerce checkout, sales page (aggressive CTAs, scarcity)
+
+═══════════════════════════════════════════════════════════════
+COMPLEXITY TIER SYSTEM (civilization thresholds)
+═══════════════════════════════════════════════════════════════
+
+Complexity determines the "civilization tier" - how sophisticated the generated system is:
+
+0.00-0.29 (Microbial): Atomic components only (buttons, inputs)
+0.30-0.49 (Flora): Growing components (cards, dropdowns)
+0.50-0.69 (Fauna): Complex organisms (data tables, wizards)
+0.70-0.84 (Sentient): CIVILIZATION BEGINS - Full architecture, state management
+0.85-0.94 (Civilized): Multi-page app, routing, advanced patterns
+0.95-1.00 (Advanced): AI-driven, micro-frontends, generative components
+
+BOOST COMPLEXITY when intent includes these keywords:
++0.20: dashboard, platform, system, suite, application
++0.18: 3d, webgl, data visualization, real-time, immersive
++0.15: spatial, live, collaborative, multiplayer
++0.12: animation, motion, physics, spring
++0.10: interactive, dynamic, social
++0.08: component, library, accessible
+
+TARGET: If the intent suggests a sophisticated application (not just a landing page),
+ensure trait combinations push complexity toward 0.70+ to trigger civilization tier.
+
+═══════════════════════════════════════════════════════════════
+EPISTASIS RULES (trait interactions - APPLY THESE CONSTRAINTS)
+═══════════════════════════════════════════════════════════════
+
+These rules govern how traits interact. Use them to constrain your output:
+
+RULE 1: High Information + High Urgency = Serious Data
+IF informationDensity > 0.7 AND temporalUrgency > 0.7:
+  → playfulness MUST be < 0.4 (serious data work, not playful)
+  → emotionalTemperature SHOULD be < 0.5 (clinical focus)
+  Example: Trading dashboard, emergency response system
+
+RULE 2: High Urgency + Low Playfulness = No Animation
+IF temporalUrgency > 0.8 AND playfulness < 0.3:
+  → Motion physics suppressed (static for scanning speed)
+  Example: Bloomberg Terminal, medical monitoring
+
+RULE 3: Dashboard Data Density = Fade Transitions
+IF informationDensity > 0.7:
+  → Component enter animations become FADE (not slide/scale)
+  → Reason: Sliding distracts from data scanning
+
+RULE 4: Trust + Warmth = Healthcare Pattern
+IF trustRequirement > 0.7 AND emotionalTemperature > 0.6:
+  → Healthcare/wellness aesthetic (calming, credible, human)
+  Example: Patient portal, therapy app
+
+RULE 5: Spatial + Playful = 3D/Immersive
+IF spatialDependency > 0.7 AND playfulness > 0.6:
+  → WebGL, 3D particles, generative art, creative coding
+  Example: Creative agency, portfolio, experiential site
+
+RULE 6: Cold + Rigid = Brutalist/Enterprise
+IF emotionalTemperature < 0.3 AND playfulness < 0.3:
+  → Brutalist aesthetic (sharp edges, monospace, raw)
+  Example: Developer tools, industrial, legal
+
+RULE 7: Visual-First + Timeless = Luxury
+IF visualEmphasis > 0.7 AND temporalUrgency < 0.3:
+  → Luxury/premium aesthetic (editorial, art direction, gallery)
+  Example: Fashion brand, luxury real estate
+
+═══════════════════════════════════════════════════════════════
+SECTOR DEFAULTS (apply unless context overrides)
+═══════════════════════════════════════════════════════════════
+
+Detected sector context should bias these defaults:
+
+FINTECH: trustRequirement 0.7+, temporalUrgency 0.6+, informationDensity 0.6+
+HEALTHCARE: trustRequirement 0.8+, emotionalTemperature 0.6+
+CREATIVE/PORTFOLIO: visualEmphasis 0.8+, playfulness 0.6+
+DOCUMENTATION: temporalUrgency 0.2, visualEmphasis 0.2, informationDensity 0.5
+ECOMMERCE: conversionFocus 0.7+, trustRequirement 0.5+
+SAAS/TECH: informationDensity 0.5, playfulness 0.3-0.5, emotionalTemperature 0.3-0.5
+
+═══════════════════════════════════════════════════════════════
+INPUT TO ANALYZE
+═══════════════════════════════════════════════════════════════
 
 Immediate Intent: "${intent}"
 Overarching Project Context: "${projectContext || "No additional context provided."}"
 
-IMPORTANT V3 OVERRIDE RULE: If the immediate intent is a simple partial prompt like "build a pricing table", you MUST rely heavily on the Overarching Project Context to determine the aesthetic vectors (e.g. if the context is biological adaptation, the table MUST be extremely playful and spatial).
+═══════════════════════════════════════════════════════════════
+OUTPUT INSTRUCTIONS
+═══════════════════════════════════════════════════════════════
 
-Respond ONLY with a valid JSON object matching this exact shape:
+1. Apply the EPISTASIS RULES to constrain trait combinations
+2. Check for COMPLEXITY KEYWORDS and adjust toward appropriate tier
+3. Apply SECTOR DEFAULTS if context suggests a specific industry
+4. Output EXACTLY this JSON structure (no markdown, no explanation):
+
 {
-  "informationDensity": 0.5,
-  "temporalUrgency": 0.5,
-  "emotionalTemperature": 0.5,
-  "playfulness": 0.5,
-  "spatialDependency": 0.5,
-  "trustRequirement": 0.3,
-  "visualEmphasis": 0.3,
-  "conversionFocus": 0.4
+  "informationDensity": 0.0-1.0,
+  "temporalUrgency": 0.0-1.0,
+  "emotionalTemperature": 0.0-1.0,
+  "playfulness": 0.0-1.0,
+  "spatialDependency": 0.0-1.0,
+  "trustRequirement": 0.0-1.0,
+  "visualEmphasis": 0.0-1.0,
+  "conversionFocus": 0.0-1.0
 }`;
     }
     async extractWithGroq(prompt) {
@@ -203,6 +353,46 @@ Respond ONLY with a valid JSON object matching this exact shape:
         const jsonMatch = text.match(/\{[\s\S]*\}/);
         if (!jsonMatch)
             throw new Error("No JSON found in Gemini response");
+        return JSON.parse(jsonMatch[0]);
+    }
+    async extractWithOpenRouter(prompt) {
+        if (!this.openrouter)
+            throw new Error("OpenRouter client not initialized");
+        const response = await this.openrouter.chat.completions.create({
+            model: "meta-llama/llama-4-scout-17b-16e-instruct", // Default to Llama 4 Scout
+            messages: [{ role: "user", content: prompt }],
+            response_format: { type: "json_object" },
+            temperature: 0.2,
+        });
+        const content = response.choices[0].message.content || "{}";
+        return JSON.parse(content);
+    }
+    async extractWithHuggingFace(prompt) {
+        if (!this.huggingface)
+            throw new Error("HuggingFace key not set");
+        const response = await fetch("https://api-inference.huggingface.co/models/meta-llama/Meta-Llama-3-8B-Instruct", {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${this.huggingface}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                inputs: prompt,
+                parameters: {
+                    temperature: 0.2,
+                    max_new_tokens: 512,
+                    return_full_text: false,
+                },
+            }),
+        });
+        if (!response.ok) {
+            throw new Error(`HuggingFace API error: ${response.status} ${response.statusText}`);
+        }
+        const result = await response.json();
+        const text = Array.isArray(result) ? result[0]?.generated_text : result.generated_text;
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (!jsonMatch)
+            throw new Error("No JSON found in HuggingFace response");
         return JSON.parse(jsonMatch[0]);
     }
     clamp(value) {

@@ -1,3 +1,6 @@
+import * as fs from "fs/promises";
+import * as path from "path";
+import * as crypto from "crypto";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
@@ -16,10 +19,12 @@ import { SVGGenerator } from "./generators/svg-generator.js";
 import { EpigeneticParser } from "./genome/epigenetics.js";
 import { detectArchetype } from "./genome/archetypes.js";
 import { PatternDetector } from "./constraints/pattern-detector.js";
-import { EcosystemGenerator } from "./genome/ecosystem.js";
+import { ecosystemGenerator, Ecosystem } from "./genome/ecosystem.js";
 import { CivilizationGenerator } from "./genome/civilization.js";
 import { generateCivilizationOutput } from "./generators/civilization-generators.js";
 import { ContentExtractor } from "./genome/extractor.js";
+import { DesignFileWriter } from "./generators/file-writer.js";
+import { formatGenerator } from "./generators/format-generators.js";
 
 class DesignGenomeServer {
     private server: Server;
@@ -32,9 +37,10 @@ class DesignGenomeServer {
     private svgGen: SVGGenerator;
     private epigeneticParser: EpigeneticParser;
     private patternDetector: PatternDetector;
-    private ecosystemGen: EcosystemGenerator;
+
     private civilizationGen: CivilizationGenerator;
     private contentExtractor: ContentExtractor;
+    private fileWriter: DesignFileWriter;
 
     constructor() {
         this.server = new Server(
@@ -51,9 +57,10 @@ class DesignGenomeServer {
         this.svgGen = new SVGGenerator();
         this.epigeneticParser = new EpigeneticParser();
         this.patternDetector = new PatternDetector();
-        this.ecosystemGen = new EcosystemGenerator();
+
         this.civilizationGen = new CivilizationGenerator();
         this.contentExtractor = new ContentExtractor();
+        this.fileWriter = new DesignFileWriter();
 
         this.setupHandlers();
     }
@@ -74,6 +81,11 @@ class DesignGenomeServer {
                                 type: "array",
                                 items: { type: "string" },
                                 description: "Absolute paths to any brand guidelines (PDF) or logos (PNG) for Epigenetic modification"
+                            },
+                            font_provider: {
+                                type: "string",
+                                enum: ["bunny", "google"],
+                                description: "Typography provider (default: bunny)"
                             }
                         },
                         required: ["intent", "seed"]
@@ -119,19 +131,19 @@ class DesignGenomeServer {
                 },
                 {
                     name: "generate_ecosystem",
-                    description: "Generates a complete planetary ecosystem with divergent evolution - microbes, flora, fauna, and civilization detection",
+                    description: "Generates a complete ecosystem of design components - microbial (atomic), flora (growing), fauna (complex) - all sharing ONE genome. Returns component specs, relationships, and civilization readiness.",
                     inputSchema: {
                         type: "object",
                         properties: {
                             intent: { type: "string", description: "Natural language design intent" },
-                            seed: { type: "string", description: "Unique planet seed" },
-                            project_context: { type: "string", description: "Planetary environment context" },
+                            seed: { type: "string", description: "Unique ecosystem seed" },
+                            project_context: { type: "string", description: "Environment context" },
                             options: {
                                 type: "object",
                                 properties: {
-                                    microbialCount: { type: "number", description: "Number of microbial variants (default: 8)" },
-                                    floraCount: { type: "number", description: "Number of flora variants (default: 4)" },
-                                    faunaCount: { type: "number", description: "Number of fauna variants (default: 2)" }
+                                    microbialCount: { type: "number", description: "Number of microbial organisms (12-16, default: auto)" },
+                                    floraCount: { type: "number", description: "Number of flora organisms (8-12, default: auto)" },
+                                    faunaCount: { type: "number", description: "Number of fauna organisms (6-10, default: auto)" }
                                 }
                             }
                         },
@@ -140,13 +152,17 @@ class DesignGenomeServer {
                 },
                 {
                     name: "generate_civilization",
-                    description: "Generates a civilization-tier sophisticated design system with component libraries, animation systems, and architectural patterns. Requires intent with complexity keywords (e.g., 'dashboard', '3D', 'real-time') or explicit minTier.",
+                    description: "Generates architecture layer for a civilization-tier design system. Takes ecosystem organisms as input and adds state management, routing, and advanced patterns. If ecosystem not provided, generates standalone.",
                     inputSchema: {
                         type: "object",
                         properties: {
                             intent: { type: "string", description: "Natural language design intent. Use complex keywords: dashboard, platform, 3D, real-time, collaborative" },
                             seed: { type: "string", description: "Unique project seed" },
                             project_context: { type: "string", description: "Detailed project context (longer = more sophisticated)" },
+                            ecosystem: {
+                                type: "object",
+                                description: "OPTIONAL: Ecosystem from generate_ecosystem. If provided, civilization will use those organisms and add architecture. Recommended for component library → application flow."
+                            },
                             min_tier: {
                                 type: "string",
                                 enum: ["sentient", "civilized", "advanced"],
@@ -156,9 +172,129 @@ class DesignGenomeServer {
                                 type: "boolean",
                                 description: "Whether to generate actual React/TypeScript code (default: true)",
                                 default: true
+                            },
+                            font_provider: {
+                                type: "string",
+                                enum: ["bunny", "google"],
+                                description: "Typography provider"
                             }
                         },
                         required: ["intent", "seed"]
+                    }
+                },
+                {
+                    name: "write_design_files",
+                    description: "Writes generated design outputs to disk as organized component files, styles, and configuration. Creates a complete file structure ready for development.",
+                    inputSchema: {
+                        type: "object",
+                        properties: {
+                            genome: {
+                                type: "object",
+                                description: "The design genome from generate_design_genome or generate_civilization"
+                            },
+                            outputs: {
+                                type: "object",
+                                description: "Generated outputs to write",
+                                properties: {
+                                    components: { type: "string" },
+                                    animations: { type: "string" },
+                                    architecture: { type: "string" },
+                                    tokens: { type: "string" },
+                                    interactions: { type: "string" },
+                                    css: { type: "string" },
+                                    html: { type: "string" },
+                                    webgl: { type: "string" },
+                                    fx: { type: "string" },
+                                    svg: { type: "string" }
+                                }
+                            },
+                            output_dir: {
+                                type: "string",
+                                description: "Directory to write files to (absolute path)"
+                            },
+                            framework: {
+                                type: "string",
+                                enum: ["react", "vue", "svelte", "vanilla"],
+                                default: "react"
+                            },
+                            styling: {
+                                type: "string",
+                                enum: ["css", "tailwind", "css-in-js", "scss"],
+                                default: "css"
+                            },
+                            typescript: {
+                                type: "boolean",
+                                default: true
+                            },
+                            include_preview: {
+                                type: "boolean",
+                                description: "Generate standalone HTML preview file",
+                                default: true
+                            }
+                        },
+                        required: ["genome", "output_dir"]
+                    }
+                },
+                {
+                    name: "generate_preview",
+                    description: "Generates a standalone HTML preview file that can be opened in a browser to visualize the design without implementation.",
+                    inputSchema: {
+                        type: "object",
+                        properties: {
+                            genome: { type: "object", description: "Design genome" },
+                            css: { type: "string", description: "Generated CSS" },
+                            html: { type: "string", description: "Generated HTML" },
+                            output_path: { type: "string", description: "Optional: path to write preview HTML" }
+                        },
+                        required: ["genome", "css", "html"]
+                    }
+                },
+                {
+                    name: "update_design_genome",
+                    description: "Updates an existing design genome with specific changes. Returns a diff showing what changed and the new genome.",
+                    inputSchema: {
+                        type: "object",
+                        properties: {
+                            original_genome: { type: "object", description: "The original design genome to modify" },
+                            changes: {
+                                type: "object",
+                                description: "Specific changes to apply",
+                                properties: {
+                                    primary_hue: { type: "number", description: "New primary color hue (0-360)" },
+                                    motion_physics: { type: "string", enum: ["none", "spring", "step", "glitch"] },
+                                    edge_radius: { type: "number" },
+                                    hero_type: { type: "string" },
+                                    sector: { type: "string" },
+                                    new_seed: { type: "string", description: "Generate completely new DNA with this seed" }
+                                }
+                            },
+                            preserve_traits: {
+                                type: "boolean",
+                                description: "Keep original trait analysis (default: true)",
+                                default: true
+                            }
+                        },
+                        required: ["original_genome", "changes"]
+                    }
+                },
+                {
+                    name: "generate_formats",
+                    description: "Generates design outputs in alternative formats: Vue, Svelte, Figma Tokens, Style Dictionary, styled-components, or Emotion.",
+                    inputSchema: {
+                        type: "object",
+                        properties: {
+                            genome: { type: "object", description: "Design genome from generate_design_genome" },
+                            tier: { type: "object", description: "Optional: Civilization tier for component generation" },
+                            formats: {
+                                type: "array",
+                                items: {
+                                    type: "string",
+                                    enum: ["figma-tokens", "style-dictionary", "styled-components", "emotion", "vue", "svelte", "all"]
+                                },
+                                description: "Formats to generate"
+                            }
+                        },
+                        required: ["genome", "formats"]
                     }
                 }
             ]
@@ -221,7 +357,10 @@ class DesignGenomeServer {
                             : "technology";
 
                         // 4. DNA Sequencing
-                        const genome = this.sequencer.generate(seed, traits, { primarySector: detectedSector }, epigeneticData);
+                        const genome = this.sequencer.generate(seed, traits, {
+                            primarySector: detectedSector,
+                            options: { fontProvider: args.font_provider }
+                        }, epigeneticData);
 
                         // 4. Component Generation
                         const tailwindConfig = this.cssGen.generate(genome, { format: "compressed" });
@@ -329,51 +468,97 @@ class DesignGenomeServer {
                         const context = args.project_context || "";
                         const traits = await this.extractor.extractTraits(args.intent, context);
 
-                        // Generate full ecosystem with divergent evolution
-                        const ecosystem = this.ecosystemGen.generate(args.seed, traits, args.options);
+                        // Generate ecosystem V2 - all organisms share ONE genome
+                        const ecosystem = ecosystemGenerator.generate(args.seed, traits, args.options);
 
-                        // Generate component outputs for each life form
-                        const outputs = {
-                            planet: {
-                                tailwind: this.cssGen.generate(ecosystem.planet.baseGenome, { format: "compressed" }),
-                                topology: this.htmlGen.generateTopology(ecosystem.planet.baseGenome)
-                            },
-                            microbial: ecosystem.lifeForms.microbial.map(m => ({
-                                id: m.id,
-                                tailwind: this.cssGen.generate(m.genome, { format: "compressed" })
+                        // Generate CSS from the shared genome
+                        const css = this.cssGen.generate(ecosystem.environment.genome, { format: "compressed" });
+                        const topology = this.htmlGen.generateTopology(ecosystem.environment.genome);
+
+                        // Organize organisms by category
+                        const organisms = {
+                            microbial: ecosystem.organisms.microbial.map(o => ({
+                                id: o.id,
+                                name: o.name,
+                                variants: o.spec.variants,
+                                props: o.spec.props.map(p => p.name),
+                                containedBy: o.relationships.predator,
+                                colorTreatment: o.characteristics.colorTreatment
                             })),
-                            flora: ecosystem.lifeForms.flora.map(f => ({
-                                id: f.id,
-                                tailwind: this.cssGen.generate(f.genome, { format: "compressed" })
+                            flora: ecosystem.organisms.flora.map(o => ({
+                                id: o.id,
+                                name: o.name,
+                                variants: o.spec.variants,
+                                props: o.spec.props.map(p => p.name),
+                                contains: o.relationships.prey,
+                                containedBy: o.relationships.predator,
+                                motionStyle: o.characteristics.motionStyle
                             })),
-                            civilization: ecosystem.civilization ? {
-                                level: ecosystem.civilization.sentienceLevel,
-                                techEras: ecosystem.civilization.technologyTree.map(t => t.era),
-                                designPatterns: ecosystem.civilization.technologyTree.flatMap(t => t.designPatterns)
-                            } : null
+                            fauna: ecosystem.organisms.fauna.map(o => ({
+                                id: o.id,
+                                name: o.name,
+                                variants: o.spec.variants,
+                                props: o.spec.props.map(p => p.name),
+                                contains: o.relationships.prey,
+                                complexity: o.adaptation.entropy
+                            }))
                         };
+
+                        // Key relationships for composition patterns
+                        const keyRelationships = ecosystem.relationships
+                            .filter(r => r.type === 'containment')
+                            .slice(0, 10)
+                            .map(r => ({
+                                container: r.organisms[0],
+                                contained: r.organisms[1],
+                                pattern: r.pattern
+                            }));
 
                         return {
                             content: [{
                                 type: "text",
                                 text: JSON.stringify({
                                     ecosystem: {
-                                        planet: {
-                                            seed: ecosystem.planet.seed,
-                                            conditions: ecosystem.planet.conditions,
-                                            habitabilityScore: ecosystem.planet.habitabilityScore,
-                                            dnaHash: ecosystem.planet.baseGenome.dnaHash
+                                        environment: {
+                                            dnaHash: ecosystem.environment.genome.dnaHash,
+                                            habitabilityScore: ecosystem.environment.habitabilityScore,
+                                            carryingCapacity: ecosystem.environment.carryingCapacity
                                         },
-                                        lifeForms: {
-                                            microbialCount: ecosystem.lifeForms.microbial.length,
-                                            floraCount: ecosystem.lifeForms.flora.length,
-                                            faunaCount: ecosystem.lifeForms.fauna.length,
-                                            dominant: ecosystem.lifeForms.dominant
+                                        organisms: {
+                                            counts: {
+                                                microbial: ecosystem.organisms.microbial.length,
+                                                flora: ecosystem.organisms.flora.length,
+                                                fauna: ecosystem.organisms.fauna.length,
+                                                total: ecosystem.organisms.total
+                                            },
+                                            ...organisms
                                         },
-                                        civilization: ecosystem.civilization,
-                                        evolution: ecosystem.evolution
+                                        evolution: ecosystem.evolution,
+                                        relationships: {
+                                            total: ecosystem.relationships.length,
+                                            containment: keyRelationships,
+                                            symbiosis: ecosystem.relationships
+                                                .filter(r => r.type === 'symbiosis')
+                                                .slice(0, 5)
+                                                .map(r => ({ organisms: r.organisms, pattern: r.pattern }))
+                                        },
+                                        civilization: {
+                                            ready: ecosystem.civilizationReady,
+                                            threshold: ecosystem.civilizationThreshold,
+                                            currentComplexity: ecosystem.evolution.complexity,
+                                            gap: Math.max(0, ecosystem.civilizationThreshold - ecosystem.evolution.complexity)
+                                        }
                                     },
-                                    outputs
+                                    sharedGenome: ecosystem.environment.genome,
+                                    css,
+                                    topology,
+                                    usage: {
+                                        whenCivilizationReady: ecosystem.civilizationReady 
+                                            ? "Call generate_civilization with the same seed to get architecture, state management, and advanced patterns"
+                                            : `Add complexity (dashboard, 3D, real-time keywords) or increase counts to reach threshold ${ecosystem.civilizationThreshold}`,
+                                        componentHierarchy: "Fauna contain Flora contain Microbial - use relationships.containment for composition",
+                                        fileStructure: "Each organism maps to a component file - use write_design_files to output"
+                                    }
                                 }, null, 2)
                             }]
                         };
@@ -388,6 +573,27 @@ class DesignGenomeServer {
                         const context = args.project_context || "";
                         const traits = await this.extractor.extractTraits(args.intent, context);
 
+                        // ECOSYSTEM INTEGRATION: Use provided ecosystem or generate standalone
+                        let ecosystem = args.ecosystem;
+                        let baseGenome = null;
+                        let organisms = null;
+                        
+                        if (ecosystem) {
+                            // Use ecosystem's organisms and genome
+                            baseGenome = ecosystem.environment?.genome;
+                            organisms = ecosystem.organisms;
+                        }
+                        
+                        // If no ecosystem or genome, generate new one
+                        if (!baseGenome) {
+                            const civContentForSector = [args.intent, context].filter(Boolean).join(" ");
+                            const civContentAnalysis = this.contentExtractor.analyze(civContentForSector);
+                            const civSector = civContentAnalysis.success && civContentAnalysis.content
+                                ? civContentAnalysis.content.sector.primary
+                                : "technology";
+                            baseGenome = this.sequencer.generate(args.seed, traits, { primarySector: civSector });
+                        }
+
                         // Generate civilization tier
                         const tier = this.civilizationGen.generate(
                             args.intent,
@@ -396,17 +602,35 @@ class DesignGenomeServer {
                             args.min_tier
                         );
 
-                        // Generate code if requested
+                        // Generate code and structured file outputs
                         let codeOutputs = null;
+                        let fileStructure = null;
+
                         if (args.generate_code !== false) {
-                            // Detect sector for accurate genome generation
-                            const civContentForSector = [args.intent, context].filter(Boolean).join(" ");
-                            const civContentAnalysis = this.contentExtractor.analyze(civContentForSector);
-                            const civSector = civContentAnalysis.success && civContentAnalysis.content
-                                ? civContentAnalysis.content.sector.primary
-                                : "technology";
-                            const baseGenome = this.sequencer.generate(args.seed, traits, { primarySector: civSector });
-                            codeOutputs = generateCivilizationOutput(tier, baseGenome);
+                            // UNIFIED CSS: Use CSSGenerator like other tools
+                            const css = this.cssGen.generate(baseGenome, { format: "compressed" });
+                            const topology = this.htmlGen.generateTopology(baseGenome);
+                            
+                            // Generate code using genome with unified CSS/topology
+                            codeOutputs = generateCivilizationOutput(tier, baseGenome, css, topology);
+
+                            // Use ecosystem organisms if available, otherwise use tier components
+                            const componentList = organisms 
+                                ? [...organisms.microbial, ...organisms.flora, ...organisms.fauna]
+                                : tier.components.list;
+
+                            // Generate file structure for easy consumption
+                            fileStructure = {
+                                components: componentList.map((c: any) => ({
+                                    name: c.name,
+                                    file: `components/${c.name}.tsx`,
+                                    category: c.category,
+                                    variants: c.spec?.variants || c.variants
+                                })),
+                                styles: ["styles/tokens.css", "styles/genome.css"],
+                                lib: ["lib/animations.ts", "lib/interactions.ts"],
+                                config: ["tailwind.config.js"]
+                            };
                         }
 
                         return {
@@ -416,19 +640,269 @@ class DesignGenomeServer {
                                     tier: tier.tier,
                                     complexity: tier.complexity,
                                     architecture: tier.architecture,
+                                    source: ecosystem ? "ecosystem" : "standalone",
                                     components: {
-                                        count: tier.components.count,
-                                        categories: [...new Set(tier.components.list.map(c => c.category))]
+                                        count: organisms 
+                                            ? organisms.microbial.length + organisms.flora.length + organisms.fauna.length
+                                            : tier.components.count,
+                                        list: organisms
+                                            ? [...organisms.microbial, ...organisms.flora, ...organisms.fauna].map(o => ({
+                                                name: o.name,
+                                                category: o.category,
+                                                variants: o.spec?.variants
+                                            }))
+                                            : tier.components.list,
+                                        categories: organisms
+                                            ? [...new Set([...organisms.microbial, ...organisms.flora, ...organisms.fauna].map(o => o.category))]
+                                            : [...new Set(tier.components.list.map(c => c.category))]
                                     },
-                                    animations: {
-                                        physics: tier.animations.physics,
-                                        types: tier.animations.types,
-                                        choreography: tier.animations.choreography
-                                    },
+                                    animations: tier.animations,
                                     designSystem: tier.designSystem,
                                     interactions: tier.interactions,
                                     ai: tier.ai,
-                                    code: codeOutputs
+                                    files: fileStructure,
+                                    code: codeOutputs,
+                                    genome: baseGenome,
+                                    organisms: organisms ? {
+                                        microbial: organisms.microbial.length,
+                                        flora: organisms.flora.length,
+                                        fauna: organisms.fauna.length
+                                    } : null
+                                }, null, 2)
+                            }]
+                        };
+                    }
+
+                    case "write_design_files": {
+                        if (!args.genome || !args.output_dir) {
+                            throw new McpError(ErrorCode.InvalidParams, "Missing genome or output_dir");
+                        }
+
+                        const outputs = args.outputs || {};
+                        const options = {
+                            baseDir: args.output_dir,
+                            framework: args.framework || "react",
+                            styling: args.styling || "css",
+                            typescript: args.typescript !== false,
+                            includePreview: args.include_preview !== false
+                        };
+
+                        // Generate preview if requested and HTML/CSS provided
+                        if (options.includePreview && outputs.css && outputs.html) {
+                            outputs.html = this.fileWriter.generatePreviewHTML(
+                                args.genome,
+                                outputs.css,
+                                outputs.html
+                            );
+                        }
+
+                        const result = await this.fileWriter.writeDesignSystem(
+                            args.genome,
+                            outputs,
+                            options
+                        );
+
+                        const fileStructure = this.fileWriter.generateFileStructure(
+                            result.files,
+                            options.baseDir
+                        );
+
+                        return {
+                            content: [{
+                                type: "text",
+                                text: JSON.stringify({
+                                    success: result.success,
+                                    filesWritten: result.files.length,
+                                    fileList: result.files.map(f => path.relative(options.baseDir, f)),
+                                    structure: fileStructure,
+                                    errors: result.errors,
+                                    baseDir: result.baseDir
+                                }, null, 2)
+                            }]
+                        };
+                    }
+
+                    case "generate_preview": {
+                        if (!args.genome || !args.css || !args.html) {
+                            throw new McpError(ErrorCode.InvalidParams, "Missing genome, css, or html");
+                        }
+
+                        const previewHTML = this.fileWriter.generatePreviewHTML(
+                            args.genome,
+                            args.css,
+                            args.html
+                        );
+
+                        // Optionally write to disk
+                        if (args.output_path) {
+                            await fs.mkdir(path.dirname(args.output_path), { recursive: true });
+                            await fs.writeFile(args.output_path, previewHTML, "utf-8");
+                        }
+
+                        return {
+                            content: [{
+                                type: "text",
+                                text: JSON.stringify({
+                                    previewHTML: previewHTML.slice(0, 2000) + (previewHTML.length > 2000 ? "..." : ""),
+                                    fullLength: previewHTML.length,
+                                    writtenTo: args.output_path || null,
+                                    instructions: args.output_path 
+                                        ? `Preview written to ${args.output_path}. Open in browser to visualize.`
+                                        : "Use output_path parameter to write to disk, or embed previewHTML in an iframe."
+                                }, null, 2)
+                            }]
+                        };
+                    }
+
+                    case "update_design_genome": {
+                        if (!args.original_genome || !args.changes) {
+                            throw new McpError(ErrorCode.InvalidParams, "Missing original_genome or changes");
+                        }
+
+                        const original = args.original_genome;
+                        const changes = args.changes;
+                        const preserveTraits = args.preserve_traits !== false;
+
+                        // Track what changed
+                        const diff: Record<string, { old: any; new: any }> = {};
+                        const newGenome = JSON.parse(JSON.stringify(original)); // Deep clone
+
+                        // Apply changes
+                        if (changes.new_seed) {
+                            // Generate completely new genome
+                            const traits = preserveTraits ? original.traits : await this.extractor.extractTraits("updated", "");
+                            const config = { primarySector: changes.sector || original.sectorContext.primary };
+                            const regenerated = this.sequencer.generate(changes.new_seed, traits, config);
+                            
+                            diff["dnaHash"] = { old: original.dnaHash, new: regenerated.dnaHash };
+                            diff["full_regeneration"] = { old: false, new: true };
+                            
+                            return {
+                                content: [{
+                                    type: "text",
+                                    text: JSON.stringify({
+                                        type: "full_regeneration",
+                                        seed: changes.new_seed,
+                                        diff,
+                                        genome: regenerated,
+                                        previousHash: original.dnaHash
+                                    }, null, 2)
+                                }]
+                            };
+                        }
+
+                        // Apply specific chromosome changes
+                        if (changes.primary_hue !== undefined) {
+                            const oldHue = original.chromosomes?.ch5_color_primary?.hue;
+                            newGenome.chromosomes.ch5_color_primary.hue = changes.primary_hue;
+                            newGenome.chromosomes.ch5_color_primary.hex = this.hslToHex(
+                                changes.primary_hue,
+                                newGenome.chromosomes.ch5_color_primary.saturation,
+                                newGenome.chromosomes.ch5_color_primary.lightness
+                            );
+                            diff["ch5_color_primary.hue"] = { old: oldHue, new: changes.primary_hue };
+                        }
+
+                        if (changes.motion_physics) {
+                            const oldMotion = original.chromosomes?.ch8_motion?.physics;
+                            newGenome.chromosomes.ch8_motion.physics = changes.motion_physics;
+                            diff["ch8_motion.physics"] = { old: oldMotion, new: changes.motion_physics };
+                        }
+
+                        if (changes.edge_radius !== undefined) {
+                            const oldRadius = original.chromosomes?.ch7_edge?.radius;
+                            newGenome.chromosomes.ch7_edge.radius = changes.edge_radius;
+                            diff["ch7_edge.radius"] = { old: oldRadius, new: changes.edge_radius };
+                        }
+
+                        if (changes.hero_type) {
+                            const oldHero = original.chromosomes?.ch19_hero_type?.type;
+                            newGenome.chromosomes.ch19_hero_type.type = changes.hero_type;
+                            diff["ch19_hero_type.type"] = { old: oldHero, new: changes.hero_type };
+                        }
+
+                        if (changes.sector) {
+                            const oldSector = original.sectorContext?.primary;
+                            newGenome.sectorContext.primary = changes.sector;
+                            diff["sectorContext.primary"] = { old: oldSector, new: changes.sector };
+                        }
+
+                        // Recalculate hash if anything changed
+                        if (Object.keys(diff).length > 0) {
+                            const crypto = await import("crypto");
+                            newGenome.dnaHash = crypto.createHash("sha256")
+                                .update(JSON.stringify(newGenome.chromosomes))
+                                .digest("hex");
+                            diff["dnaHash"] = { 
+                                old: original.dnaHash, 
+                                new: newGenome.dnaHash 
+                            };
+                        }
+
+                        return {
+                            content: [{
+                                type: "text",
+                                text: JSON.stringify({
+                                    type: "partial_update",
+                                    changesApplied: Object.keys(diff).length,
+                                    diff,
+                                    genome: newGenome,
+                                    canRevert: true
+                                }, null, 2)
+                            }]
+                        };
+                    }
+
+                    case "generate_formats": {
+                        if (!args.genome || !args.formats) {
+                            throw new McpError(ErrorCode.InvalidParams, "Missing genome or formats");
+                        }
+
+                        const genome = args.genome;
+                        const tier = args.tier;
+                        const requestedFormats = args.formats as string[];
+                        const generateAll = requestedFormats.includes("all");
+
+                        const outputs: Record<string, any> = {};
+
+                        if (generateAll || requestedFormats.includes("figma-tokens")) {
+                            outputs.figmaTokens = formatGenerator.generateFigmaTokens(genome);
+                        }
+
+                        if (generateAll || requestedFormats.includes("style-dictionary")) {
+                            outputs.styleDictionary = formatGenerator.generateStyleDictionary(genome);
+                        }
+
+                        if (generateAll || requestedFormats.includes("styled-components")) {
+                            outputs.styledComponents = formatGenerator.generateStyledComponents(genome);
+                        }
+
+                        if (generateAll || requestedFormats.includes("emotion")) {
+                            outputs.emotion = formatGenerator.generateEmotion(genome);
+                        }
+
+                        if (generateAll || requestedFormats.includes("vue")) {
+                            outputs.vue = formatGenerator.generateVueLibrary(genome, tier);
+                        }
+
+                        if (generateAll || requestedFormats.includes("svelte")) {
+                            outputs.svelte = formatGenerator.generateSvelteLibrary(genome, tier);
+                        }
+
+                        return {
+                            content: [{
+                                type: "text",
+                                text: JSON.stringify({
+                                    formatsGenerated: Object.keys(outputs).length,
+                                    outputs,
+                                    usage: {
+                                        figmaTokens: "Import into Figma Tokens Studio plugin",
+                                        styleDictionary: "Use with Amazon Style Dictionary to generate CSS/SCSS/iOS/Android",
+                                        styledComponents: "Import theme into styled-components ThemeProvider",
+                                        emotion: "Use with @emotion/react ThemeProvider",
+                                        vue: "Single File Components for Vue 3",
+                                        svelte: "Svelte components with scoped styles"
+                                    }
                                 }, null, 2)
                             }]
                         };
@@ -444,6 +918,18 @@ class DesignGenomeServer {
                 };
             }
         });
+    }
+
+    private hslToHex(h: number, s: number, l: number): string {
+        const saturation = s;
+        const lightness = l;
+        const k = (n: number) => (n + h / 30) % 12;
+        const a = saturation * Math.min(lightness, 1 - lightness);
+        const f = (n: number) => {
+            const color = lightness - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+            return Math.round(255 * color).toString(16).padStart(2, "0");
+        };
+        return `#${f(0)}${f(8)}${f(4)}`;
     }
 
     async run() {

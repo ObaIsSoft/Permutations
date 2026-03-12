@@ -54,11 +54,15 @@ export function ${spec.name}({ ${propsDestructuring} }: ${spec.name}Props) {
 
 function generateVariantStyle(variant: string, genome: DesignGenome): string {
     const hue = genome.chromosomes.ch5_color_primary.hue;
+    const sat = Math.round(genome.chromosomes.ch5_color_primary.saturation * 100);
+    const light = Math.round(genome.chromosomes.ch5_color_primary.lightness * 100);
+    const accentHue = (hue + 30) % 360; // Complementary for danger
+    
     switch (variant) {
-        case 'primary': return `bg-[hsl(${hue},60%,50%)] text-white`;
-        case 'secondary': return `bg-[hsl(${hue},40%,90%)] text-[hsl(${hue},60%,30%)]`;
-        case 'ghost': return `bg-transparent border border-[hsl(${hue},60%,50%)]`;
-        case 'danger': return `bg-red-500 text-white`;
+        case 'primary': return `bg-[hsl(${hue},${sat}%,${light}%)] text-white`;
+        case 'secondary': return `bg-[hsl(${hue},${Math.max(20, sat - 20)}%,${Math.min(95, light + 40)}%)] text-[hsl(${hue},${sat}%,${Math.max(20, light - 20)}%)]`;
+        case 'ghost': return `bg-transparent border border-[hsl(${hue},${sat}%,${light}%)]`;
+        case 'danger': return `bg-[hsl(${accentHue},${sat}%,${Math.min(50, light)}%)] text-white`;
         default: return '';
     }
 }
@@ -191,16 +195,22 @@ export function Router() {
  */
 export function generateDesignTokens(tier: CivilizationTier, genome: DesignGenome): string {
     const primary = genome.chromosomes.ch5_color_primary;
+    const ch6 = genome.chromosomes.ch6_color_temp;
     const radius = genome.chromosomes.ch7_edge.radius;
     const motion = genome.chromosomes.ch8_motion;
     
+    // CHROMOSOME-DRIVEN: Use surfaceStack from genome, not hardcoded colors
+    const surfaceStack = ch6.surfaceStack;
+    
     // CSS Custom Properties
     const cssVars = `:root {
-  /* Colors */
+  /* Colors - FROM CHROMOSOMES */
   --color-primary: hsl(${primary.hue}, ${primary.saturation * 100}%, ${primary.lightness * 100}%);
   --color-primary-hue: ${primary.hue};
-  --color-background: ${primary.temperature === 'warm' ? '#faf9f6' : '#0a0a0a'};
-  --color-surface: ${primary.temperature === 'warm' ? '#ffffff' : '#141414'};
+  --color-background: ${surfaceStack[0]};
+  --color-surface: ${surfaceStack[1]};
+  --color-surface-elevated: ${surfaceStack[2]};
+  --color-surface-overlay: ${surfaceStack[3]};
   
   /* Spacing */
   --spacing-unit: ${genome.chromosomes.ch2_rhythm.baseSpacing}px;
@@ -378,13 +388,20 @@ export function useCommandPalette(commands: Command[]) {
 /**
  * Generates the complete civilization tier output
  */
-export function generateCivilizationOutput(tier: CivilizationTier, genome: DesignGenome): {
+export function generateCivilizationOutput(
+    tier: CivilizationTier, 
+    genome: DesignGenome,
+    cssOutput?: string,  // UNIFIED: Full CSS from CSSGenerator
+    topologyOutput?: string  // UNIFIED: HTML topology from HTMLGenerator
+): {
     components: string;
     animations: string;
     architecture: string;
     tokens: string;
     interactions: string;
     index: string;
+    css?: string;
+    topology?: string;
 } {
     return {
         components: tier.components.list
@@ -394,6 +411,8 @@ export function generateCivilizationOutput(tier: CivilizationTier, genome: Desig
         architecture: generateArchitectureSetup(tier.architecture, genome),
         tokens: generateDesignTokens(tier, genome),
         interactions: generateInteractionHandlers(tier.interactions),
-        index: generateComponentLibraryIndex(tier.components.list, tier.tier)
+        index: generateComponentLibraryIndex(tier.components.list, tier.tier),
+        css: cssOutput,  // UNIFIED: Pass through from CSSGenerator
+        topology: topologyOutput  // UNIFIED: Pass through from HTMLGenerator
     };
 }

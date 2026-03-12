@@ -84,7 +84,7 @@ ${indent}outline-offset: 2px;
         const primaryLight = Math.round(chromosomes.ch5_color_primary.lightness * 100);
         const primaryHex = chromosomes.ch5_color_primary.hex;
         
-        parts.push(`${indent}/* Color System */`);
+        parts.push(`${indent}/* Colors */`);
         parts.push(`${indent}--color-primary: ${primaryHex};`);
         parts.push(`${indent}--color-primary-h: ${primaryHue};`);
         parts.push(`${indent}--color-primary-s: ${primarySat}%;`);
@@ -102,20 +102,25 @@ ${indent}outline-offset: 2px;
         parts.push(`${indent}--color-primary-800: hsl(${primaryHue}, ${primarySat}%, ${Math.max(5, primaryLight - 30)}%);`);
         parts.push(`${indent}--color-primary-900: hsl(${primaryHue}, ${primarySat}%, ${Math.max(5, primaryLight - 40)}%);`);
         
-        // Surface colors
-        const temp = chromosomes.ch6_color_temp.backgroundTemp;
-        if (temp === "cool") {
-            parts.push(`${indent}--color-surface: #0a0a0a;`);
-            parts.push(`${indent}--color-surface-elevated: #141414;`);
-            parts.push(`${indent}--color-surface-hover: #1e1e1e;`);
+        // Surface colors - FROM GENOME surfaceStack
+        const surfaceStack = chromosomes.ch6_color_temp.surfaceStack;
+        const isDark = chromosomes.ch6_color_temp.isDark;
+        
+        if (surfaceStack && surfaceStack.length >= 4) {
+            // Use genome-derived surface stack
+            parts.push(`${indent}--color-surface: ${surfaceStack[0]};`);
+            parts.push(`${indent}--color-surface-elevated: ${surfaceStack[1]};`);
+            parts.push(`${indent}--color-surface-overlay: ${surfaceStack[2]};`);
+            parts.push(`${indent}--color-surface-modal: ${surfaceStack[3]};`);
+        }
+        
+        // Text colors based on dark/light mode
+        if (isDark) {
             parts.push(`${indent}--color-text: #ffffff;`);
             parts.push(`${indent}--color-text-secondary: rgba(255, 255, 255, 0.7);`);
             parts.push(`${indent}--color-text-tertiary: rgba(255, 255, 255, 0.5);`);
         } else {
-            parts.push(`${indent}--color-surface: #ffffff;`);
-            parts.push(`${indent}--color-surface-elevated: #f8f8f8;`);
-            parts.push(`${indent}--color-surface-hover: #f0f0f0;`);
-            parts.push(`${indent}--color-text: #0a0a0a;`);
+            parts.push(`${indent}--color-text: ${surfaceStack?.[0] || '#0a0a0a'};`);
             parts.push(`${indent}--color-text-secondary: rgba(0, 0, 0, 0.7);`);
             parts.push(`${indent}--color-text-tertiary: rgba(0, 0, 0, 0.5);`);
         }
@@ -187,7 +192,7 @@ ${indent}outline-offset: 2px;
         
         // Structure
         const structure = genome.chromosomes.ch1_structure;
-        parts.push(`/* Layout */`);
+        parts.push(`/* Grid */`);
         parts.push(`.container {
 ${indent}max-width: ${structure.maxNesting > 2 ? '1200px' : '900px'};
 ${indent}margin-inline: auto;
@@ -250,6 +255,7 @@ ${indent}transform: translateY(-2px);
         const hero = genome.chromosomes.ch19_hero_type;
         const variant = genome.chromosomes.ch19_hero_variant_detail;
         const visual = genome.chromosomes.ch20_visual_treatment;
+        const grid = genome.chromosomes.ch9_grid;
         const parts: string[] = [];
         
         parts.push(`/* Hero Section */`);
@@ -330,7 +336,7 @@ ${indent}gap: var(--space-md);
             case 'asymmetric':
                 parts.push(`.hero-asymmetric {
 ${indent}display: grid;
-${indent}grid-template-columns: 1fr 2fr;
+${indent}grid-template-columns: ${Math.round(100/(grid.columns+1))}fr ${Math.round(100*grid.columns/(grid.columns+1))}fr;
 ${indent}gap: var(--space-xl);
 ${indent}padding: var(--space-xl);
 }`);
@@ -363,7 +369,7 @@ ${indent}color: var(--color-text-secondary);
             case 'stats_counter':
                 parts.push(`.hero-stats {
 ${indent}display: grid;
-${indent}grid-template-columns: repeat(3, 1fr);
+${indent}grid-template-columns: repeat(${Math.min(grid.columns, 3)}, 1fr);
 ${indent}gap: var(--space-lg);
 ${indent}margin-top: var(--space-xl);
 }${indent}.hero-stat-number {
@@ -422,6 +428,7 @@ ${indent}z-index: -1;
     private generateTrustSignalStyles(genome: DesignGenome, indent: string, newline: string): string {
         const trust = genome.chromosomes.ch21_trust_signals;
         const social = genome.chromosomes.ch22_social_proof;
+        const grid = genome.chromosomes.ch9_grid;
         const parts: string[] = [];
         
         parts.push(`/* Trust Signals */`);
@@ -456,7 +463,7 @@ ${indent}border-top: 1px solid var(--color-primary-100);
             case 'testimonials_grid':
                 parts.push(`.testimonials-grid {
 ${indent}display: grid;
-${indent}grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+${indent}grid-template-columns: repeat(auto-fit, minmax(${Math.max(250, Math.round(960 / grid.columns))}px, 1fr));
 ${indent}gap: var(--space-lg);
 }`);
                 parts.push(`.testimonial-card {

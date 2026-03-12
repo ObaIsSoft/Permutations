@@ -31,18 +31,22 @@ import {
     TrustProminence,
     SocialProofType,
     ImpactDemonstration,
-    HeroConfig
+    HeroConfig,
+    FontProvider
 } from "./types.js";
 import { EpigeneticData } from "./epigenetics.js";
 import { ARCHETYPES, detectArchetype, FunctionalArchetype } from "./archetypes.js";
 import { GenomeConstraintSolver, SolverResult } from "./constraint-solver.js";
 import {
-    SECTOR_PROFILES,
     getSectorProfile,
     classifySubSector,
-    selectColorFromProfile,
-    colorNameToHSL,
-    isValidSector
+    isValidSector,
+    generateHueFromBias,
+    generateSaturationFromBias,
+    generateLightnessFromBias,
+    selectHeroType,
+    selectTrustApproach,
+    getColorBias
 } from "./sector-profiles.js";
 
 export interface SequencerConfig {
@@ -187,8 +191,8 @@ export class GenomeSequencer {
         // Original Chromosomes (1-18)
         const ch1_structure = isForced('ch1_structure') as any || this.generateStructure(traits, b);
         const ch2_rhythm = isForced('ch2_rhythm') as any || this.generateRhythm(traits, b);
-        const ch3_type_display = isForced('ch3_type_display') as any || this.generateDisplayType(traits, b, primaryProfile);
-        const ch4_type_body = isForced('ch4_type_body') as any || this.generateBodyType(traits, b, primaryProfile);
+        const ch3_type_display = isForced('ch3_type_display') as any || this.generateDisplayType(traits, b, primaryProfile, options);
+        const ch4_type_body = isForced('ch4_type_body') as any || this.generateBodyType(traits, b, primaryProfile, options);
         const ch5_color_primary = isForced('ch5_color_primary') as any || this.generatePrimaryColor(
             b, primaryProfile, secondaryProfile, brand, brandWeight, epigenetics
         );
@@ -221,7 +225,7 @@ export class GenomeSequencer {
         // Hero & Visual Chromosomes (19-20)
         const forcedHero = isForced('ch19_hero_type') as any;
         const heroType: HeroType = forcedHero?.type ||
-            this.selectHeroType(b(101), primaryProfile, secondaryProfile);
+            selectHeroType(primaryProfile.sector, Math.floor(b(101) * 255));
         const heroVariant: HeroLayoutVariant = forcedHero?.variant ||
             this.selectHeroVariant(heroType, b(102));
 
@@ -264,14 +268,14 @@ export class GenomeSequencer {
         // Trust & Social Chromosomes (21-22)
         const forcedTrust = isForced('ch21_trust_signals') as any;
         const trustApproach: TrustApproach = forcedTrust?.approach ||
-            this.selectTrustApproach(b(108), primaryProfile);
+            selectTrustApproach(primaryProfile.sector, Math.floor(b(108) * 255));
 
         const ch21_trust_signals = forcedTrust || {
             approach: trustApproach,
             prominence: this.selectTrustProminence(traits, primaryProfile),
             layoutVariant: `trust_${trustApproach}_${Math.floor(b(109) * 5)}`,
             contentProvided: false,
-            suggestedStats: this.suggestStats(primaryProfile),
+            suggestedStats: ["{{STAT_1}}", "{{STAT_2}}", "{{STAT_3}}"],
             animationType: traits.informationDensity > 0.7
                 ? "count_up"
                 : traits.temporalUrgency > 0.6
@@ -279,8 +283,7 @@ export class GenomeSequencer {
                     : "none" as "count_up" | "fade_in" | "none"
         };
 
-        // Populate trust content with sector-specific template tokens
-        const sectorStats = this.suggestStats(primaryProfile);
+        // Populate trust content with template tokens (not fake data)
         const ch21_trust_content = isForced('ch21_trust_content') as any || {
             credentials: primaryProfile.sector === "healthcare" || primaryProfile.sector === "legal"
                 ? ["{{CREDENTIAL_1}}", "{{CREDENTIAL_2}}"]
@@ -288,7 +291,11 @@ export class GenomeSequencer {
             testimonials: traits.trustRequirement > 0.5
                 ? ["{{TESTIMONIAL_1}}", "{{TESTIMONIAL_2}}"]
                 : [],
-            stats: sectorStats.slice(0, 3).map(key => ({ label: `{{LABEL_${key.toUpperCase()}}}`, value: `{{VALUE_${key.toUpperCase()}}}` })),
+            stats: [
+                { label: "{{STAT_1_LABEL}}", value: "{{STAT_1_VALUE}}" },
+                { label: "{{STAT_2_LABEL}}", value: "{{STAT_2_VALUE}}" },
+                { label: "{{STAT_3_LABEL}}", value: "{{STAT_3_VALUE}}" }
+            ],
             securityBadges: traits.trustRequirement > 0.7
                 ? ["{{BADGE_ISO}}", "{{BADGE_SOC2}}"]
                 : []
@@ -346,6 +353,8 @@ export class GenomeSequencer {
             segmentCount: (traits.informationDensity > 0.7 ? 4 : traits.informationDensity > 0.4 ? 3 : 2) as 2 | 3 | 4
         };
 
+        const ch25_copy_engine = isForced('ch25_copy_engine') as any || this.generateCopyEngine(primaryProfile, b);
+
         return {
             ch0_sector_primary,
             ch0_sector_secondary,
@@ -378,12 +387,46 @@ export class GenomeSequencer {
             ch22_impact_demonstration,
             ch23_content_depth,
             ch23_information_architecture,
-            ch24_personalization
+            ch24_personalization,
+            ch25_copy_engine
+        };
+    }
+
+    /**
+     * Generate copy engine placeholders
+     */
+    private generateCopyEngine(_profile: ReturnType<typeof getSectorProfile>, b: (index: number) => number) {
+        const entropy = Math.floor(b(130) * 10000).toString(16);
+        
+        return {
+            headline: `{{HEADLINE_${entropy.slice(0, 4)}}}`,
+            subheadline: `{{SUBHEADLINE_${entropy.slice(4, 8)}}}`,
+            cta: `{{CTA_${Math.floor(b(131) * 3)}}}`,
+            authorName: `{{AUTHOR_NAME}}`,
+            authorTitle: `{{AUTHOR_TITLE}}`,
+            testimonial: `{{TESTIMONIAL_QUOTE}}`,
+            companyName: `{{COMPANY_NAME}}`,
+            tagline: `{{TAGLINE_${entropy.slice(8, 12)}}}`,
+            stats: [
+                { label: `{{STAT_1_LABEL}}`, value: `{{STAT_1_VALUE}}` },
+                { label: `{{STAT_2_LABEL}}`, value: `{{STAT_2_VALUE}}` },
+                { label: `{{STAT_3_LABEL}}`, value: `{{STAT_3_VALUE}}` }
+            ],
+            faq: [
+                { question: `{{FAQ_1_Q}}`, answer: `{{FAQ_1_A}}` },
+                { question: `{{FAQ_2_Q}}`, answer: `{{FAQ_2_A}}` }
+            ],
+            features: [
+                { title: `{{FEATURE_1_TITLE}}`, description: `{{FEATURE_1_DESC}}` },
+                { title: `{{FEATURE_2_TITLE}}`, description: `{{FEATURE_2_DESC}}` },
+                { title: `{{FEATURE_3_TITLE}}`, description: `{{FEATURE_3_DESC}}` }
+            ]
         };
     }
 
     /**
      * Classify sub-sector from content traits
+     * @deprecated Synthetic keyword strings for classification will be replaced with hash-derived selection
      */
     private classifySubSectorFromTraits(traits: ContentTraits, primarySector: PrimarySector): { subSector: SubSector; confidence: number } {
         const contentHints: string[] = [];
@@ -589,22 +632,34 @@ export class GenomeSequencer {
     /**
      * Generate display typography
      */
-    private generateDisplayType(traits: ContentTraits, b: (index: number) => number, profile: ReturnType<typeof getSectorProfile>) {
+    private generateDisplayType(traits: ContentTraits, b: (index: number) => number, profile: ReturnType<typeof getSectorProfile>, options?: GenerationOptions) {
         let charge: TypeCharge = profile.defaultTypography;
 
         if (traits.temporalUrgency > 0.7 && traits.informationDensity > 0.6) {
             charge = "monospace";
         } else if (traits.emotionalTemperature > 0.7) {
             charge = "humanist";
+        } else if (traits.emotionalTemperature < 0.3) {
+            charge = "grotesque";
+        } else if (traits.playfulness > 0.7) {
+            charge = "expressive";
+        } else if (traits.trustRequirement > 0.7) {
+            charge = "transitional";
         } else if (traits.emotionalTemperature < 0.4) {
             charge = "geometric";
         }
 
+        const provider = options?.fontProvider || "bunny";
+        const fontData = this.selectDisplayFont(b(5), charge, provider);
+
         return {
-            family: this.selectDisplayFont(b(5), charge),
+            family: fontData.family,
+            displayName: fontData.displayName,
+            importUrl: fontData.importUrl,
+            provider: fontData.provider,
             charge,
             weight: [400, 700, 900][Math.floor(b(6) * 3) % 3],
-            fallback: "system-ui, -apple-system, sans-serif",
+            fallback: fontData.fallback,
             tracking: traits.informationDensity > 0.7
                 ? "tight"
                 : traits.emotionalTemperature > 0.7
@@ -619,14 +674,20 @@ export class GenomeSequencer {
     /**
      * Generate body typography
      */
-    private generateBodyType(traits: ContentTraits, b: (index: number) => number, profile: ReturnType<typeof getSectorProfile>) {
+    private generateBodyType(traits: ContentTraits, b: (index: number) => number, profile: ReturnType<typeof getSectorProfile>, options?: GenerationOptions) {
         const charge = profile.defaultTypography;
+        const provider = options?.fontProvider || "bunny";
+        const fontData = this.selectBodyFont(b(7), charge, provider);
 
         return {
-            family: this.selectBodyFont(b(7), charge),
+            family: fontData.family,
+            displayName: fontData.displayName,
+            importUrl: fontData.importUrl,
+            provider: fontData.provider,
+            charge,
             xHeightRatio: 0.5 + b(8) * 0.2,
             contrast: 0.8 + b(9) * 0.4,
-            fallback: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+            fallback: fontData.fallback,
             optimalLineLength: traits.informationDensity > 0.7
                 ? "narrow"
                 : traits.informationDensity < 0.35
@@ -639,6 +700,7 @@ export class GenomeSequencer {
 
     /**
      * Generate primary color with sector psychology and brand integration
+     * MATHEMATICAL: Uses hue/saturation/lightness ranges, NOT named colors
      */
     private generatePrimaryColor(
         b: (index: number) => number,
@@ -679,37 +741,29 @@ export class GenomeSequencer {
             };
         }
 
-        // Select from sector color profile
-        const colorName = selectColorFromProfile(
-            primaryProfile.colorProfile.primary,
-            Math.floor(b(10) * 255)
-        );
-        const hsl = colorNameToHSL(colorName);
+        // MATHEMATICAL: Generate from sector bias ranges, NOT named colors
+        const primarySector = primaryProfile.sector;
+        let hue = generateHueFromBias(primarySector, Math.floor(b(10) * 255));
+        let saturation = generateSaturationFromBias(primarySector, Math.floor(b(11) * 255));
+        let lightness = generateLightnessFromBias(primarySector, Math.floor(b(12) * 255));
 
         // Blend with secondary sector if present
-        if (secondaryProfile && b(11) > 0.5) {
-            const secondaryColor = selectColorFromProfile(
-                secondaryProfile.colorProfile.primary,
-                Math.floor(b(12) * 255)
-            );
-            const secondaryHSL = colorNameToHSL(secondaryColor);
-
+        if (secondaryProfile && b(13) > 0.5) {
+            const secondaryHue = generateHueFromBias(secondaryProfile.sector, Math.floor(b(14) * 255));
             // Blend 70% primary, 30% secondary
-            hsl.h = this.blendHue(hsl.h, secondaryHSL.h, 0.3);
-            hsl.s = hsl.s * 0.7 + secondaryHSL.s * 0.3;
-            hsl.l = hsl.l * 0.7 + secondaryHSL.l * 0.3;
+            hue = this.blendHue(hue, secondaryHue, 0.3);
         }
 
         // Add entropy variation (±15 degrees)
-        const variation = (b(13) - 0.5) * 30;
-        hsl.h = (hsl.h + variation + 360) % 360;
+        const variation = (b(15) - 0.5) * 30;
+        hue = (hue + variation + 360) % 360;
 
         return {
-            hue: Math.round(hsl.h),
-            saturation: Math.round(hsl.s) / 100,
-            lightness: Math.round(hsl.l) / 100,
-            temperature: this.getTemperatureFromHue(hsl.h),
-            hex: this.hslToHex(hsl.h, hsl.s, hsl.l),
+            hue: Math.round(hue),
+            saturation: Math.round(saturation * 100) / 100,
+            lightness: Math.round(lightness * 100) / 100,
+            temperature: this.getTemperatureFromHue(hue),
+            hex: this.hslToHex(hue, saturation * 100, lightness * 100),
             sectorAppropriate: true
         };
     }
@@ -1093,35 +1147,6 @@ export class GenomeSequencer {
 
     // ==================== HERO TYPE SELECTION ====================
 
-    private selectHeroType(
-        byte: number,
-        primaryProfile: ReturnType<typeof getSectorProfile>,
-        secondaryProfile: ReturnType<typeof getSectorProfile> | null
-    ): HeroType {
-        // Blend primary and secondary sector weights
-        const weights = { ...primaryProfile.heroTypeWeights };
-
-        if (secondaryProfile) {
-            for (const [type, weight] of Object.entries(secondaryProfile.heroTypeWeights)) {
-                weights[type as HeroType] = weights[type as HeroType] * 0.7 + weight * 0.3;
-            }
-        }
-
-        // Normalize and select
-        const total = Object.values(weights).reduce((a, b) => a + b, 0);
-        const threshold = (byte / 255) * total;
-        let cumulative = 0;
-
-        for (const [type, weight] of Object.entries(weights)) {
-            cumulative += weight;
-            if (cumulative >= threshold) {
-                return type as HeroType;
-            }
-        }
-
-        return "product_ui";
-    }
-
     private selectHeroVariant(heroType: HeroType, byte: number): HeroLayoutVariant {
         const variantsByType: Record<HeroType, HeroLayoutVariant[]> = {
             product_ui: ["centered", "split_right", "full_bleed", "floating_cards"],
@@ -1163,25 +1188,6 @@ export class GenomeSequencer {
 
     // ==================== TRUST SIGNALS ====================
 
-    private selectTrustApproach(
-        byte: number,
-        profile: ReturnType<typeof getSectorProfile>
-    ): TrustApproach {
-        const weights = profile.trustApproachWeights;
-        const total = Object.values(weights).reduce((a, b) => a + b, 0);
-        const threshold = (byte / 255) * total;
-        let cumulative = 0;
-
-        for (const [approach, weight] of Object.entries(weights)) {
-            cumulative += weight;
-            if (cumulative >= threshold) {
-                return approach as TrustApproach;
-            }
-        }
-
-        return "credentials";
-    }
-
     private selectTrustProminence(
         traits: ContentTraits,
         profile: ReturnType<typeof getSectorProfile>
@@ -1190,26 +1196,6 @@ export class GenomeSequencer {
         if (traits.trustRequirement > 0.6) return "prominent";
         if (traits.trustRequirement > 0.4) return "integrated";
         return "subtle";
-    }
-
-    private suggestStats(profile: ReturnType<typeof getSectorProfile>): string[] {
-        const statsBySector: Record<PrimarySector, string[]> = {
-            healthcare: ["patients_served", "success_rate", "years_experience", "awards"],
-            fintech: ["transaction_volume", "users", "uptime", "security_rating"],
-            automotive: ["vehicles_sold", "satisfaction_rate", "years_warranty", "dealerships"],
-            education: ["students_enrolled", "graduation_rate", "alumni_network", "courses"],
-            commerce: ["customers", "products", "shipping_speed", "return_rate"],
-            entertainment: ["subscribers", "content_hours", "ratings", "awards"],
-            manufacturing: ["units_produced", "quality_certifications", "countries", "years_experience"],
-            legal: ["cases_won", "years_practice", "attorneys", "client_satisfaction"],
-            real_estate: ["properties_sold", "agents", "years_experience", "customer_rating"],
-            travel: ["destinations", "travelers", "reviews", "partners"],
-            food: ["locations", "meals_served", "rating", "years_open"],
-            sports: ["members", "championships", "athletes", "facilities"],
-            technology: ["users", "uptime", "performance", "integrations"]
-        };
-
-        return statsBySector[profile.sector] || ["customers", "years_experience"];
     }
 
     private selectSocialProofType(byte: number, profile: ReturnType<typeof getSectorProfile>): SocialProofType {
@@ -1229,13 +1215,14 @@ export class GenomeSequencer {
             technology: { customer_logos: 0.25, user_count: 0.25, rating_stars: 0.15, testimonials_grid: 0.15, community_size: 0.1, press_mentions: 0.1 }
         };
 
-        const sectorWeights = weights[profile.sector];
-        const total = Object.values(sectorWeights).reduce((a, b) => a + b, 0);
+        const sector = profile.sector as PrimarySector;
+        const sectorWeights = weights[sector];
+        const total = Object.values(sectorWeights).reduce((a: number, b: number) => (a as number) + (b as number), 0) as number;
         const threshold = (byte / 255) * total;
         let cumulative = 0;
 
         for (const [type, weight] of Object.entries(sectorWeights)) {
-            cumulative += weight;
+            cumulative += weight as number;
             if (cumulative >= threshold) {
                 return type as SocialProofType;
             }
@@ -1261,13 +1248,14 @@ export class GenomeSequencer {
             technology: { live_counter: 0.3, cumulative_stats: 0.3, before_after: 0.1, roi_calculator: 0.15, timeline_progress: 0.15 }
         };
 
-        const sectorWeights = weights[profile.sector];
-        const total = Object.values(sectorWeights).reduce((a, b) => a + b, 0);
+        const sector = profile.sector as PrimarySector;
+        const sectorWeights = weights[sector];
+        const total = Object.values(sectorWeights).reduce((a: number, b: number) => (a as number) + (b as number), 0) as number;
         const threshold = (byte / 255) * total;
         let cumulative = 0;
 
         for (const [type, weight] of Object.entries(sectorWeights)) {
-            cumulative += weight;
+            cumulative += weight as number;
             if (cumulative >= threshold) {
                 return type as ImpactDemonstration;
             }
@@ -1332,7 +1320,8 @@ export class GenomeSequencer {
             technology: ["product_screenshots", "abstract_gradient", "illustration"]
         };
 
-        const treatments = treatmentsBySector[profile.sector] || ["lifestyle_photography"];
+        const sector = profile.sector as PrimarySector;
+        const treatments = treatmentsBySector[sector] || ["lifestyle_photography"];
         return treatments[Math.floor(byte * treatments.length) % treatments.length];
     }
 
@@ -1358,7 +1347,8 @@ export class GenomeSequencer {
             technology: ["product_demo", "brand_story", "tutorial_walkthrough"]
         };
 
-        const strategies = strategiesBySector[profile.sector] || ["brand_story"];
+        const sector = profile.sector as PrimarySector;
+        const strategies = strategiesBySector[sector] || ["brand_story"];
         return strategies[Math.floor(byte * strategies.length) % strategies.length];
     }
 
@@ -1371,112 +1361,127 @@ export class GenomeSequencer {
         return options[Math.floor(byte * options.length) % options.length];
     }
 
-    private selectDisplayFont(byte: number, charge: string): string {
+    private selectDisplayFont(byte: number, charge: string, provider: FontProvider = "bunny") {
         const fonts: Record<string, string[]> = {
-            // Geometric: clean, modernist, swiss-influenced
             geometric: [
-                "Space Grotesk",
-                "DM Sans",
-                "Outfit",
-                "Cabinet Grotesk",
-                "Plus Jakarta Sans",
-                "Barlow",
-                "Syne",
-                "Unbounded"
+                "Space Grotesk", "DM Sans", "Outfit", "Cabinet Grotesk", "Plus Jakarta Sans",
+                "Barlow", "Syne", "Unbounded", "Lexend", "Urbanist", "Questrial",
+                "Work Sans", "Montserrat", "Jost", "Manrope", "Sen", "Tenor Sans"
             ],
-            // Humanist: warm editorial, literary, serif-adjacent
             humanist: [
-                "Fraunces",
-                "Playfair Display",
-                "Cormorant",
-                "Lora",
-                "Libre Baskerville",
-                "Spectral",
-                "DM Serif Display",
-                "Gloock"
+                "Fraunces", "Playfair Display", "Cormorant", "Lora", "Libre Baskerville",
+                "Spectral", "DM Serif Display", "Gloock", "Cinzel", "Crimson Text",
+                "Eczar", "Gentium Book Plus", "Inknut Antiqua", "Quattrocento", "Unna"
             ],
-            // Monospace: brutalist, technical, data-driven
-            monospace: [
-                "Space Mono",
-                "JetBrains Mono",
-                "Fira Code",
-                "IBM Plex Mono",
-                "Geist Mono",
-                "Commit Mono",
-                "Martian Mono"
+            grotesque: [
+                "Inter", "Public Sans", "Arimo", "Heebo", "IBM Plex Sans", "Karla",
+                "Public Sans", "Public Sans", "Red Hat Display", "Sora", "Chivo",
+                "Figtree", "Instrument Sans", "Schibsted Grotesk", "Hanken Grotesk"
             ],
-            // Transitional: classic editorial, newspaper, academic
             transitional: [
-                "Libre Baskerville",
-                "Cardo",
-                "EB Garamond",
-                "Literata",
-                "Newsreader",
-                "Source Serif 4",
-                "Bitter"
+                "Libre Baskerville", "Cardo", "EB Garamond", "Literata", "Newsreader",
+                "Source Serif 4", "Bitter", "Baskervville", "Bodoni Moda", "Domine",
+                "Zilla Slab", "Prata", "Fraunces"
+            ],
+            slab_serif: [
+                "Arvo", "Josefin Slab", "Roboto Slab", "Zilla Slab", "BioRhyme",
+                "Alfa Slab One", "Cousine", "Martel Sans", "Poly", "Rokkitt"
+            ],
+            monospace: [
+                "Space Mono", "JetBrains Mono", "Fira Code", "IBM Plex Mono", "Geist Mono",
+                "Commit Mono", "Martian Mono", "Nanum Gothic Coding", "Overpass Mono",
+                "Roboto Mono", "Source Code Pro", "Ubuntu Mono", "VT323"
+            ],
+            expressive: [
+                "Syne", "Unbounded", "Bungee", "Faster One", "Monoton", "Nabla",
+                "Righteous", "Rubik Beastly", "Tourney", "Ultra", "Yeseva One"
             ]
         };
 
         const fallbacks: Record<string, string> = {
             geometric: "system-ui, -apple-system, sans-serif",
             humanist: "Georgia, 'Times New Roman', serif",
+            grotesque: "Helvetica, Arial, sans-serif",
             monospace: "'Courier New', Courier, monospace",
-            transitional: "Georgia, serif"
+            transitional: "Georgia, serif",
+            slab_serif: "serif",
+            expressive: "cursive, sans-serif"
         };
 
         const pool = fonts[charge] ?? fonts.geometric;
-        const fallback = fallbacks[charge] ?? fallbacks.geometric;
         const selected = pool[Math.floor(byte * pool.length) % pool.length];
-        return `${selected}, ${fallback}`;
+
+        return {
+            family: `${selected}, ${fallbacks[charge] || fallbacks.geometric}`,
+            displayName: selected,
+            importUrl: this.getFontImportUrl(selected, provider, [400, 700]),
+            provider,
+            fallback: fallbacks[charge] || fallbacks.geometric
+        };
     }
 
-    private selectBodyFont(byte: number, charge: string): string {
+    private selectBodyFont(byte: number, charge: string, provider: FontProvider = "bunny") {
         const fonts: Record<string, string[]> = {
-            // Geometric body: clean, high-legibility
             geometric: [
-                "DM Sans",
-                "Inter",        // Only acceptable as BODY font (not display)
-                "Geist",
-                "Nunito",
-                "Atkinson Hyperlegible"
+                "DM Sans", "Inter", "Geist", "Nunito", "Atkinson Hyperlegible",
+                "Lexend Deca", "Plus Jakarta Sans", "Outfit", "Albert Sans"
             ],
-            // Humanist body: literary, warm, editorial
             humanist: [
-                "Merriweather",
-                "Source Serif 4",
-                "Lora",
-                "Literata",
-                "Palatino Linotype"
+                "Merriweather", "Source Serif 4", "Lora", "Literata", "Palatino Linotype",
+                "Crimson Text", "Domine", "Libre Franklin", "Spectral"
             ],
-            // Monospace body: for highly technical, code-adjacent sites
-            monospace: [
-                "IBM Plex Mono",
-                "Fira Code",
-                "JetBrains Mono",
-                "Geist Mono",
-                "Commit Mono"
+            grotesque: [
+                "Inter", "Public Sans", "IBM Plex Sans", "Karla", "Work Sans",
+                "Figtree", "Hanken Grotesk", "Public Sans"
             ],
-            // Transitional body: news, academic, documentation
             transitional: [
-                "Georgia",
-                "Newsreader",
-                "EB Garamond",
-                "Cardo",
-                "Libre Baskerville"
+                "Newsreader", "Source Serif 4", "EB Garamond", "Cardo", "Libre Baskerville",
+                "Domine", "Cormorant", "Baskervville"
+            ],
+            slab_serif: [
+                "Roboto Slab", "Arvo", "Domine", "Josefin Slab", "Zilla Slab"
+            ],
+            monospace: [
+                "IBM Plex Mono", "Fira Code", "JetBrains Mono", "Geist Mono", "Roboto Mono"
+            ],
+            expressive: [
+                "Rubik", "Outfit", "Space Grotesk", "Syne"
             ]
         };
 
+        const pool = fonts[charge] ?? fonts.geometric;
+        const selected = pool[Math.floor(byte * pool.length) % pool.length];
+
         const fallbacks: Record<string, string> = {
-            geometric: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+            geometric: "system-ui, -apple-system, sans-serif",
             humanist: "Georgia, serif",
-            monospace: "'Courier New', monospace",
-            transitional: "Georgia, 'Times New Roman', serif"
+            grotesque: "Arial, sans-serif",
+            monospace: "monospace",
+            transitional: "serif",
+            slab_serif: "serif",
+            expressive: "sans-serif"
         };
 
-        const pool = fonts[charge] ?? fonts.geometric;
-        const fallback = fallbacks[charge] ?? fallbacks.geometric;
-        const selected = pool[Math.floor(byte * pool.length) % pool.length];
-        return `${selected}, ${fallback}`;
+        return {
+            family: `${selected}, ${fallbacks[charge] || fallbacks.geometric}`,
+            displayName: selected,
+            importUrl: this.getFontImportUrl(selected, provider, [400, 700]),
+            provider,
+            fallback: fallbacks[charge] || fallbacks.geometric
+        };
+    }
+
+    private getFontImportUrl(fontName: string, provider: FontProvider, weights: number[]): string {
+        const slug = fontName.toLowerCase().replace(/ /g, '-');
+        const weightString = weights.join(',');
+
+        if (provider === "google") {
+            const googleName = fontName.replace(/ /g, '+');
+            return `https://fonts.googleapis.com/css2?family=${googleName}:wght@${weightString.replace(',', ';')}&display=swap`;
+        }
+
+        // Bunny Fonts default
+        return `https://fonts.bunny.net/css?family=${slug}:${weightString}&display=swap`;
     }
 
     private isColorAppropriateForSector(hue: number, sector: PrimarySector): boolean {

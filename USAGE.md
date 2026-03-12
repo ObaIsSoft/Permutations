@@ -50,9 +50,12 @@ npm run build
 
 | Provider | API Key Env Var | Notes |
 |---|---|---|
-| **Groq** (default, fastest) | `GROQ_API_KEY` | llama-3.1-70b-versatile |
-| **OpenAI** | `OPENAI_API_KEY` | gpt-4o-mini |
-| **Anthropic** | `ANTHROPIC_API_KEY` | claude-3-haiku-20240307 |
+| **Groq** (default, fastest) | `GROQ_API_KEY` | llama-4-scout-17b-16e-instruct |
+| **OpenAI** | `OPENAI_API_KEY` | gpt-4.1 |
+| **Anthropic** | `ANTHROPIC_API_KEY` | claude-3-7-sonnet-latest |
+| **Gemini** | `GEMINI_API_KEY` | gemini-2.5-pro-latest |
+| **OpenRouter** | `OPENROUTER_API_KEY` | meta-llama/llama-4-scout |
+| **HuggingFace** | `HUGGINGFACE_API_KEY` | meta-llama/Meta-Llama-3-8B |
 
 ---
 
@@ -71,7 +74,7 @@ npm run build
 
 | Field | Description |
 |---|---|
-| `genome` | Full 18-chromosome JSON object. All design decisions encoded as floats |
+| `genome` | Full 25-chromosome JSON object. All design decisions encoded as floats |
 | `tailwindConfig` | Ready-to-paste `tailwind.config.js` with all chromosome values injected |
 | `cssVariableBlock` | CSS custom properties file for runtime injection |
 | `topology` | Structural sections object describing the layout skeleton |
@@ -127,6 +130,25 @@ generate_design_genome(
 )
 ```
 
+### Ecosystem → Civilization Flow
+
+For complex applications, generate organisms first, then add architecture:
+
+```
+// Step 1: Generate component ecosystem
+const ecosystem = generate_ecosystem(
+  intent: "fintech dashboard with real-time data",
+  seed: "trading-platform-v2"
+)
+
+// Step 2: Add civilization layer (architecture + state management)
+const civilization = generate_civilization(
+  intent: "real-time 3D dashboard with animation",
+  seed: "trading-platform-v2",
+  ecosystem: ecosystem  // Uses ecosystem organisms
+)
+```
+
 ---
 
 ## Interpreting The Genome
@@ -163,6 +185,12 @@ generate_design_genome(
 | ch16_typography | Full type scale (display → small sizes and ratios) |
 | ch17_accessibility | WCAG profile (contrast ratio, motion, touch target) |
 | ch18_rendering | Rendering strategy (webgl/css/svg/static) |
+| ch19_hero_type | Hero section strategy (product_ui, brand_logo, editorial_feature, etc.) |
+| ch20_visual_treatment | Image/photography treatment approach |
+| ch21_trust_signals | Trust-building elements (testimonials, stats, security badges) |
+| ch22_social_proof | Social validation (logos, ratings, community size) |
+| ch23_content_depth | Number of sections (minimal/moderate/extensive/comprehensive) |
+| ch24_personalization | Dynamic content approach (static/behavior_based/fully_dynamic) |
 
 ---
 
