@@ -158,6 +158,90 @@ export class GenomeMutator {
         if (key === "ch28_iconography") {
             return this.mutateIconography(chromosome, changeType, seed);
         }
+        // Structure mutations
+        if (key === "ch1_structure") {
+            return this.mutateStructure(chromosome, changeType, seed);
+        }
+        // Rhythm/spacing mutations
+        if (key === "ch2_rhythm") {
+            return this.mutateRhythm(chromosome, changeType, seed);
+        }
+        // Grid mutations
+        if (key === "ch9_grid") {
+            return this.mutateGrid(chromosome, changeType, seed);
+        }
+        // Texture mutations
+        if (key === "ch11_texture") {
+            return this.mutateTexture(chromosome, changeType, seed);
+        }
+        // Atmosphere mutations
+        if (key === "ch13_atmosphere") {
+            return this.mutateAtmosphere(chromosome, changeType, seed);
+        }
+        // Physics mutations
+        if (key === "ch14_physics") {
+            return this.mutatePhysics(chromosome, changeType, seed);
+        }
+        // Biomarker mutations
+        if (key === "ch15_biomarker") {
+            return this.mutateBiomarker(chromosome, changeType, seed);
+        }
+        // Typography scale mutations
+        if (key === "ch16_typography") {
+            return this.mutateTypographyScale(chromosome, changeType, seed);
+        }
+        // Accessibility mutations
+        if (key === "ch17_accessibility") {
+            return this.mutateAccessibility(chromosome, changeType, seed);
+        }
+        // Rendering mutations
+        if (key === "ch18_rendering") {
+            return this.mutateRendering(chromosome, changeType, seed);
+        }
+        // Hero mutations
+        if (key === "ch19_hero_type") {
+            return this.mutateHero(chromosome, changeType, seed);
+        }
+        // Visual treatment mutations
+        if (key === "ch20_visual_treatment") {
+            return this.mutateVisualTreatment(chromosome, changeType, seed);
+        }
+        // Trust signals mutations
+        if (key === "ch21_trust_signals") {
+            return this.mutateTrustSignals(chromosome, changeType, seed);
+        }
+        // Social proof mutations
+        if (key === "ch22_social_proof") {
+            return this.mutateSocialProof(chromosome, changeType, seed);
+        }
+        // Content depth mutations
+        if (key === "ch23_content_depth") {
+            return this.mutateContentDepth(chromosome, changeType, seed);
+        }
+        // Personalization mutations
+        if (key === "ch24_personalization") {
+            return this.mutatePersonalization(chromosome, changeType, seed);
+        }
+        // Copy engine mutations
+        if (key === "ch25_copy_engine") {
+            return this.mutateCopyEngine(chromosome, changeType, seed);
+        }
+        // Copy intelligence mutations
+        if (key === "ch26_copy_intelligence") {
+            return this.mutateCopyIntelligence(chromosome, changeType, seed);
+        }
+        // Sector mutations (rare, affects entire genome)
+        if (key === "ch0_sector") {
+            return this.mutateSector(chromosome, changeType, seed);
+        }
+        // Signature mutations (entropy/identifier)
+        if (key === "ch12_signature") {
+            return this.mutateSignature(chromosome, changeType, seed);
+        }
+        // Hierarchy mutations
+        if (key === "ch10_hierarchy") {
+            return this.mutateHierarchy(chromosome, changeType, seed);
+        }
 
         return null;
     }
@@ -318,6 +402,420 @@ export class GenomeMutator {
             property: "style",
             oldValue: oldStyle,
             newValue: icon.style,
+            changeType
+        };
+    }
+
+    // === Additional chromosome mutations ===
+
+    private mutateStructure(
+        structure: any,
+        changeType: MutationRecord["changeType"],
+        seed: string
+    ): MutationRecord {
+        const b = this.getHashByte(seed, 1);
+        const topologies = ["flat", "deep", "graph", "radial"];
+        const oldTopology = structure.topology;
+        structure.topology = topologies[Math.floor(b * topologies.length)];
+
+        return {
+            chromosome: "ch1_structure",
+            property: "topology",
+            oldValue: oldTopology,
+            newValue: structure.topology,
+            changeType
+        };
+    }
+
+    private mutateRhythm(
+        rhythm: any,
+        changeType: MutationRecord["changeType"],
+        seed: string
+    ): MutationRecord {
+        const b = this.getHashByte(seed, 1);
+        const oldSpacing = rhythm.baseSpacing;
+        
+        // Adjust base spacing by ±20%
+        const adjustment = 0.8 + (b * 0.4);
+        rhythm.baseSpacing = Math.round(oldSpacing * adjustment);
+
+        return {
+            chromosome: "ch2_rhythm",
+            property: "baseSpacing",
+            oldValue: oldSpacing,
+            newValue: rhythm.baseSpacing,
+            changeType
+        };
+    }
+
+    private mutateGrid(
+        grid: any,
+        changeType: MutationRecord["changeType"],
+        seed: string
+    ): MutationRecord {
+        const b = this.getHashByte(seed, 1);
+        const logics = ["column", "masonry", "radial", "broken"];
+        const oldLogic = grid.logic;
+        grid.logic = logics[Math.floor(b * logics.length)];
+
+        return {
+            chromosome: "ch9_grid",
+            property: "logic",
+            oldValue: oldLogic,
+            newValue: grid.logic,
+            changeType
+        };
+    }
+
+    private mutateTexture(
+        texture: any,
+        changeType: MutationRecord["changeType"],
+        seed: string
+    ): MutationRecord {
+        const b = this.getHashByte(seed, 1);
+        const surfaces = ["flat", "grain", "glass", "chrome"];
+        const oldSurface = texture.surface;
+        texture.surface = surfaces[Math.floor(b * surfaces.length)];
+
+        return {
+            chromosome: "ch11_texture",
+            property: "surface",
+            oldValue: oldSurface,
+            newValue: texture.surface,
+            changeType
+        };
+    }
+
+    private mutateAtmosphere(
+        atmosphere: any,
+        changeType: MutationRecord["changeType"],
+        seed: string
+    ): MutationRecord {
+        const b = this.getHashByte(seed, 1);
+        const effects = ["glassmorphism", "crt_noise", "fluid_mesh", "none"];
+        const oldFx = atmosphere.fx;
+        atmosphere.fx = effects[Math.floor(b * effects.length)];
+
+        return {
+            chromosome: "ch13_atmosphere",
+            property: "fx",
+            oldValue: oldFx,
+            newValue: atmosphere.fx,
+            changeType
+        };
+    }
+
+    private mutatePhysics(
+        physics: any,
+        changeType: MutationRecord["changeType"],
+        seed: string
+    ): MutationRecord {
+        const b = this.getHashByte(seed, 1);
+        const materials = ["neumorphism", "metallic", "glass", "matte"];
+        const oldMaterial = physics.material;
+        physics.material = materials[Math.floor(b * materials.length)];
+
+        return {
+            chromosome: "ch14_physics",
+            property: "material",
+            oldValue: oldMaterial,
+            newValue: physics.material,
+            changeType
+        };
+    }
+
+    private mutateBiomarker(
+        biomarker: any,
+        changeType: MutationRecord["changeType"],
+        seed: string
+    ): MutationRecord {
+        const b = this.getHashByte(seed, 1);
+        const geometries = ["monolithic", "organic", "fractal"];
+        const oldGeometry = biomarker.geometry;
+        biomarker.geometry = geometries[Math.floor(b * geometries.length)];
+
+        return {
+            chromosome: "ch15_biomarker",
+            property: "geometry",
+            oldValue: oldGeometry,
+            newValue: biomarker.geometry,
+            changeType
+        };
+    }
+
+    private mutateTypographyScale(
+        typography: any,
+        changeType: MutationRecord["changeType"],
+        seed: string
+    ): MutationRecord {
+        const b = this.getHashByte(seed, 1);
+        const oldRatio = typography.ratio;
+        
+        // Adjust ratio slightly: 1.067 to 1.618 range
+        const ratios = [1.067, 1.125, 1.2, 1.25, 1.333, 1.414, 1.5, 1.618];
+        const currentIndex = ratios.indexOf(oldRatio);
+        const newIndex = Math.max(0, Math.min(ratios.length - 1, 
+            currentIndex + Math.floor((b - 0.5) * 4)));
+        typography.ratio = ratios[newIndex];
+
+        return {
+            chromosome: "ch16_typography",
+            property: "ratio",
+            oldValue: oldRatio,
+            newValue: typography.ratio,
+            changeType
+        };
+    }
+
+    private mutateAccessibility(
+        accessibility: any,
+        changeType: MutationRecord["changeType"],
+        seed: string
+    ): MutationRecord {
+        const b = this.getHashByte(seed, 1);
+        const oldMinTouch = accessibility.minTouchTarget;
+        
+        // Toggle between 44px and 48px
+        accessibility.minTouchTarget = b > 0.5 ? 48 : 44;
+
+        return {
+            chromosome: "ch17_accessibility",
+            property: "minTouchTarget",
+            oldValue: oldMinTouch,
+            newValue: accessibility.minTouchTarget,
+            changeType
+        };
+    }
+
+    private mutateRendering(
+        rendering: any,
+        changeType: MutationRecord["changeType"],
+        seed: string
+    ): MutationRecord {
+        const b = this.getHashByte(seed, 1);
+        const strategies = ["webgl", "css", "svg", "static"];
+        const oldStrategy = rendering.strategy;
+        rendering.strategy = strategies[Math.floor(b * strategies.length)];
+
+        return {
+            chromosome: "ch18_rendering",
+            property: "strategy",
+            oldValue: oldStrategy,
+            newValue: rendering.strategy,
+            changeType
+        };
+    }
+
+    private mutateHero(
+        hero: any,
+        changeType: MutationRecord["changeType"],
+        seed: string
+    ): MutationRecord {
+        const b = this.getHashByte(seed, 1);
+        const types = ["trust_authority", "product_ui", "stats_counter", "search_discovery", 
+                       "service_showcase", "brand_logo", "testimonial_focus", "editorial_feature",
+                       "aspirational_imagery", "configurator_3d", "content_carousel", "product_video"];
+        const oldType = hero.type;
+        hero.type = types[Math.floor(b * types.length)];
+
+        return {
+            chromosome: "ch19_hero_type",
+            property: "type",
+            oldValue: oldType,
+            newValue: hero.type,
+            changeType
+        };
+    }
+
+    private mutateVisualTreatment(
+        visual: any,
+        changeType: MutationRecord["changeType"],
+        seed: string
+    ): MutationRecord {
+        const b = this.getHashByte(seed, 1);
+        const treatments = ["natural", "high_contrast", "warm", "cool", "monochrome"];
+        const oldTreatment = visual.imageTreatment;
+        visual.imageTreatment = treatments[Math.floor(b * treatments.length)];
+
+        return {
+            chromosome: "ch20_visual_treatment",
+            property: "imageTreatment",
+            oldValue: oldTreatment,
+            newValue: visual.imageTreatment,
+            changeType
+        };
+    }
+
+    private mutateTrustSignals(
+        trust: any,
+        changeType: MutationRecord["changeType"],
+        seed: string
+    ): MutationRecord {
+        const b = this.getHashByte(seed, 1);
+        const prominences = ["subtle", "prominent", "hero_feature"];
+        const oldProminence = trust.prominence;
+        trust.prominence = prominences[Math.floor(b * prominences.length)];
+
+        return {
+            chromosome: "ch21_trust_signals",
+            property: "prominence",
+            oldValue: oldProminence,
+            newValue: trust.prominence,
+            changeType
+        };
+    }
+
+    private mutateSocialProof(
+        social: any,
+        changeType: MutationRecord["changeType"],
+        seed: string
+    ): MutationRecord {
+        const b = this.getHashByte(seed, 1);
+        const types = ["testimonials_grid", "customer_logos", "rating_stars", "none"];
+        const oldType = social.type;
+        social.type = types[Math.floor(b * types.length)];
+
+        return {
+            chromosome: "ch22_social_proof",
+            property: "type",
+            oldValue: oldType,
+            newValue: social.type,
+            changeType
+        };
+    }
+
+    private mutateContentDepth(
+        depth: any,
+        changeType: MutationRecord["changeType"],
+        seed: string
+    ): MutationRecord {
+        const b = this.getHashByte(seed, 1);
+        const levels = ["minimal", "moderate", "extensive", "comprehensive"];
+        const oldLevel = depth.level;
+        depth.level = levels[Math.floor(b * levels.length)];
+
+        return {
+            chromosome: "ch23_content_depth",
+            property: "level",
+            oldValue: oldLevel,
+            newValue: depth.level,
+            changeType
+        };
+    }
+
+    private mutatePersonalization(
+        personalization: any,
+        changeType: MutationRecord["changeType"],
+        seed: string
+    ): MutationRecord {
+        const b = this.getHashByte(seed, 1);
+        const approaches = ["static", "behavior_based", "fully_dynamic"];
+        const oldApproach = personalization.approach;
+        personalization.approach = approaches[Math.floor(b * approaches.length)];
+
+        return {
+            chromosome: "ch24_personalization",
+            property: "approach",
+            oldValue: oldApproach,
+            newValue: personalization.approach,
+            changeType
+        };
+    }
+
+    private mutateCopyEngine(
+        copy: any,
+        changeType: MutationRecord["changeType"],
+        seed: string
+    ): MutationRecord {
+        const b = this.getHashByte(seed, 1);
+        const ctas = ["Get Started", "Learn More", "Try Free", "Book Demo", "Subscribe", "Download"];
+        const oldCta = copy.cta;
+        copy.cta = ctas[Math.floor(b * ctas.length)];
+
+        return {
+            chromosome: "ch25_copy_engine",
+            property: "cta",
+            oldValue: oldCta,
+            newValue: copy.cta,
+            changeType
+        };
+    }
+
+    private mutateCopyIntelligence(
+        intel: any,
+        changeType: MutationRecord["changeType"],
+        seed: string
+    ): MutationRecord {
+        const b = this.getHashByte(seed, 1);
+        const registers = ["clinical", "professional", "conversational", "playful", "luxury", "urgent"];
+        const oldRegister = intel.emotionalRegister;
+        intel.emotionalRegister = registers[Math.floor(b * registers.length)];
+
+        return {
+            chromosome: "ch26_copy_intelligence",
+            property: "emotionalRegister",
+            oldValue: oldRegister,
+            newValue: intel.emotionalRegister,
+            changeType
+        };
+    }
+
+    private mutateSector(
+        sector: any,
+        changeType: MutationRecord["changeType"],
+        seed: string
+    ): MutationRecord {
+        const b = this.getHashByte(seed, 1);
+        const sectors = ["healthcare", "fintech", "technology", "education", "commerce", 
+                         "food", "travel", "entertainment", "legal", "automotive"];
+        const oldSector = sector.primary;
+        sector.primary = sectors[Math.floor(b * sectors.length)];
+
+        return {
+            chromosome: "ch0_sector",
+            property: "primary",
+            oldValue: oldSector,
+            newValue: sector.primary,
+            changeType
+        };
+    }
+
+    private mutateSignature(
+        signature: any,
+        changeType: MutationRecord["changeType"],
+        seed: string
+    ): MutationRecord {
+        const oldMutation = signature.uniqueMutation;
+        // Generate a new mutation identifier based on seed
+        signature.uniqueMutation = crypto.createHash("sha256")
+            .update(seed + oldMutation)
+            .digest("hex")
+            .slice(0, 8);
+
+        return {
+            chromosome: "ch12_signature",
+            property: "uniqueMutation",
+            oldValue: oldMutation,
+            newValue: signature.uniqueMutation,
+            changeType
+        };
+    }
+
+    private mutateHierarchy(
+        hierarchy: any,
+        changeType: MutationRecord["changeType"],
+        seed: string
+    ): MutationRecord {
+        const b = this.getHashByte(seed, 1);
+        const depths = ["flat", "overlapping", "3d-stack"];
+        const oldDepth = hierarchy.depth;
+        hierarchy.depth = depths[Math.floor(b * depths.length)];
+
+        return {
+            chromosome: "ch10_hierarchy",
+            property: "depth",
+            oldValue: oldDepth,
+            newValue: hierarchy.depth,
             changeType
         };
     }

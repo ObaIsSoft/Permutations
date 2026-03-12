@@ -1,457 +1,442 @@
-import postcss, { Root, Declaration, Rule, AtRule } from 'postcss';
-import safeParser from 'postcss-safe-parser';
+/**
+ * Genome-Aware CSS Validator
+ * 
+ * Uses css-tree to parse CSS and validate against genome constraints.
+ * Provides drift scoring and auto-correction suggestions.
+ */
 
-export interface PatternViolation {
-    type: "visual" | "structural" | "semantic";
-    pattern: string;
-    severity: "error" | "warning" | "info";
-    line?: number;
-    column?: number;
-    suggestion: string;
-    reason: string;
-    evidence: string;
+import * as csstree from 'css-tree';
+import type { DesignGenome } from '../genome/types.js';
+
+export interface ValidationViolation {
+    chromosome: string;
+    property: string;
+    expected: string;
+    actual: string;
+    line: number;
+    column: number;
+    severity: 'error' | 'warning';
+    correction: string;
 }
 
-export interface PatternRule {
-    id: string;
-    severity: "error" | "warning" | "info";
-    category: "font" | "color" | "layout" | "motion" | "component";
-    suggestion: string;
-    reason: string;
+export interface ValidationResult {
+    valid: boolean;
+    driftScore: number; // 0-100
+    violations: ValidationViolation[];
+    corrections: string; // Corrected CSS
 }
 
-// Font detection rules
-const FONT_RULES: PatternRule[] = [
-    {
-        id: "font_inter",
-        severity: "error",
-        category: "font",
-        suggestion: "Use the DNA-assigned display or body font family",
-        reason: "Inter is the default AI slop font"
-    },
-    {
-        id: "font_roboto",
-        severity: "error",
-        category: "font",
-        suggestion: "Use the DNA-assigned font family",
-        reason: "Roboto is overused and generic"
-    }
-];
+export class GenomeAwareValidator {
+    private genome!: DesignGenome;
+    private violations: ValidationViolation[] = [];
+    private corrections: Map<string, string> = new Map();
 
-// Gradient detection rules
-const GRADIENT_RULES: PatternRule[] = [
-    {
-        id: "tailwind_gradient",
-        severity: "warning",
-        category: "color",
-        suggestion: "Use solid colors from DNA palette or fx-atmosphere",
-        reason: "Tailwind gradients are overused"
-    },
-    {
-        id: "blue_purple_gradient",
-        severity: "error",
-        category: "color",
-        suggestion: "Use DNA primary color with proper temperature",
-        reason: "Blue-purple gradient is ultimate AI slop"
-    }
-];
-
-// Layout detection rules
-const LAYOUT_RULES: PatternRule[] = [
-    {
-        id: "excessive_rounding",
-        severity: "error",
-        category: "layout",
-        suggestion: "Use rounded-genome (9px) or brutalist 0px based on DNA",
-        reason: "Excessive rounding creates generic SaaS aesthetic"
-    },
-    {
-        id: "heavy_shadow",
-        severity: "warning",
-        category: "layout",
-        suggestion: "Use 1px borders or subtle DNA shadows",
-        reason: "Heavy shadows create depth confusion"
-    },
-    {
-        id: "backdrop_blur",
-        severity: "warning",
-        category: "color",
-        suggestion: "Use solid DNA surface colors",
-        reason: "Glassmorphism is overused"
-    }
-];
-
-export class ASTPatternDetector {
-    private violations: PatternViolation[] = [];
-
-    async detect(css: string, html?: string, jsx?: string): Promise<PatternViolation[]> {
+    validate(css: string, genome: DesignGenome): ValidationResult {
+        this.genome = genome;
         this.violations = [];
+        this.corrections = new Map();
 
-        // Parse CSS with PostCSS
-        await this.detectInCSS(css);
+        const ast = csstree.parse(css, {
+            positions: true,
+            onParseError: (error: any) => {
+                // Log parsing errors but continue
+                console.error('CSS parse error:', error.message);
+            }
+        });
 
-        // Detect in HTML/JSX inline styles
-        if (html) {
-            await this.detectInHTML(html);
-        }
+        // Walk the AST and validate declarations
+        csstree.walk(ast, (node: any) => {
+            if (node.type === 'Declaration') {
+                this.validateDeclaration(node);
+            }
+        });
 
-        if (jsx) {
-            await this.detectInJSX(jsx);
-        }
+        // Generate corrected CSS
+        const correctedCSS = this.applyCorrections(css, ast);
 
-        return this.violations;
+        // Calculate drift score (0-100)
+        const driftScore = this.calculateDriftScore();
+
+        return {
+            valid: this.violations.length === 0,
+            driftScore,
+            violations: this.violations,
+            corrections: correctedCSS
+        };
     }
 
-    private async detectInCSS(css: string): Promise<void> {
-        try {
-            const root = safeParser(css);
+    private validateDeclaration(node: any): void {
+        const property = node.property.toLowerCase();
+        const value = csstree.generate(node.value);
+        const line = node.loc?.start?.line || 0;
+        const column = node.loc?.start?.column || 0;
+
+        switch (property) {
+            case 'font-family':
+                this.validateFontFamily(value, line, column);
+                break;
+            case 'color':
+            case 'background-color':
+            case 'border-color':
+                this.validateColor(value, property, line, column);
+                break;
+            case 'border-radius':
+                this.validateBorderRadius(value, line, column);
+                break;
+            case 'padding':
+            case 'margin':
+            case 'gap':
+                this.validateSpacing(value, property, line, column);
+                break;
+            case 'font-size':
+                this.validateFontSize(value, line, column);
+                break;
+            case 'transition-duration':
+            case 'animation-duration':
+                this.validateTiming(value, line, column);
+                break;
+        }
+    }
+
+    private validateFontFamily(value: string, line: number, column: number): void {
+        const expectedDisplay = this.genome.chromosomes.ch3_type_display.family;
+        const expectedBody = this.genome.chromosomes.ch4_type_body.family;
+        
+        // Check if font matches either display or body
+        const valueLower = value.toLowerCase();
+        const isDisplay = valueLower.includes(expectedDisplay.toLowerCase());
+        const isBody = valueLower.includes(expectedBody.toLowerCase());
+
+        if (!isDisplay && !isBody && !valueLower.includes('system-ui')) {
+            this.violations.push({
+                chromosome: 'ch3_type_display / ch4_type_body',
+                property: 'font-family',
+                expected: `${expectedDisplay} or ${expectedBody}`,
+                actual: value,
+                line,
+                column,
+                severity: 'warning',
+                correction: `font-family: ${expectedBody}, system-ui, sans-serif`
+            });
+            this.corrections.set(`font-family:${value}`, `font-family: ${expectedBody}, system-ui, sans-serif`);
+        }
+    }
+
+    private validateColor(value: string, property: string, line: number, column: number): void {
+        const primary = this.genome.chromosomes.ch5_color_primary;
+        const expectedHue = primary.hue;
+        
+        // Parse the color value
+        const parsed = this.parseColor(value);
+        if (!parsed) return;
+
+        // Check if it's within ±20° of primary hue
+        const hueDiff = Math.abs(this.hueDifference(parsed.hue, expectedHue));
+        
+        if (hueDiff > 20 && parsed.saturation > 0.1) {
+            this.violations.push({
+                chromosome: 'ch5_color_primary',
+                property,
+                expected: `hue within ±20° of ${expectedHue}`,
+                actual: `hue ${parsed.hue}`,
+                line,
+                column,
+                severity: 'warning',
+                correction: `${property}: ${this.adjustHue(value, expectedHue, parsed.hue)}`
+            });
+        }
+    }
+
+    private validateBorderRadius(value: string, line: number, column: number): void {
+        const expectedRadius = this.genome.chromosomes.ch7_edge.componentRadius;
+        const pxValue = this.extractPx(value);
+        
+        if (pxValue !== null && Math.abs(pxValue - expectedRadius) > 2) {
+            this.violations.push({
+                chromosome: 'ch7_edge',
+                property: 'border-radius',
+                expected: `${expectedRadius}px`,
+                actual: `${pxValue}px`,
+                line,
+                column,
+                severity: 'error',
+                correction: `border-radius: ${expectedRadius}px`
+            });
+            this.corrections.set(`border-radius:${value}`, `border-radius: ${expectedRadius}px`);
+        }
+    }
+
+    private validateSpacing(value: string, property: string, line: number, column: number): void {
+        const baseSpacing = this.genome.chromosomes.ch2_rhythm.baseSpacing;
+        const pxValue = this.extractPx(value);
+        
+        if (pxValue !== null) {
+            // Check if it's a multiple of base spacing
+            const remainder = pxValue % baseSpacing;
+            if (remainder > 2) {
+                const corrected = Math.round(pxValue / baseSpacing) * baseSpacing;
+                this.violations.push({
+                    chromosome: 'ch2_rhythm',
+                    property,
+                    expected: `multiple of ${baseSpacing}px`,
+                    actual: `${pxValue}px`,
+                    line,
+                    column,
+                    severity: 'warning',
+                    correction: `${property}: ${corrected}px`
+                });
+                this.corrections.set(`${property}:${value}`, `${property}: ${corrected}px`);
+            }
+        }
+    }
+
+    private validateFontSize(value: string, line: number, column: number): void {
+        const baseSize = this.genome.chromosomes.ch16_typography.baseSize;
+        const ratio = this.genome.chromosomes.ch16_typography.ratio;
+        const pxValue = this.extractPx(value);
+        
+        if (pxValue !== null) {
+            // Check if it follows the type scale
+            const expectedSizes = [
+                baseSize,
+                Math.round(baseSize * ratio),
+                Math.round(baseSize * ratio * ratio),
+                Math.round(baseSize / ratio)
+            ];
             
-            root.walkDecls((decl) => {
-                this.checkDeclaration(decl);
-            });
-        } catch (e) {
-            // CSS parsing error
-        }
-    }
-
-    private checkDeclaration(decl: Declaration): void {
-        const prop = decl.prop.toLowerCase();
-        const value = decl.value.toLowerCase();
-
-        // Check font-family declarations
-        if (prop === 'font-family' || prop === 'font') {
-            this.checkFontFamily(decl);
-        }
-
-        // Check background/gradient declarations
-        if (prop === 'background' || prop === 'background-image') {
-            this.checkGradients(decl);
-        }
-
-        // Check border-radius
-        if (prop === 'border-radius') {
-            this.checkBorderRadius(decl);
-        }
-
-        // Check box-shadow
-        if (prop === 'box-shadow') {
-            this.checkShadow(decl);
-        }
-
-        // Check backdrop-filter (glassmorphism)
-        if (prop === 'backdrop-filter') {
-            this.checkBackdropFilter(decl);
-        }
-    }
-
-    private checkFontFamily(decl: Declaration): void {
-        const value = decl.value;
-        
-        // Check for Inter (various formats)
-        if (/inter/i.test(value) && !/system-ui/i.test(value)) {
-            this.addViolation({
-                ...FONT_RULES[0],
-                line: decl.source?.start?.line,
-                column: decl.source?.start?.column,
-                evidence: value
-            });
-        }
-
-        // Check for Roboto
-        if (/roboto/i.test(value)) {
-            this.addViolation({
-                ...FONT_RULES[1],
-                line: decl.source?.start?.line,
-                column: decl.source?.start?.column,
-                evidence: value
-            });
-        }
-    }
-
-    private checkGradients(decl: Declaration): void {
-        const value = decl.value;
-
-        // Check for Tailwind gradient classes in CSS
-        if (/bg-gradient-to-(r|l|t|b|tr|tl|br|bl)/.test(value)) {
-            this.addViolation({
-                ...GRADIENT_RULES[0],
-                line: decl.source?.start?.line,
-                column: decl.source?.start?.column,
-                evidence: value
-            });
-        }
-
-        // Check for blue-purple gradients
-        if (/linear-gradient.*(blue|indigo).*purple|from-blue.*to-purple/i.test(value)) {
-            this.addViolation({
-                ...GRADIENT_RULES[1],
-                line: decl.source?.start?.line,
-                column: decl.source?.start?.column,
-                evidence: value
-            });
-        }
-    }
-
-    private checkBorderRadius(decl: Declaration): void {
-        const value = decl.value;
-        
-        // Extract pixel values
-        const pxMatch = value.match(/(\d+)px/);
-        const remMatch = value.match(/([\d.]+)rem/);
-        
-        let radius = 0;
-        if (pxMatch) {
-            radius = parseInt(pxMatch[1]);
-        } else if (remMatch) {
-            radius = parseFloat(remMatch[1]) * 16;
-        }
-
-        // Flag excessive rounding (> 16px)
-        if (radius > 16) {
-            this.addViolation({
-                ...LAYOUT_RULES[0],
-                line: decl.source?.start?.line,
-                column: decl.source?.start?.column,
-                evidence: `${decl.prop}: ${value}`
-            });
-        }
-    }
-
-    private checkShadow(decl: Declaration): void {
-        const value = decl.value;
-        
-        // Check for heavy shadows (large blur radius)
-        const blurMatches = value.match(/(\d+)px/g);
-        if (blurMatches) {
-            const blurValues = blurMatches.map(v => parseInt(v));
-            const maxBlur = Math.max(...blurValues);
+            const isValid = expectedSizes.some(size => Math.abs(size - pxValue) <= 2);
             
-            if (maxBlur > 20) {
-                this.addViolation({
-                    ...LAYOUT_RULES[1],
-                    line: decl.source?.start?.line,
-                    column: decl.source?.start?.column,
-                    evidence: `${decl.prop}: ${value}`
+            if (!isValid) {
+                const closest = expectedSizes.reduce((prev, curr) => 
+                    Math.abs(curr - pxValue) < Math.abs(prev - pxValue) ? curr : prev
+                );
+                
+                this.violations.push({
+                    chromosome: 'ch16_typography',
+                    property: 'font-size',
+                    expected: `type scale multiple of ${baseSize}px (ratio ${ratio.toFixed(2)})`,
+                    actual: `${pxValue}px`,
+                    line,
+                    column,
+                    severity: 'warning',
+                    correction: `font-size: ${closest}px`
                 });
             }
         }
     }
 
-    private checkBackdropFilter(decl: Declaration): void {
-        const value = decl.value;
+    private validateTiming(value: string, line: number, column: number): void {
+        const durationScale = this.genome.chromosomes.ch8_motion.durationScale;
+        const msValue = this.extractMs(value);
         
-        if (/blur/i.test(value)) {
-            this.addViolation({
-                ...LAYOUT_RULES[2],
-                line: decl.source?.start?.line,
-                column: decl.source?.start?.column,
-                evidence: `${decl.prop}: ${value}`
-            });
-        }
-    }
-
-    private async detectInHTML(html: string): Promise<void> {
-        // Check for inline styles in HTML
-        const styleRegex = /style=["']([^"']+)["']/gi;
-        let match;
-        
-        while ((match = styleRegex.exec(html)) !== null) {
-            const inlineCSS = match[1];
-            const fakeCSS = `.inline { ${inlineCSS} }`;
+        if (msValue !== null) {
+            // Expected range based on durationScale
+            const expectedFast = 150 * durationScale;
+            const expectedNormal = 300 * durationScale;
+            const expectedSlow = 500 * durationScale;
             
-            try {
-                const root = safeParser(fakeCSS);
-                root.walkDecls((decl) => {
-                    this.checkDeclaration(decl);
+            const expectedValues = [expectedFast, expectedNormal, expectedSlow];
+            const isValid = expectedValues.some(v => Math.abs(v - msValue) <= 50);
+            
+            if (!isValid) {
+                const closest = expectedValues.reduce((prev, curr) => 
+                    Math.abs(curr - msValue) < Math.abs(prev - msValue) ? curr : prev
+                );
+                
+                this.violations.push({
+                    chromosome: 'ch8_motion',
+                    property: 'transition-duration',
+                    expected: `${expectedFast.toFixed(0)}ms, ${expectedNormal.toFixed(0)}ms, or ${expectedSlow.toFixed(0)}ms`,
+                    actual: `${msValue}ms`,
+                    line,
+                    column,
+                    severity: 'warning',
+                    correction: `transition-duration: ${closest.toFixed(0)}ms`
                 });
-            } catch (e) {
-                // Ignore invalid inline styles
             }
         }
-
-        // Check for Tailwind classes in HTML
-        this.checkTailwindClasses(html);
     }
 
-    private async detectInJSX(jsx: string): Promise<void> {
-        // Check CSS-in-JS patterns
+    private parseColor(value: string): { hue: number; saturation: number; lightness: number } | null {
+        // Handle hex
+        const hexMatch = value.match(/#([0-9a-fA-F]{3,6})/);
+        if (hexMatch) {
+            return this.hexToHsl(hexMatch[1]);
+        }
         
-        // styled-components: styled.div`...`
-        const styledRegex = /styled\.\w+\s*`|styled\([\w\"\']+\)\s*`/g;
-        let match;
-        while ((match = styledRegex.exec(jsx)) !== null) {
-            const templateContent = this.extractTemplateLiteral(jsx, match.index + match[0].length - 1);
-            if (templateContent) {
-                await this.detectInCSS(templateContent);
-            }
+        // Handle rgb/rgba
+        const rgbMatch = value.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+        if (rgbMatch) {
+            return this.rgbToHsl(
+                parseInt(rgbMatch[1]),
+                parseInt(rgbMatch[2]),
+                parseInt(rgbMatch[3])
+            );
         }
-
-        // Emotion: css`...`
-        const emotionRegex = /css\s*`/g;
-        while ((match = emotionRegex.exec(jsx)) !== null) {
-            const templateContent = this.extractTemplateLiteral(jsx, match.index + match[0].length - 1);
-            if (templateContent) {
-                await this.detectInCSS(templateContent);
-            }
+        
+        // Handle hsl/hsla
+        const hslMatch = value.match(/hsla?\((\d+),\s*(\d+)%,?\s*(\d+)%/);
+        if (hslMatch) {
+            return {
+                hue: parseInt(hslMatch[1]),
+                saturation: parseInt(hslMatch[2]) / 100,
+                lightness: parseInt(hslMatch[3]) / 100
+            };
         }
-
-        // Inline styles in JSX: style={{...}}
-        const jsxStyleRegex = /style=\{\{\s*([^}]+)\}\}/g;
-        while ((match = jsxStyleRegex.exec(jsx)) !== null) {
-            const styleObj = match[1];
-            // Convert JSX style object to CSS
-            const css = this.convertJSXStyleToCSS(styleObj);
-            await this.detectInCSS(css);
-        }
-
-        // Check Tailwind classes
-        this.checkTailwindClasses(jsx);
-    }
-
-    private extractTemplateLiteral(source: string, startIndex: number): string | null {
-        let depth = 0;
-        let result = '';
-        let escaped = false;
-
-        for (let i = startIndex + 1; i < source.length; i++) {
-            const char = source[i];
-
-            if (escaped) {
-                result += char;
-                escaped = false;
-                continue;
-            }
-
-            if (char === '\\') {
-                escaped = true;
-                result += char;
-                continue;
-            }
-
-            if (char === '$' && source[i + 1] === '{') {
-                depth++;
-                i++;
-                result += '${';
-                continue;
-            }
-
-            if (char === '}') {
-                if (depth > 0) {
-                    depth--;
-                    result += char;
-                    continue;
-                }
-            }
-
-            if (char === '`' && depth === 0) {
-                return result;
-            }
-
-            result += char;
-        }
-
+        
         return null;
     }
 
-    private convertJSXStyleToCSS(styleObj: string): string {
-        // Convert camelCase to kebab-case
-        const css = styleObj
-            .replace(/([A-Z])/g, '-$1')
-            .toLowerCase()
-            .replace(/:\s*/g, ': ')
-            .replace(/,\s*/g, '; ');
+    private hexToHsl(hex: string): { hue: number; saturation: number; lightness: number } {
+        // Expand 3-digit hex
+        if (hex.length === 3) {
+            hex = hex.split('').map(c => c + c).join('');
+        }
         
-        return `.jsx-style { ${css} }`;
+        const r = parseInt(hex.substring(0, 2), 16) / 255;
+        const g = parseInt(hex.substring(2, 4), 16) / 255;
+        const b = parseInt(hex.substring(4, 6), 16) / 255;
+        
+        return this.rgbToHsl(r * 255, g * 255, b * 255);
     }
 
-    private checkTailwindClasses(content: string): void {
-        // Check for Tailwind font classes
-        const fontInterRegex = /\bfont-(inter|Inter)\b/g;
-        let match;
-        while ((match = fontInterRegex.exec(content)) !== null) {
-            this.addViolation({
-                ...FONT_RULES[0],
-                line: this.estimateLineNumber(content, match.index),
-                evidence: match[0]
-            });
+    private rgbToHsl(r: number, g: number, b: number): { hue: number; saturation: number; lightness: number } {
+        r /= 255;
+        g /= 255;
+        b /= 255;
+        
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        let h = 0;
+        let s = 0;
+        const l = (max + min) / 2;
+        
+        if (max !== min) {
+            const d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            switch (max) {
+                case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                case g: h = (b - r) / d + 2; break;
+                case b: h = (r - g) / d + 4; break;
+            }
+            h /= 6;
         }
-
-        // Check for gradient classes
-        const gradientRegex = /\bbg-gradient-to-(r|l|t|b|tr|tl|br|bl)\b/g;
-        while ((match = gradientRegex.exec(content)) !== null) {
-            this.addViolation({
-                ...GRADIENT_RULES[0],
-                line: this.estimateLineNumber(content, match.index),
-                evidence: match[0]
-            });
-        }
-
-        // Check for excessive rounding
-        const roundedRegex = /\brounded-(xl|2xl|3xl|full)\b/g;
-        while ((match = roundedRegex.exec(content)) !== null) {
-            this.addViolation({
-                ...LAYOUT_RULES[0],
-                line: this.estimateLineNumber(content, match.index),
-                evidence: match[0]
-            });
-        }
-
-        // Check for backdrop blur
-        const blurRegex = /\bbackdrop-blur(-\w+)?\b/g;
-        while ((match = blurRegex.exec(content)) !== null) {
-            this.addViolation({
-                ...LAYOUT_RULES[2],
-                line: this.estimateLineNumber(content, match.index),
-                evidence: match[0]
-            });
-        }
+        
+        return {
+            hue: Math.round(h * 360),
+            saturation: s,
+            lightness: l
+        };
     }
 
-    private estimateLineNumber(content: string, index: number): number {
-        const lines = content.substring(0, index).split('\n');
-        return lines.length;
+    private hueDifference(h1: number, h2: number): number {
+        const diff = Math.abs(h1 - h2);
+        return diff > 180 ? 360 - diff : diff;
     }
 
-    private addViolation(rule: PatternRule & { line?: number; column?: number; evidence?: string }): void {
-        this.violations.push({
-            type: rule.category === "layout" || rule.category === "component" ? "structural" : "visual",
-            pattern: rule.id,
-            severity: rule.severity,
-            line: rule.line,
-            column: rule.column,
-            suggestion: rule.suggestion,
-            reason: rule.reason,
-            evidence: rule.evidence || ""
-        });
-    }
-
-    generateReport(violations: PatternViolation[]): string {
-        if (violations.length === 0) {
-            return "✅ No slop patterns detected. Design is DNA-compliant.";
+    private adjustHue(originalValue: string, targetHue: number, currentHue: number): string {
+        // Simple hue shift - preserve format
+        const hueShift = targetHue - currentHue;
+        
+        if (originalValue.includes('hsl')) {
+            return originalValue.replace(/hsl\((\d+)/, `hsl(${targetHue}`);
         }
+        
+        // For hex/rgb, convert to HSL and back
+        const parsed = this.parseColor(originalValue);
+        if (!parsed) return originalValue;
+        
+        return `hsl(${targetHue}, ${Math.round(parsed.saturation * 100)}%, ${Math.round(parsed.lightness * 100)}%)`;
+    }
 
-        const errors = violations.filter(v => v.severity === "error");
-        const warnings = violations.filter(v => v.severity === "warning");
+    private extractPx(value: string): number | null {
+        const match = value.match(/(\d+(?:\.\d+)?)px/);
+        return match ? parseFloat(match[1]) : null;
+    }
 
-        let report = `❌ Pattern Analysis Failed\n`;
-        report += `   Errors: ${errors.length} | Warnings: ${warnings.length}\n\n`;
+    private extractMs(value: string): number | null {
+        const msMatch = value.match(/(\d+(?:\.\d+)?)ms/);
+        if (msMatch) return parseFloat(msMatch[1]);
+        
+        const sMatch = value.match(/(\d+(?:\.\d+)?)s/);
+        if (sMatch) return parseFloat(sMatch[1]) * 1000;
+        
+        return null;
+    }
 
+    private calculateDriftScore(): number {
+        if (this.violations.length === 0) return 0;
+        
+        // Weight violations by severity
+        const errorWeight = 10;
+        const warningWeight = 5;
+        
+        let totalWeight = 0;
+        for (const v of this.violations) {
+            totalWeight += v.severity === 'error' ? errorWeight : warningWeight;
+        }
+        
+        // Cap at 100
+        return Math.min(100, totalWeight);
+    }
+
+    private applyCorrections(css: string, ast: any): string {
+        let corrected = css;
+        
+        // Apply corrections in reverse order to preserve positions
+        const sortedViolations = [...this.violations].sort((a, b) => 
+            b.line - a.line || b.column - a.column
+        );
+        
+        for (const violation of sortedViolations) {
+            // Simple string replacement - in production, use AST manipulation
+            const lines = corrected.split('\n');
+            if (violation.line > 0 && violation.line <= lines.length) {
+                const line = lines[violation.line - 1];
+                if (line.includes(violation.actual)) {
+                    lines[violation.line - 1] = line.replace(
+                        violation.actual,
+                        violation.correction.split(': ')[1] || violation.expected
+                    );
+                }
+            }
+            corrected = lines.join('\n');
+        }
+        
+        return corrected;
+    }
+
+    generateReport(result: ValidationResult): string {
+        if (result.valid) {
+            return `✅ CSS is fully DNA-compliant (drift score: ${result.driftScore})`;
+        }
+        
+        let report = `❌ CSS Validation Failed (drift score: ${result.driftScore}/100)\n\n`;
+        
+        const errors = result.violations.filter(v => v.severity === 'error');
+        const warnings = result.violations.filter(v => v.severity === 'warning');
+        
         if (errors.length > 0) {
-            report += `ERRORS (must fix):\n`;
+            report += `ERRORS (${errors.length}):\n`;
             errors.forEach(v => {
-                report += `  [${v.pattern}] Line ${v.line || '?'}: ${v.suggestion}\n`;
-                report += `     Evidence: ${v.evidence.slice(0, 60)}${v.evidence.length > 60 ? '...' : ''}\n`;
-                report += `     Reason: ${v.reason}\n\n`;
+                report += `  [${v.chromosome}] Line ${v.line}:${v.column}\n`;
+                report += `    Property: ${v.property}\n`;
+                report += `    Expected: ${v.expected}\n`;
+                report += `    Actual:   ${v.actual}\n`;
+                report += `    → ${v.correction}\n\n`;
             });
         }
-
+        
         if (warnings.length > 0) {
-            report += `WARNINGS:\n`;
+            report += `WARNINGS (${warnings.length}):\n`;
             warnings.forEach(v => {
-                report += `  [${v.pattern}] Line ${v.line || '?'}: ${v.suggestion}\n`;
+                report += `  [${v.chromosome}] Line ${v.line}:${v.column} - ${v.property}\n`;
+                report += `    → ${v.correction}\n`;
             });
         }
-
+        
         return report;
     }
 }
+
+export const genomeValidator = new GenomeAwareValidator();

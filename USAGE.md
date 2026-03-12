@@ -186,7 +186,7 @@ mutate_genome(
 
 ### Extract Genome from URL
 
-Reverse-engineer a genome from any website (requires browser automation):
+Reverse-engineer a genome from any website. Automatically scrapes CSS/design tokens:
 
 ```
 extract_genome_from_url(
@@ -195,12 +195,27 @@ extract_genome_from_url(
 → Returns: Approximate genome with confidence score
 ```
 
+**Scraping Backends (auto-selected):**
+
+| Backend | When Used | Pros | Cons |
+|---------|-----------|------|------|
+| **Playwright** (default) | Browser installed | JavaScript-rendered sites, computed styles | Requires `npx playwright install` |
+| **Native fetch** (fallback) | No browser | Zero dependencies, fast | Static HTML only, no JS-rendered content |
+| **Scrapy** (optional) | Python available | Professional crawling, rate limiting, proxies | Requires Python + `pip install scrapy` |
+
+**Install Playwright (recommended):**
+```bash
+npm install
+npx playwright install chromium
+```
+
 **Capabilities:**
-- Color palette extraction → ch5, ch26
-- Typography detection → ch3, ch4, ch16
-- Spacing inference → ch2
+- Color palette extraction (hex, rgb, hsl, named colors) → ch5, ch26
+- Typography detection (font-family, weights, sizes) → ch3, ch4, ch16
+- Spacing inference (margin, padding, gaps) → ch2
 - Border radius patterns → ch7
-- Animation detection → ch8, ch27
+- Animation detection (durations, easings) → ch8, ch27
+- Sector inference from URL + content (fintech, healthcare, etc.) → ch0
 
 ### Generate Design Brief
 

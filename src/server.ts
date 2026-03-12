@@ -392,17 +392,13 @@ class DesignGenomeServer {
                 },
                 {
                     name: "extract_genome_from_url",
-                    description: "Reverse-engineers an approximate genome from any website URL. Scrapes CSS, extracts colors/fonts/spacing, and builds a genome approximation. Use for 'I love this site, make something similar' workflows.",
+                    description: "Reverse-engineers an approximate genome from any website URL using browser automation (Playwright). Scrapes CSS, extracts colors/fonts/spacing from computed styles, and builds a genome approximation. Use for 'I love this site, make something similar' workflows. No manual CSS required.",
                     inputSchema: {
                         type: "object",
                         properties: {
                             url: {
                                 type: "string",
-                                description: "Website URL to analyze"
-                            },
-                            css: {
-                                type: "string",
-                                description: "CSS content (if already scraped)"
+                                description: "Website URL to analyze (e.g., https://stripe.com)"
                             }
                         },
                         required: ["url"]
@@ -1099,27 +1095,25 @@ class DesignGenomeServer {
                             throw new McpError(ErrorCode.InvalidParams, "Missing URL");
                         }
 
-                        // Note: This requires browser automation in production
-                        // For now, returns a mock response indicating the feature
+                        // Use Playwright to scrape the URL and extract CSS/design tokens
+                        const extracted = await urlGenomeExtractor.extract(args.url);
+                        
+                        // Clean up browser after extraction
+                        await urlGenomeExtractor.closeBrowser();
+                        
                         return {
                             content: [{
                                 type: "text",
                                 text: JSON.stringify({
-                                    note: "URL extraction requires browser automation tool in production",
                                     url: args.url,
-                                    status: "This feature analyzes CSS to reverse-engineer genomes",
-                                    workflow: [
-                                        "1. Scrape CSS from URL using browser automation",
-                                        "2. Pass css content to this tool",
-                                        "3. Returns approximated genome with confidence score"
-                                    ],
-                                    capabilities: [
-                                        "Color palette extraction (primary → ch5)",
-                                        "Typography detection (ch3, ch4, ch16)",
-                                        "Spacing inference (ch2 rhythm)",
-                                        "Border radius patterns (ch7 edge)",
-                                        "Animation detection (ch8, ch27)"
-                                    ]
+                                    sector: extracted.sector,
+                                    confidence: extracted.confidence,
+                                    colors: extracted.colors,
+                                    typography: extracted.typography,
+                                    layout: extracted.layout,
+                                    animation: extracted.animation,
+                                    extractedAt: extracted.extractedAt,
+                                    note: "This is an approximation based on computed styles. For better results, use generate_design_genome() to create a purpose-built genome."
                                 }, null, 2)
                             }]
                         };

@@ -1,404 +1,944 @@
-/**
- * URL Genome Extractor
- * 
- * Reverse-engineers an approximate genome from any website.
- * 
- * Use cases:
- * 1. "I love this site's aesthetic, generate something similar but unique"
- * 2. Audit existing sites for slop patterns
- * 3. Migration: existing site → Permutations genome
- */
+import { chromium, type Browser, type Page } from "playwright";
+import { spawn } from "child_process";
+import { writeFile, unlink } from "fs/promises";
+import { tmpdir } from "os";
+import { join } from "path";
+import * as crypto from "crypto";
 
-import type { DesignGenome, PrimarySector } from "./types.js";
+// Simple logger
+const logger = {
+    info: (msg: string, ...args: any[]) => console.log(`[URLExtractor] ${msg}`, ...args),
+    error: (msg: string, ...args: any[]) => console.error(`[URLExtractor] ${msg}`, ...args),
+    warn: (msg: string, ...args: any[]) => console.warn(`[URLExtractor] ${msg}`, ...args),
+};
+
+export interface ComputedStyle {
+    selector: string;
+    fontFamily?: string;
+    fontSize?: string;
+    fontWeight?: string;
+    color?: string;
+    backgroundColor?: string;
+    borderRadius?: string;
+    margin?: string;
+    padding?: string;
+    lineHeight?: string;
+    letterSpacing?: string;
+    textAlign?: string;
+    display?: string;
+    gap?: string;
+    transitionDuration?: string;
+    animationDuration?: string;
+}
 
 export interface ExtractedGenome {
-    genome: Partial<DesignGenome>;
-    confidence: number; // 0-1 how confident we are in extraction
-    source: {
-        url: string;
-        colors: string[];
-        fonts: string[];
-        borderRadii: number[];
-        animations: string[];
+    url: string;
+    sector: string;
+    confidence: number;
+    colors: {
+        primary: string | null;
+        secondary: string | null;
+        background: string | null;
+        surface: string | null;
+        text: string | null;
+        textMuted: string | null;
+        accent: string | null;
+        all: Array<{ value: string; frequency: number }>;
     };
-    approximations: string[]; // What we had to guess
+    typography: {
+        headingFont: string | null;
+        bodyFont: string | null;
+        baseSize: number;
+        scaleRatio: number;
+        lineHeight: number;
+        letterSpacing: number;
+        fontWeights: number[];
+    };
+    layout: {
+        maxWidth: number;
+        gridColumns: number;
+        spacingBase: number;
+        borderRadius: number;
+        density: "compact" | "normal" | "spacious";
+    };
+    animation: {
+        durationBase: number;
+        easing: string;
+        complexity: "minimal" | "functional" | "expressive";
+    };
+    rawCSS: string;
+    computedStyles: ComputedStyle[];
+    extractedAt: string;
+}
+
+interface ColorMatch {
+    value: string;
+    frequency: number;
+    context: string[];
 }
 
 export class URLGenomeExtractor {
-    /**
-     * Extract genome from URL
-     * Note: This requires a browser automation tool in production.
-     * This is the analysis logic that would run after scraping.
-     */
-    async extract(url: string, css: string, computedStyles: ComputedStyle[]): Promise<ExtractedGenome> {
-        const colors = this.extractColors(css, computedStyles);
-        const fonts = this.extractFonts(css, computedStyles);
-        const radii = this.extractBorderRadii(css);
-        const animations = this.extractAnimations(css);
-        
-        // Infer primary color
-        const primaryColor = this.inferPrimaryColor(colors);
-        
-        // Infer sector from content analysis
-        const sector = this.inferSector(url, css);
-        
-        // Build approximate genome
-        const genome: Partial<DesignGenome> = {
-            chromosomes: {
-                ch0_sector: {
-                    primary: sector,
-                    secondary: null,
-                    subSector: `${sector}_general` as any,
-                    confidence: 0.6
-                },
-                ch5_color_primary: {
-                    hue: primaryColor?.hue || 220,
-                    saturation: primaryColor?.saturation || 0.6,
-                    lightness: primaryColor?.lightness || 0.5,
-                    temperature: this.inferTemperature(primaryColor?.hue || 220),
-                    hex: primaryColor?.hex || "#3b82f6",
-                    sectorAppropriate: true
-                },
-                ch3_type_display: {
-                    family: fonts[0] || "system-ui",
-                    displayName: fonts[0] || "System",
-                    importUrl: "",
-                    provider: "bunny",
-                    charge: this.inferFontCharge(fonts[0]),
-                    weight: 700,
-                    fallback: "system-ui, sans-serif",
-                    tracking: "normal",
-                    casing: "normal"
-                },
-                ch4_type_body: {
-                    family: fonts[1] || fonts[0] || "system-ui",
-                    displayName: fonts[1] || fonts[0] || "System",
-                    importUrl: "",
-                    provider: "bunny",
-                    charge: this.inferFontCharge(fonts[1] || fonts[0]),
-                    xHeightRatio: 0.5,
-                    contrast: 1.0,
-                    fallback: "system-ui, sans-serif",
-                    optimalLineLength: "medium",
-                    paragraphSpacing: 1.5,
-                    hyphenation: false
-                },
-                ch7_edge: {
-                    radius: this.inferBorderRadius(radii),
-                    style: this.inferEdgeStyle(radii),
-                    variableRadius: false,
-                    componentRadius: this.inferBorderRadius(radii),
-                    imageRadius: this.inferBorderRadius(radii),
-                    asymmetric: false
-                },
-                ch8_motion: {
-                    physics: this.inferPhysics(animations),
-                    durationScale: this.inferDuration(animations),
-                    staggerDelay: 0.1,
-                    enterDirection: "up",
-                    exitBehavior: "fade",
-                    hoverIntensity: animations.length > 0 ? 0.5 : 0,
-                    reducedMotionFallback: "fade"
-                },
-                ch9_grid: {
-                    logic: this.inferGridLogic(css),
-                    asymmetry: 0,
-                    columns: this.inferColumnCount(css),
-                    gap: this.inferGap(css),
-                    mobileColumns: 1,
-                    alignment: "stretch"
-                }
-            } as any
-        };
+    private browser: Browser | null = null;
 
-        const approximations = this.identifyApproximations(genome);
+    async initBrowser(): Promise<void> {
+        if (!this.browser) {
+            this.browser = await chromium.launch({
+                headless: true,
+            });
+        }
+    }
+
+    async closeBrowser(): Promise<void> {
+        if (this.browser) {
+            await this.browser.close();
+            this.browser = null;
+        }
+    }
+
+    async extract(url: string, options?: { useScrapy?: boolean }): Promise<ExtractedGenome> {
+        try {
+            logger.info(`Extracting genome from URL: ${url}`);
+            
+            // Option 1: Use Scrapy if explicitly requested and available
+            if (options?.useScrapy) {
+                try {
+                    return await this.extractWithScrapy(url);
+                } catch (scrapyError) {
+                    logger.warn("Scrapy failed:", scrapyError);
+                    // Continue to other methods
+                }
+            }
+            
+            // Option 2: Try Playwright first for best results (JavaScript-rendered content)
+            try {
+                await this.initBrowser();
+                const page = await this.browser!.newPage();
+                await page.goto(url, { waitUntil: "networkidle", timeout: 30000 });
+                await page.waitForTimeout(2000);
+                
+                const allCSS = await this.extractAllCSS(page);
+                const computedStyles = await this.extractComputedStyles(page);
+                
+                await page.close();
+                
+                return this.buildGenome(url, allCSS, computedStyles);
+            } catch (browserError) {
+                logger.warn("Playwright browser failed, trying fallback:", browserError);
+            }
+            
+            // Option 3: Try Scrapy if Playwright failed
+            try {
+                return await this.extractWithScrapy(url);
+            } catch (scrapyError) {
+                logger.warn("Scrapy not available, falling back to native fetch:", scrapyError);
+            }
+            
+            // Option 4: Native fetch (last resort)
+            return this.extractWithFetch(url);
+        } catch (error) {
+            logger.error(`Failed to extract genome from ${url}:`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Fallback extraction using native fetch (no browser required)
+     * Gets static HTML/CSS only - no JavaScript-rendered content
+     */
+    private async extractWithFetch(url: string): Promise<ExtractedGenome> {
+        logger.info(`Using native fetch fallback for: ${url}`);
+        
+        const response = await fetch(url, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const html = await response.text();
+        
+        // Extract inline styles from HTML
+        const allCSS = this.extractCSSFromHTML(html);
+        
+        // Create minimal computed styles from inline styles
+        const computedStyles = this.inferStylesFromHTML(html);
+        
+        return this.buildGenome(url, allCSS, computedStyles);
+    }
+
+    /**
+     * Python Scrapy-based extraction
+     * Best for: Professional crawling, rate limiting, proxy support
+     * Requires: Python + pip install scrapy
+     */
+    private async extractWithScrapy(url: string): Promise<ExtractedGenome> {
+        logger.info(`Using Scrapy (Python) for: ${url}`);
+        
+        // Check if scrapy is available
+        const pythonCmd = await this.findPython();
+        if (!pythonCmd) {
+            throw new Error("Python not found");
+        }
+        
+        try {
+            await this.execCommand(pythonCmd, ["-c", "import scrapy"], { timeout: 5000 });
+        } catch {
+            throw new Error("Scrapy not installed. Run: pip install scrapy");
+        }
+        
+        const tempFile = join(tmpdir(), `scrapy_result_${Date.now()}_${crypto.randomBytes(4).toString("hex")}.json`);
+        const tempScript = join(tmpdir(), `scrapy_spider_${Date.now()}.py`);
+        
+        const spiderCode = `
+import json
+import scrapy
+from scrapy.crawler import CrawlerProcess
+
+class CSSSpider(scrapy.Spider):
+    name = 'css_spider'
+    start_urls = ['${url}']
+    
+    custom_settings = {
+        'LOG_ENABLED': False,
+        'DOWNLOAD_DELAY': 0.5,
+        'ROBOTSTXT_OBEY': True,
+        'USER_AGENT': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+    }
+    
+    def parse(self, response):
+        css_parts = []
+        
+        # Extract inline styles
+        for style in response.css('style::text').getall():
+            css_parts.append(style)
+        
+        # Extract linked stylesheets (just note them - would need async fetch)
+        for link in response.css('link[rel="stylesheet"]::attr(href)').getall():
+            css_parts.append(f"/* External: {response.urljoin(link)} */")
+        
+        # Extract inline element styles
+        for elem in response.css('[style]'):
+            style_attr = elem.attrib.get('style', '')
+            if style_attr:
+                tag = elem.root.tag
+                css_parts.append(f"{tag}[style] {{ {style_attr} }}")
+        
+        result = {
+            'url': response.url,
+            'css': '\\n'.join(css_parts),
+            'html': response.text[:50000],
+            'status': response.status,
+        }
+        
+        with open('${tempFile}', 'w') as f:
+            json.dump(result, f)
+
+process = CrawlerProcess()
+process.crawl(CSSSpider)
+process.start()
+`;
+        
+        try {
+            await writeFile(tempScript, spiderCode);
+            
+            // Run Scrapy spider
+            await this.execCommand(pythonCmd, [tempScript], { timeout: 60000 });
+            
+            // Read result
+            const resultText = await import("fs/promises").then(fs => fs.readFile(tempFile, "utf-8"));
+            const result = JSON.parse(resultText);
+            
+            // Cleanup
+            await unlink(tempFile).catch(() => {});
+            await unlink(tempScript).catch(() => {});
+            
+            const computedStyles = this.inferStylesFromHTML(result.html);
+            return this.buildGenome(url, result.css, computedStyles);
+            
+        } catch (error) {
+            await unlink(tempFile).catch(() => {});
+            await unlink(tempScript).catch(() => {});
+            throw error;
+        }
+    }
+
+    private async findPython(): Promise<string | null> {
+        for (const cmd of ["python3", "python"]) {
+            try {
+                await this.execCommand(cmd, ["--version"], { timeout: 5000 });
+                return cmd;
+            } catch {
+                continue;
+            }
+        }
+        return null;
+    }
+
+    private execCommand(cmd: string, args: string[], options?: { timeout?: number }): Promise<void> {
+        return new Promise((resolve, reject) => {
+            const proc = spawn(cmd, args, { 
+                cwd: tmpdir(),
+                timeout: options?.timeout 
+            });
+            
+            let stderr = "";
+            proc.stderr?.on("data", (data) => { stderr += data; });
+            
+            proc.on("close", (code) => {
+                if (code === 0) resolve();
+                else reject(new Error(`Exit ${code}: ${stderr}`));
+            });
+            
+            proc.on("error", reject);
+        });
+    }
+
+    private extractCSSFromHTML(html: string): string {
+        let css = "";
+        
+        // Extract <style> tag contents
+        const styleRegex = /<style[^>]*>([\s\S]*?)<\/style>/gi;
+        let match;
+        while ((match = styleRegex.exec(html)) !== null) {
+            css += match[1] + "\n";
+        }
+        
+        // Extract inline styles
+        const inlineStyleRegex = /style="([^"]*)"/gi;
+        while ((match = inlineStyleRegex.exec(html)) !== null) {
+            css += `[style] { ${match[1]} }\n`;
+        }
+        
+        return css;
+    }
+
+    private inferStylesFromHTML(html: string): ComputedStyle[] {
+        const styles: ComputedStyle[] = [];
+        
+        // Simple pattern matching for common selectors
+        const tagPattern = /<([a-z][a-z0-9]*)[^>]*>/gi;
+        const seen = new Set<string>();
+        let match;
+        let index = 0;
+        
+        while ((match = tagPattern.exec(html)) !== null && index < 50) {
+            const tag = match[1].toLowerCase();
+            const attrs = match[0];
+            
+            const key = `${tag}-${index}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            
+            const style: ComputedStyle = { selector: key };
+            
+            // Extract class-based hints
+            const classMatch = attrs.match(/class="([^"]*)"/);
+            const className = classMatch ? classMatch[1] : "";
+            
+            if (['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tag)) {
+                style.fontWeight = tag === 'h1' ? '700' : '600';
+            }
+            
+            styles.push(style);
+            index++;
+        }
+        
+        return styles;
+    }
+
+    private buildGenome(url: string, allCSS: string, computedStyles: ComputedStyle[]): ExtractedGenome {
+        const colors = this.analyzeColors(allCSS, computedStyles);
+        const typography = this.analyzeTypography(allCSS, computedStyles);
+        const layout = this.analyzeLayout(allCSS, computedStyles);
+        const animation = this.analyzeAnimation(allCSS);
+        const sector = this.inferSector(url, allCSS, computedStyles);
+        
+        logger.info(`Genome extraction complete: ${colors.all.length} colors, ${computedStyles.length} styles`);
         
         return {
-            genome: genome as DesignGenome,
-            confidence: this.calculateConfidence(colors, fonts, radii),
-            source: {
-                url,
-                colors: colors.map(c => c.hex),
-                fonts: [...new Set(fonts)],
-                borderRadii: radii,
-                animations
-            },
-            approximations
+            url,
+            sector,
+            confidence: this.calculateConfidence(colors, typography, layout),
+            colors,
+            typography,
+            layout,
+            animation,
+            rawCSS: allCSS.slice(0, 50000),
+            computedStyles: computedStyles.slice(0, 100),
+            extractedAt: new Date().toISOString(),
         };
     }
 
-    private extractColors(css: string, computedStyles: ComputedStyle[]): ColorInfo[] {
-        const colors: ColorInfo[] = [];
-        
-        // Extract hex colors
-        const hexRegex = /#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})/g;
-        const hexMatches = css.match(hexRegex) || [];
-        
-        for (const hex of hexMatches) {
-            colors.push(this.parseHex(hex));
-        }
-        
-        // Extract rgb/rgba
-        const rgbRegex = /rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*[\d.]+)?\s*\)/g;
-        let match;
-        while ((match = rgbRegex.exec(css)) !== null) {
-            colors.push(this.rgbToHsl(parseInt(match[1]), parseInt(match[2]), parseInt(match[3])));
-        }
-        
-        // Count frequency and sort
-        const frequency = colors.reduce((acc, c) => {
-            acc[c.hex] = (acc[c.hex] || 0) + 1;
-            return acc;
-        }, {} as Record<string, number>);
-        
-        return colors
-            .filter((c, i, arr) => arr.findIndex(x => x.hex === c.hex) === i)
-            .sort((a, b) => (frequency[b.hex] || 0) - (frequency[a.hex] || 0));
+    private async extractAllCSS(page: Page): Promise<string> {
+        return page.evaluate(() => {
+            let allCSS = "";
+            
+            document.querySelectorAll('style').forEach((style) => {
+                allCSS += style.textContent + "\n";
+            });
+            
+            document.querySelectorAll('[style]').forEach((el) => {
+                const style = el.getAttribute('style');
+                if (style) {
+                    allCSS += `[style] { ${style} }\n`;
+                }
+            });
+            
+            return allCSS;
+        });
     }
 
-    private extractFonts(css: string, computedStyles: ComputedStyle[]): string[] {
-        const fonts: string[] = [];
+    private async extractComputedStyles(page: Page): Promise<ComputedStyle[]> {
+        return page.evaluate(() => {
+            const styles: ComputedStyle[] = [];
+            const seen = new Set<string>();
+            
+            const rgbToHex = (rgb: string): string => {
+                const match = rgb.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+                if (!match) return rgb;
+                
+                const r = parseInt(match[1]).toString(16).padStart(2, '0');
+                const g = parseInt(match[2]).toString(16).padStart(2, '0');
+                const b = parseInt(match[3]).toString(16).padStart(2, '0');
+                
+                return `#${r}${g}${b}`.toLowerCase();
+            };
+            
+            const elements = document.querySelectorAll(
+                'h1, h2, h3, h4, h5, h6, p, a, button, input, nav, header, footer, main, section, article, div, span, li'
+            );
+            
+            elements.forEach((el, index) => {
+                const computed = window.getComputedStyle(el);
+                const className = el.className || "";
+                const id = el.id || "";
+                const tag = el.tagName.toLowerCase();
+                const selector = id ? `#${id}` : className ? `.${className.split(' ')[0]}` : tag;
+                const key = `${selector}-${index}`;
+                
+                if (seen.has(key)) return;
+                seen.add(key);
+                
+                const fontFamily = computed.fontFamily.split(',')[0].replace(/["']/g, '').trim();
+                const color = rgbToHex(computed.color);
+                const bgColor = rgbToHex(computed.backgroundColor);
+                
+                styles.push({
+                    selector: key,
+                    fontFamily: fontFamily !== "inherit" ? fontFamily : undefined,
+                    fontSize: computed.fontSize,
+                    fontWeight: computed.fontWeight,
+                    color: color !== "#000000" ? color : undefined,
+                    backgroundColor: bgColor !== "#00000000" && bgColor !== "#ffffff00" ? bgColor : undefined,
+                    borderRadius: computed.borderRadius !== "0px" ? computed.borderRadius : undefined,
+                    margin: computed.margin,
+                    padding: computed.padding,
+                    lineHeight: computed.lineHeight !== "normal" ? computed.lineHeight : undefined,
+                    letterSpacing: computed.letterSpacing !== "normal" ? computed.letterSpacing : undefined,
+                    textAlign: computed.textAlign !== "start" ? computed.textAlign : undefined,
+                    display: computed.display !== "block" ? computed.display : undefined,
+                    gap: computed.gap !== "0px" ? computed.gap : undefined,
+                    transitionDuration: computed.transitionDuration !== "0s" ? computed.transitionDuration : undefined,
+                    animationDuration: computed.animationDuration !== "0s" ? computed.animationDuration : undefined,
+                });
+            });
+            
+            return styles;
+        });
+    }
+
+    private analyzeColors(css: string, computedStyles: ComputedStyle[]): ExtractedGenome["colors"] {
+        // Match hex, rgb, rgba, hsl, and named colors
+        const colorRegex = /#([a-fA-F0-9]{3,8})|rgb\(([^)]+)\)|rgba\(([^)]+)\)|hsl\(([^)]+)\)|(?<!-)(?:red|blue|green|white|black|yellow|cyan|magenta|gray|grey|orange|purple|pink|brown|lime|navy|teal|silver|gold|transparent)(?!-)/gi;
+        const colorMap = new Map<string, { count: number; contexts: Set<string> }>();
         
-        // Extract font-family declarations
+        let match;
+        while ((match = colorRegex.exec(css)) !== null) {
+            let color = match[0].toLowerCase();
+            
+            // Expand shorthand hex
+            if (color.startsWith("#") && color.length === 4) {
+                color = "#" + color[1] + color[1] + color[2] + color[2] + color[3] + color[3];
+            }
+            
+            // Convert named colors to hex
+            color = this.normalizeNamedColor(color);
+            
+            const entry = colorMap.get(color) || { count: 0, contexts: new Set<string>() };
+            entry.count++;
+            
+            const contextStart = Math.max(0, match.index - 50);
+            const contextEnd = Math.min(css.length, match.index + match[0].length + 50);
+            entry.contexts.add(css.slice(contextStart, contextEnd).replace(/\s+/g, ' '));
+            
+            colorMap.set(color, entry);
+        }
+        
+        computedStyles.forEach((style) => {
+            if (style.color) {
+                const entry = colorMap.get(style.color.toLowerCase()) || { count: 0, contexts: new Set<string>() };
+                entry.count += 2;
+                entry.contexts.add(`computed: ${style.selector}`);
+                colorMap.set(style.color.toLowerCase(), entry);
+            }
+            if (style.backgroundColor) {
+                const entry = colorMap.get(style.backgroundColor.toLowerCase()) || { count: 0, contexts: new Set<string>() };
+                entry.count += 2;
+                entry.contexts.add(`bg: ${style.selector}`);
+                colorMap.set(style.backgroundColor.toLowerCase(), entry);
+            }
+        });
+        
+        const sortedColors = Array.from(colorMap.entries())
+            .sort((a, b) => b[1].count - a[1].count)
+            .map(([value, data]) => ({
+                value,
+                frequency: data.count,
+                context: Array.from(data.contexts).slice(0, 3),
+            }));
+        
+        const all = sortedColors.map(({ value, frequency }) => ({ value, frequency }));
+        
+        const { primary, secondary, background, surface, text, textMuted, accent } = 
+            this.categorizeColors(sortedColors);
+        
+        return {
+            primary,
+            secondary,
+            background,
+            surface,
+            text,
+            textMuted,
+            accent,
+            all,
+        };
+    }
+
+    private categorizeColors(colors: Array<{ value: string; frequency: number; context: string[] }>): {
+        primary: string | null;
+        secondary: string | null;
+        background: string | null;
+        surface: string | null;
+        text: string | null;
+        textMuted: string | null;
+        accent: string | null;
+    } {
+        const hexColors = colors
+            .filter(c => c.value.startsWith("#"))
+            .map(c => ({ ...c, hsl: this.hexToHSL(c.value) }));
+        
+        const backgrounds = hexColors.filter(c => 
+            c.context.some(ctx => ctx.includes("background") || ctx.includes("bg:"))
+        );
+        
+        const texts = hexColors.filter(c => 
+            c.context.some(ctx => ctx.includes("color") || ctx.includes("computed:"))
+        );
+        
+        const sorted = [...hexColors].sort((a, b) => b.frequency - a.frequency);
+        
+        const backgroundColor = backgrounds.find(c => c.hsl.l > 80)?.value || 
+                               backgrounds.find(c => c.hsl.l > 50)?.value ||
+                               sorted.find(c => c.hsl.l > 90)?.value || "#ffffff";
+        
+        const surfaceColor = backgrounds.find(c => c.hsl.l > 50 && c.hsl.l < 90)?.value ||
+                            sorted.find(c => c.hsl.l > 70 && c.hsl.l < 95)?.value ||
+                            this.lightenColor(backgroundColor, 5);
+        
+        const textColor = texts.find(c => c.hsl.l < 30)?.value ||
+                         sorted.find(c => c.hsl.l < 20)?.value ||
+                         "#1a1a1a";
+        
+        const accents = sorted.filter(c => {
+            const hue = c.hsl.h;
+            return (hue > 0 && hue < 60) || (hue > 120 && hue < 180) || (hue > 220 && hue < 280);
+        });
+        
+        const primary = accents[0]?.value || "#3b82f6";
+        const secondary = accents[1]?.value || this.adjustHue(primary, 30);
+        const accent = accents[2]?.value || this.adjustHue(primary, -30);
+        const textMuted = texts.find(c => {
+            const l = this.hexToHSL(c.value).l;
+            return l > 30 && l < 60;
+        })?.value || this.mixColors(textColor, backgroundColor, 0.6);
+        
+        return {
+            primary,
+            secondary,
+            background: backgroundColor,
+            surface: surfaceColor,
+            text: textColor,
+            textMuted,
+            accent,
+        };
+    }
+
+    private analyzeTypography(css: string, computedStyles: ComputedStyle[]): ExtractedGenome["typography"] {
         const fontRegex = /font-family:\s*([^;]+)/g;
+        const fonts = new Map<string, number>();
+        
         let match;
         while ((match = fontRegex.exec(css)) !== null) {
-            const families = match[1].split(",").map(f => 
-                f.trim().replace(/['"]/g, "")
-            );
-            fonts.push(...families.filter(f => f !== "sans-serif" && f !== "serif" && f !== "monospace"));
+            const font = match[1].split(',')[0].replace(/["']/g, '').trim();
+            fonts.set(font, (fonts.get(font) || 0) + 1);
         }
         
-        // Also check computed styles
-        for (const style of computedStyles) {
+        computedStyles.forEach((style) => {
             if (style.fontFamily) {
-                fonts.push(...style.fontFamily.split(",").map(f => f.trim().replace(/['"]/g, "")));
+                fonts.set(style.fontFamily, (fonts.get(style.fontFamily) || 0) + 2);
             }
-        }
+        });
         
-        return [...new Set(fonts)].slice(0, 5);
+        const sortedFonts = Array.from(fonts.entries())
+            .sort((a, b) => b[1] - a[1])
+            .map(([name]) => name);
+        
+        const headingKeywords = ['h1', 'h2', 'h3', 'heading', 'title', 'display'];
+        const bodyKeywords = ['body', 'p', 'text', 'content', 'main'];
+        
+        let headingFont = sortedFonts[0] || null;
+        let bodyFont = sortedFonts[1] || headingFont;
+        
+        computedStyles.forEach((style) => {
+            const selector = style.selector.toLowerCase();
+            if (headingKeywords.some(k => selector.includes(k)) && style.fontFamily) {
+                headingFont = style.fontFamily;
+            }
+            if (bodyKeywords.some(k => selector.includes(k)) && style.fontFamily) {
+                bodyFont = style.fontFamily;
+            }
+        });
+        
+        const sizeValues: number[] = [];
+        computedStyles.forEach((style) => {
+            if (style.fontSize) {
+                const px = this.parsePixelValue(style.fontSize);
+                if (px > 0) sizeValues.push(px);
+            }
+        });
+        
+        const baseSize = sizeValues.length > 0 
+            ? sizeValues.sort((a, b) => a - b)[Math.floor(sizeValues.length / 2)]
+            : 16;
+        
+        const weights = computedStyles
+            .map(s => parseInt(s.fontWeight || "400"))
+            .filter(w => !isNaN(w) && w >= 100 && w <= 900);
+        
+        const uniqueWeights = [...new Set(weights)].sort((a, b) => a - b);
+        
+        const lineHeightValues = computedStyles
+            .map(s => parseFloat(s.lineHeight || "1.5"))
+            .filter(v => !isNaN(v) && v > 0.8 && v < 3);
+        
+        const avgLineHeight = lineHeightValues.length > 0
+            ? lineHeightValues.reduce((a, b) => a + b, 0) / lineHeightValues.length
+            : 1.6;
+        
+        const letterSpacingValues = computedStyles
+            .map(s => this.parsePixelValue(s.letterSpacing || "0px"))
+            .filter(v => !isNaN(v));
+        
+        const avgLetterSpacing = letterSpacingValues.length > 0
+            ? letterSpacingValues.reduce((a, b) => a + b, 0) / letterSpacingValues.length
+            : 0;
+        
+        return {
+            headingFont,
+            bodyFont,
+            baseSize: Math.round(baseSize),
+            scaleRatio: 1.25,
+            lineHeight: Math.round(avgLineHeight * 100) / 100,
+            letterSpacing: Math.round(avgLetterSpacing * 1000) / 1000,
+            fontWeights: uniqueWeights.length > 0 ? uniqueWeights : [400, 600],
+        };
     }
 
-    private extractBorderRadii(css: string): number[] {
-        const radii: number[] = [];
-        const regex = /border-radius:\s*(\d+)px/g;
+    private analyzeLayout(css: string, computedStyles: ComputedStyle[]): ExtractedGenome["layout"] {
+        const maxWidthRegex = /max-width:\s*(\d+)px/g;
+        const maxWidths: number[] = [];
         let match;
-        while ((match = regex.exec(css)) !== null) {
+        while ((match = maxWidthRegex.exec(css)) !== null) {
+            maxWidths.push(parseInt(match[1]));
+        }
+        
+        const maxWidth = maxWidths.length > 0 
+            ? Math.max(...maxWidths.filter(w => w < 2000))
+            : 1200;
+        
+        const gridRegex = /grid-template-columns:\s*repeat\((\d+)/g;
+        const grids: number[] = [];
+        while ((match = gridRegex.exec(css)) !== null) {
+            grids.push(parseInt(match[1]));
+        }
+        const gridColumns = grids.length > 0 ? Math.max(...grids) : 12;
+        
+        const spacingValues: number[] = [];
+        computedStyles.forEach((style) => {
+            if (style.padding) {
+                const px = this.parsePixelValue(style.padding);
+                if (px > 0) spacingValues.push(px);
+            }
+            if (style.margin) {
+                const px = this.parsePixelValue(style.margin);
+                if (px > 0 && px < 100) spacingValues.push(px);
+            }
+            if (style.gap) {
+                const px = this.parsePixelValue(style.gap);
+                if (px > 0) spacingValues.push(px);
+            }
+        });
+        
+        const spacingBase = spacingValues.length > 0
+            ? spacingValues.sort((a, b) => a - b)[Math.floor(spacingValues.length / 4)]
+            : 8;
+        
+        const radiusRegex = /border-radius:\s*(\d+)px/g;
+        const radii: number[] = [];
+        computedStyles.forEach((style) => {
+            if (style.borderRadius) {
+                const px = this.parsePixelValue(style.borderRadius);
+                if (px >= 0) radii.push(px);
+            }
+        });
+        while ((match = radiusRegex.exec(css)) !== null) {
             radii.push(parseInt(match[1]));
         }
-        return [...new Set(radii)].sort((a, b) => a - b);
+        
+        const avgRadius = radii.length > 0
+            ? radii.reduce((a, b) => a + b, 0) / radii.length
+            : 4;
+        
+        const density = spacingBase < 8 ? "compact" : spacingBase > 24 ? "spacious" : "normal";
+        
+        return {
+            maxWidth,
+            gridColumns,
+            spacingBase: Math.round(spacingBase),
+            borderRadius: Math.round(avgRadius),
+            density,
+        };
     }
 
-    private extractAnimations(css: string): string[] {
-        const animations: string[] = [];
-        const regex = /(?:animation|transition):\s*([^;]+)/g;
-        let match;
-        while ((match = regex.exec(css)) !== null) {
-            animations.push(match[1]);
-        }
-        return animations;
-    }
-
-    private inferPrimaryColor(colors: ColorInfo[]): ColorInfo | null {
-        if (colors.length === 0) return null;
-        
-        // Skip neutrals (grays)
-        const nonNeutrals = colors.filter(c => c.saturation > 0.1);
-        
-        // Return most frequent non-neutral, or first color
-        return nonNeutrals[0] || colors[0];
-    }
-
-    private inferSector(url: string, css: string): PrimarySector {
-        const lowerUrl = url.toLowerCase();
-        const lowerCss = css.toLowerCase();
-        
-        // Simple keyword matching
-        if (lowerUrl.includes("health") || lowerCss.includes("medical")) return "healthcare";
-        if (lowerUrl.includes("bank") || lowerUrl.includes("finance") || lowerUrl.includes("pay")) return "fintech";
-        if (lowerUrl.includes("law") || lowerUrl.includes("legal")) return "legal";
-        if (lowerUrl.includes("car") || lowerUrl.includes("auto")) return "automotive";
-        if (lowerUrl.includes("edu") || lowerUrl.includes("school") || lowerUrl.includes("learn")) return "education";
-        if (lowerUrl.includes("shop") || lowerUrl.includes("store") || lowerUrl.includes("buy")) return "commerce";
-        if (lowerUrl.includes("travel") || lowerUrl.includes("hotel") || lowerUrl.includes("flight")) return "travel";
-        if (lowerUrl.includes("food") || lowerUrl.includes("restaurant") || lowerUrl.includes("eat")) return "food";
-        if (lowerUrl.includes("sport") || lowerUrl.includes("fitness")) return "sports";
-        
-        return "technology";
-    }
-
-    private inferTemperature(hue: number): "warm" | "cool" | "neutral" {
-        if (hue >= 15 && hue <= 75) return "warm"; // Yellow-Orange
-        if (hue >= 165 && hue <= 255) return "cool"; // Cyan-Blue
-        return "neutral";
-    }
-
-    private inferFontCharge(fontName?: string): "geometric" | "humanist" | "transitional" | "monospace" {
-        if (!fontName) return "transitional";
-        
-        const geometric = ["montserrat", "poppins", "raleway", "nunito", "manrope", "plus jakarta sans"];
-        const humanist = ["merriweather", "crimson", "source serif", "playfair", "fraunces"];
-        const monospace = ["mono", "code", "ibm plex mono", "fira code", "jetbrains"];
-        
-        const lower = fontName.toLowerCase();
-        if (geometric.some(g => lower.includes(g))) return "geometric";
-        if (humanist.some(h => lower.includes(h))) return "humanist";
-        if (monospace.some(m => lower.includes(m))) return "monospace";
-        
-        return "transitional";
-    }
-
-    private inferBorderRadius(radii: number[]): number {
-        if (radii.length === 0) return 4;
-        // Return median
-        const sorted = [...radii].sort((a, b) => a - b);
-        return sorted[Math.floor(sorted.length / 2)];
-    }
-
-    private inferEdgeStyle(radii: number[]): "sharp" | "soft" | "organic" | "techno" {
-        if (radii.length === 0 || radii.every(r => r === 0)) return "sharp";
-        const max = Math.max(...radii);
-        if (max > 20) return "organic";
-        if (max > 8) return "soft";
-        return "techno";
-    }
-
-    private inferPhysics(animations: string[]): "none" | "spring" | "step" | "glitch" {
-        if (animations.length === 0) return "none";
-        
-        const animText = animations.join(" ").toLowerCase();
-        if (animText.includes("cubic-bezier") || animText.includes("spring")) return "spring";
-        if (animText.includes("steps") || animText.includes("discrete")) return "step";
-        
-        return "spring"; // Default assumption
-    }
-
-    private inferDuration(animations: string[]): number {
-        if (animations.length === 0) return 0.3;
-        
-        // Extract duration values
+    private analyzeAnimation(css: string): ExtractedGenome["animation"] {
+        const durationRegex = /(?:transition|animation)-duration:\s*(\d+(?:\.\d+)?)(ms|s)/g;
         const durations: number[] = [];
-        const regex = /(\d+(?:\.\d+)?)s/g;
         let match;
         
-        for (const anim of animations) {
-            while ((match = regex.exec(anim)) !== null) {
-                durations.push(parseFloat(match[1]));
+        while ((match = durationRegex.exec(css)) !== null) {
+            const value = parseFloat(match[1]);
+            const unit = match[2];
+            durations.push(unit === "s" ? value * 1000 : value);
+        }
+        
+        const easingRegex = /(?:transition-timing-function|animation-timing-function):\s*([^;]+)/g;
+        const easings: Map<string, number> = new Map();
+        while ((match = easingRegex.exec(css)) !== null) {
+            const easing = match[1].trim();
+            easings.set(easing, (easings.get(easing) || 0) + 1);
+        }
+        
+        const avgDuration = durations.length > 0
+            ? durations.reduce((a, b) => a + b, 0) / durations.length
+            : 200;
+        
+        const sortedEasings = Array.from(easings.entries())
+            .sort((a, b) => b[1] - a[1]);
+        
+        const easing = sortedEasings[0]?.[0] || "ease-out";
+        
+        const keyframeCount = (css.match(/@keyframes/g) || []).length;
+        const transitionCount = (css.match(/transition:/g) || []).length;
+        
+        let complexity: "minimal" | "functional" | "expressive" = "functional";
+        if (keyframeCount === 0 && transitionCount < 5) {
+            complexity = "minimal";
+        } else if (keyframeCount > 5 || transitionCount > 20) {
+            complexity = "expressive";
+        }
+        
+        return {
+            durationBase: Math.round(avgDuration),
+            easing,
+            complexity,
+        };
+    }
+
+    private inferSector(url: string, css: string, computedStyles: ComputedStyle[]): string {
+        const urlLower = url.toLowerCase();
+        const cssLower = css.toLowerCase();
+        
+        const sectorKeywords: Record<string, string[]> = {
+            healthcare: ["health", "medical", "clinic", "hospital", "doctor", "patient", "care", "wellness"],
+            fintech: ["bank", "finance", "money", "pay", "crypto", "invest", "trading", "loan", "credit"],
+            ecommerce: ["shop", "store", "product", "cart", "buy", "price", "sale", "checkout"],
+            education: ["learn", "course", "school", "university", "student", "academy", "edu"],
+            saas: ["app", "software", "platform", "dashboard", "api", "solution"],
+            media: ["news", "blog", "magazine", "media", "article", "journal"],
+            hospitality: ["hotel", "restaurant", "food", "travel", "booking", "reservation"],
+            realestate: ["property", "real estate", "home", "apartment", "rent", "mortgage"],
+        };
+        
+        for (const [sector, keywords] of Object.entries(sectorKeywords)) {
+            if (keywords.some(k => urlLower.includes(k) || cssLower.includes(k))) {
+                return sector;
             }
         }
         
-        // Return median duration
-        if (durations.length === 0) return 0.3;
-        const sorted = durations.sort((a, b) => a - b);
-        return sorted[Math.floor(sorted.length / 2)];
+        const hasDashboard = computedStyles.some(s => 
+            s.selector.includes("dashboard") || s.selector.includes("sidebar")
+        );
+        if (hasDashboard) return "saas";
+        
+        const hasProductGrid = cssLower.includes("product-grid") || cssLower.includes("product-card");
+        if (hasProductGrid) return "ecommerce";
+        
+        return "generic";
     }
 
-    private inferGridLogic(css: string): "column" | "masonry" | "radial" | "broken" {
-        if (css.includes("grid-template-columns")) return "column";
-        if (css.includes("columns:")) return "masonry";
-        return "column";
+    private calculateConfidence(colors: any, typography: any, layout: any): number {
+        let score = 0;
+        let maxScore = 0;
+        
+        maxScore += 20;
+        if (colors.primary && colors.background) score += 20;
+        
+        maxScore += 20;
+        if (typography.headingFont && typography.bodyFont) score += 20;
+        
+        maxScore += 20;
+        if (layout.maxWidth > 0) score += 20;
+        
+        maxScore += 20;
+        if (colors.all.length > 3) score += 20;
+        
+        maxScore += 20;
+        if (typography.fontWeights.length > 1) score += 20;
+        
+        return Math.round((score / maxScore) * 100);
     }
 
-    private inferColumnCount(css: string): number {
-        const regex = /grid-template-columns:\s*repeat\((\d+)/;
-        const match = css.match(regex);
-        if (match) return parseInt(match[1]);
+    private rgbToHex(rgb: string): string {
+        const match = rgb.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+        if (!match) return rgb;
         
-        // Check for explicit columns
-        const colRegex = /grid-template-columns:\s*[^;]+/g;
-        const colMatch = colRegex.exec(css);
-        if (colMatch) {
-            return colMatch[0].split(" ").filter(c => c.trim()).length;
-        }
+        const r = parseInt(match[1]).toString(16).padStart(2, '0');
+        const g = parseInt(match[2]).toString(16).padStart(2, '0');
+        const b = parseInt(match[3]).toString(16).padStart(2, '0');
         
-        return 3; // Default
+        return `#${r}${g}${b}`.toLowerCase();
     }
 
-    private inferGap(css: string): number {
-        const regex = /gap:\s*(\d+)px/;
-        const match = css.match(regex);
-        return match ? parseInt(match[1]) : 24;
-    }
-
-    private calculateConfidence(colors: ColorInfo[], fonts: string[], radii: number[]): number {
-        let score = 0.5; // Base confidence
+    private hexToHSL(hex: string): { h: number; s: number; l: number } {
+        const r = parseInt(hex.slice(1, 3), 16) / 255;
+        const g = parseInt(hex.slice(3, 5), 16) / 255;
+        const b = parseInt(hex.slice(5, 7), 16) / 255;
         
-        // More data = higher confidence
-        if (colors.length > 3) score += 0.1;
-        if (fonts.length > 0) score += 0.1;
-        if (radii.length > 0) score += 0.1;
-        
-        // Less confidence if we have to guess a lot
-        return Math.min(0.9, score);
-    }
-
-    private identifyApproximations(genome: Partial<DesignGenome>): string[] {
-        const approximations: string[] = [];
-        
-        if (!genome.chromosomes?.ch26_color_system) {
-            approximations.push("No complete color system extracted - using primary color only");
-        }
-        if (!genome.chromosomes?.ch27_motion_choreography) {
-            approximations.push("Motion choreography not detectable from CSS alone");
-        }
-        if (!genome.chromosomes?.ch28_iconography) {
-            approximations.push("Iconography not detectable from CSS alone");
-        }
-        
-        return approximations;
-    }
-
-    // Color utilities
-    private parseHex(hex: string): ColorInfo {
-        const full = hex.length === 4 
-            ? `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`
-            : hex;
-        
-        const r = parseInt(full.slice(1, 3), 16);
-        const g = parseInt(full.slice(3, 5), 16);
-        const b = parseInt(full.slice(5, 7), 16);
-        
-        return this.rgbToHsl(r, g, b);
-    }
-
-    private rgbToHsl(r: number, g: number, b: number): ColorInfo {
-        r /= 255; g /= 255; b /= 255;
         const max = Math.max(r, g, b);
         const min = Math.min(r, g, b);
         let h = 0, s = 0, l = (max + min) / 2;
-
+        
         if (max !== min) {
             const d = max - min;
             s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            
             switch (max) {
                 case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
                 case g: h = ((b - r) / d + 2) / 6; break;
                 case b: h = ((r - g) / d + 4) / 6; break;
             }
         }
-
-        const hex = `#${[r, g, b].map(x => {
-            const v = Math.round(x * 255);
-            return v.toString(16).padStart(2, "0");
-        }).join("")}`;
-
-        return { hue: Math.round(h * 360), saturation: s, lightness: l, hex };
+        
+        return { h: h * 360, s: s * 100, l: l * 100 };
     }
-}
 
-interface ColorInfo {
-    hue: number;
-    saturation: number;
-    lightness: number;
-    hex: string;
-}
+    private lightenColor(hex: string, percent: number): string {
+        const hsl = this.hexToHSL(hex);
+        hsl.l = Math.min(100, hsl.l + percent);
+        return this.hslToHex(hsl);
+    }
 
-interface ComputedStyle {
-    fontFamily?: string;
-    color?: string;
-    backgroundColor?: string;
-    borderRadius?: string;
-    // ... other computed properties
+    private adjustHue(hex: string, degrees: number): string {
+        const hsl = this.hexToHSL(hex);
+        hsl.h = (hsl.h + degrees) % 360;
+        if (hsl.h < 0) hsl.h += 360;
+        return this.hslToHex(hsl);
+    }
+
+    private mixColors(color1: string, color2: string, weight: number): string {
+        const r1 = parseInt(color1.slice(1, 3), 16);
+        const g1 = parseInt(color1.slice(3, 5), 16);
+        const b1 = parseInt(color1.slice(5, 7), 16);
+        
+        const r2 = parseInt(color2.slice(1, 3), 16);
+        const g2 = parseInt(color2.slice(3, 5), 16);
+        const b2 = parseInt(color2.slice(5, 7), 16);
+        
+        const r = Math.round(r1 * weight + r2 * (1 - weight));
+        const g = Math.round(g1 * weight + g2 * (1 - weight));
+        const b = Math.round(b1 * weight + b2 * (1 - weight));
+        
+        return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+    }
+
+    private hslToHex({ h, s, l }: { h: number; s: number; l: number }): string {
+        const c = (1 - Math.abs(2 * l / 100 - 1)) * s / 100;
+        const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+        const m = l / 100 - c / 2;
+        
+        let r = 0, g = 0, b = 0;
+        
+        if (h < 60) { r = c; g = x; b = 0; }
+        else if (h < 120) { r = x; g = c; b = 0; }
+        else if (h < 180) { r = 0; g = c; b = x; }
+        else if (h < 240) { r = 0; g = x; b = c; }
+        else if (h < 300) { r = x; g = 0; b = c; }
+        else { r = c; g = 0; b = x; }
+        
+        const toHex = (n: number) => Math.round((n + m) * 255).toString(16).padStart(2, '0');
+        return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+    }
+
+    private parsePixelValue(value: string): number {
+        if (value.includes("rem")) {
+            return parseFloat(value) * 16;
+        }
+        if (value.includes("em")) {
+            return parseFloat(value) * 16;
+        }
+        const px = parseFloat(value);
+        return isNaN(px) ? 0 : px;
+    }
+
+    private normalizeNamedColor(color: string): string {
+        const namedColors: Record<string, string> = {
+            red: "#ff0000",
+            blue: "#0000ff",
+            green: "#008000",
+            white: "#ffffff",
+            black: "#000000",
+            yellow: "#ffff00",
+            cyan: "#00ffff",
+            magenta: "#ff00ff",
+            gray: "#808080",
+            grey: "#808080",
+            orange: "#ffa500",
+            purple: "#800080",
+            pink: "#ffc0cb",
+            brown: "#a52a2a",
+            lime: "#00ff00",
+            navy: "#000080",
+            teal: "#008080",
+            silver: "#c0c0c0",
+            gold: "#ffd700",
+            transparent: "#00000000",
+        };
+        
+        return namedColors[color.toLowerCase()] || color;
+    }
 }
 
 export const urlGenomeExtractor = new URLGenomeExtractor();
