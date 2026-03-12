@@ -972,15 +972,27 @@ export class GenomeSequencer {
         const primaryHue = Math.floor(b(13) * 360);
         const accentHue = (primaryHue + 30) % 360;
         const accentHex = this.hslToHex(accentHue, 65, isDark ? 60 : 45);
-        // 4-level surface stack
+        // 4-level surface stack - hash-derived, not hardcoded
+        // Dark mode: 5-15% lightness steps
+        // Light mode: 95-85% lightness steps
         const surfaceStack = isDark
-            ? ["#0a0a0a", "#141414", "#1e1e1e", "#282828"]
-            : ["#ffffff", "#f4f4f4", "#e8e8e8", "#dcdcdc"];
+            ? [
+                this.hslToHex(0, 0, 5 + b(20) * 5), // 5-10% (darkest)
+                this.hslToHex(0, 0, 10 + b(21) * 8), // 10-18%
+                this.hslToHex(0, 0, 18 + b(22) * 10), // 18-28%
+                this.hslToHex(0, 0, 28 + b(23) * 12) // 28-40% (lightest)
+            ]
+            : [
+                this.hslToHex(0, 0, 98 - b(20) * 5), // 93-98% (lightest)
+                this.hslToHex(0, 0, 90 - b(21) * 8), // 82-90%
+                this.hslToHex(0, 0, 82 - b(22) * 10), // 72-82%
+                this.hslToHex(0, 0, 72 - b(23) * 12) // 60-72% (darkest)
+            ];
         return {
             backgroundTemp,
             contrastRatio: 4.5 + b(13) * 10,
-            surfaceColor: isDark ? "#141414" : "#ffffff",
-            elevatedSurface: isDark ? "#1e1e1e" : "#f4f4f4",
+            surfaceColor: surfaceStack[1], // Use stack values
+            elevatedSurface: surfaceStack[2],
             isDark,
             accentColor: accentHex,
             surfaceStack

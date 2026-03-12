@@ -20,7 +20,6 @@ import { DesignFileWriter } from "./generators/file-writer.js";
 import { formatGenerator } from "./generators/format-generators.js";
 import { componentGenerator } from "./generators/component-generator.js";
 import { designBriefGenerator } from "./generators/design-brief-generator.js";
-import { dynamicComponentGenerator } from "./generators/dynamic-component-generator.js";
 import { genomeMutator } from "./genome/mutation.js";
 class DesignGenomeServer {
     server;
@@ -284,7 +283,7 @@ class DesignGenomeServer {
                 },
                 {
                     name: "generate_component",
-                    description: "Generates a specific UI component (pricing_table, nav, card_grid, testimonial, etc.) from an existing genome. The component inherits the design system including colors, typography, spacing, and motion from the genome.",
+                    description: "Generates ANY UI component dynamically from description + genome. No hardcoded templates - structure is inferred from purpose and elements. Uses ch27_motion_choreography and ch26_color_system.",
                     inputSchema: {
                         type: "object",
                         properties: {
@@ -292,17 +291,27 @@ class DesignGenomeServer {
                                 type: "object",
                                 description: "The design genome from generate_design_genome or generate_civilization"
                             },
-                            component_type: {
+                            purpose: {
                                 type: "string",
-                                enum: ["pricing_table", "nav", "card_grid", "testimonial", "data_table", "hero", "feature_list", "stats_counter", "faq_accordion", "cta_section", "footer", "form_contact"],
-                                description: "Type of component to generate"
+                                description: "Component purpose (e.g., 'pricing', 'navigation', 'content_display', 'testimonial', 'stats')"
                             },
-                            variant: {
+                            elements: {
+                                type: "array",
+                                items: { type: "string" },
+                                description: "Elements to include (e.g., ['title', 'price', 'cta', 'feature_list'])"
+                            },
+                            layout: {
                                 type: "string",
-                                description: "Optional variant name (e.g., 'horizontal', 'compact', 'featured'). If not specified, default variant is used."
+                                enum: ["horizontal", "vertical", "grid", "layered"],
+                                description: "Layout direction (default: vertical)"
+                            },
+                            complexity: {
+                                type: "string",
+                                enum: ["atomic", "molecular", "organism"],
+                                description: "Component complexity (default: molecular)"
                             }
                         },
-                        required: ["genome", "component_type"]
+                        required: ["genome", "purpose", "elements"]
                     }
                 },
                 {
@@ -323,39 +332,6 @@ class DesignGenomeServer {
                             }
                         },
                         required: ["genome"]
-                    }
-                },
-                {
-                    name: "generate_dynamic_component",
-                    description: "Generates ANY component type dynamically from description + genome. No hardcoded templates - structure is inferred from purpose and elements. Uses ch27_motion_choreography and ch26_color_system.",
-                    inputSchema: {
-                        type: "object",
-                        properties: {
-                            genome: {
-                                type: "object",
-                                description: "The design genome"
-                            },
-                            purpose: {
-                                type: "string",
-                                description: "Component purpose (e.g., 'pricing', 'navigation', 'content_display')"
-                            },
-                            elements: {
-                                type: "array",
-                                items: { type: "string" },
-                                description: "Elements to include (e.g., ['title', 'price', 'cta', 'feature_list'])"
-                            },
-                            layout: {
-                                type: "string",
-                                enum: ["horizontal", "vertical", "grid", "layered"],
-                                description: "Layout direction"
-                            },
-                            complexity: {
-                                type: "string",
-                                enum: ["atomic", "molecular", "organism"],
-                                description: "Component complexity"
-                            }
-                        },
-                        required: ["genome", "purpose", "elements"]
                     }
                 },
                 {
@@ -911,30 +887,19 @@ class DesignGenomeServer {
                         };
                     }
                     case "generate_component": {
-                        if (!args.genome || !args.component_type) {
-                            throw new McpError(ErrorCode.InvalidParams, "Missing genome or component_type");
+                        if (!args.genome || !args.purpose || !args.elements) {
+                            throw new McpError(ErrorCode.InvalidParams, "Missing required parameters: genome, purpose, elements");
                         }
-                        const component = componentGenerator.generate(args.component_type, args.genome, args.genome.dnaHash);
+                        const component = componentGenerator.generate({
+                            purpose: args.purpose,
+                            elements: args.elements,
+                            layout: args.layout || "vertical",
+                            complexity: args.complexity || "molecular"
+                        }, args.genome);
                         return {
                             content: [{
                                     type: "text",
-                                    text: JSON.stringify({
-                                        component: {
-                                            type: component.type,
-                                            name: component.name,
-                                            html: component.html,
-                                            css: component.css,
-                                            variants: component.variants,
-                                            accessibility: component.accessibility
-                                        },
-                                        genomeDerivation: component.genomeDerivation,
-                                        usage: {
-                                            html: "Copy the HTML into your component file",
-                                            css: "Add the CSS to your stylesheet or CSS-in-JS",
-                                            variants: "Apply modifier classes for different layouts",
-                                            accessibility: "ARIA roles and keyboard handlers are included"
-                                        }
-                                    }, null, 2)
+                                    text: JSON.stringify(component, null, 2)
                                 }]
                         };
                     }
@@ -955,23 +920,6 @@ class DesignGenomeServer {
                             content: [{
                                     type: "text",
                                     text: output
-                                }]
-                        };
-                    }
-                    case "generate_dynamic_component": {
-                        if (!args.genome || !args.purpose || !args.elements) {
-                            throw new McpError(ErrorCode.InvalidParams, "Missing required parameters");
-                        }
-                        const component = dynamicComponentGenerator.generate({
-                            purpose: args.purpose,
-                            elements: args.elements,
-                            layout: args.layout || "vertical",
-                            complexity: args.complexity || "molecular"
-                        }, args.genome);
-                        return {
-                            content: [{
-                                    type: "text",
-                                    text: JSON.stringify(component, null, 2)
                                 }]
                         };
                     }

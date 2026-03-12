@@ -246,10 +246,10 @@ export class DesignFileWriter {
             position: fixed;
             bottom: 20px;
             right: 20px;
-            background: rgba(0,0,0,0.8);
-            color: white;
+            background: ${genome.chromosomes.ch6_color_temp.isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.8)'};
+            color: ${genome.chromosomes.ch6_color_temp.isDark ? '#000' : '#fff'};
             padding: 16px;
-            border-radius: 8px;
+            border-radius: ${genome.chromosomes.ch7_edge.componentRadius}px;
             font-family: monospace;
             font-size: 12px;
             max-width: 300px;
@@ -262,9 +262,9 @@ export class DesignFileWriter {
         }
         
         .preview-info code {
-            background: rgba(255,255,255,0.1);
+            background: ${genome.chromosomes.ch6_color_temp.isDark ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.15)'};
             padding: 2px 4px;
-            border-radius: 3px;
+            border-radius: ${Math.max(2, genome.chromosomes.ch7_edge.radius / 4)}px;
         }
         
         .chromosome-tag {

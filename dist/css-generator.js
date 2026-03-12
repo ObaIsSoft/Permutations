@@ -4,6 +4,7 @@
  * Generates CSS with hero type support, trust signals,
  * and sector-aware styling.
  */
+import * as crypto from "crypto";
 export class CSSGenerator {
     generate(genome, options = {}) {
         const { includeReset = true, includeVariables = true, format = "expanded" } = options;
@@ -91,16 +92,22 @@ ${indent}outline-offset: 2px;
             parts.push(`${indent}--color-surface-overlay: ${surfaceStack[2]};`);
             parts.push(`${indent}--color-surface-modal: ${surfaceStack[3]};`);
         }
-        // Text colors based on dark/light mode
+        // Text colors - derived from genome hash, not hardcoded
+        const hash = crypto.createHash("sha256").update(genome.dnaHash + "text_colors").digest("hex");
+        const textDarkness = parseInt(hash.slice(0, 2), 16) / 255;
         if (isDark) {
-            parts.push(`${indent}--color-text: #ffffff;`);
-            parts.push(`${indent}--color-text-secondary: rgba(255, 255, 255, 0.7);`);
-            parts.push(`${indent}--color-text-tertiary: rgba(255, 255, 255, 0.5);`);
+            // Light text for dark backgrounds - hash-derived brightness
+            const textLightness = Math.floor(95 + textDarkness * 5); // 95-100%
+            parts.push(`${indent}--color-text: hsl(0, 0%, ${textLightness}%);`);
+            parts.push(`${indent}--color-text-secondary: hsla(0, 0%, ${textLightness}%, 0.7);`);
+            parts.push(`${indent}--color-text-tertiary: hsla(0, 0%, ${textLightness}%, 0.5);`);
         }
         else {
-            parts.push(`${indent}--color-text: ${surfaceStack?.[0] || '#0a0a0a'};`);
-            parts.push(`${indent}--color-text-secondary: rgba(0, 0, 0, 0.7);`);
-            parts.push(`${indent}--color-text-tertiary: rgba(0, 0, 0, 0.5);`);
+            // Dark text for light backgrounds
+            const textDarknessVal = Math.floor(5 + textDarkness * 10); // 5-15%
+            parts.push(`${indent}--color-text: hsl(0, 0%, ${textDarknessVal}%);`);
+            parts.push(`${indent}--color-text-secondary: hsla(0, 0%, ${textDarknessVal}%, 0.7);`);
+            parts.push(`${indent}--color-text-tertiary: hsla(0, 0%, ${textDarknessVal}%, 0.5);`);
         }
         // Typography
         const typography = chromosomes.ch16_typography;
@@ -429,12 +436,17 @@ ${indent}filter: grayscale(0%);
 }`);
                 break;
             case 'rating_stars':
+                // Hash-derived star color (warm accent) - not hardcoded #f59e0b
+                const starHash = crypto.createHash("sha256").update(genome.dnaHash + "star_color").digest("hex");
+                const starHue = Math.floor(30 + (parseInt(starHash.slice(0, 2), 16) / 255) * 30); // 30-60 (orange-gold)
+                const starSat = Math.floor(70 + (parseInt(starHash.slice(2, 4), 16) / 255) * 20); // 70-90%
+                const starLight = Math.floor(50 + (parseInt(starHash.slice(4, 6), 16) / 255) * 10); // 50-60%
                 parts.push(`.rating-display {
 ${indent}display: flex;
 ${indent}align-items: center;
 ${indent}gap: var(--space-sm);
 }${indent}.rating-stars {
-${indent}color: #f59e0b;
+${indent}color: hsl(${starHue}, ${starSat}%, ${starLight}%);
 ${indent}font-size: var(--text-h3);
 }${indent}.rating-text {
 ${indent}font-size: var(--text-small);
