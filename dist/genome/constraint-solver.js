@@ -325,6 +325,86 @@ export class GenomeConstraintSolver {
                 reason: "Editorial/portfolio interfaces with no conversion goal can be fully static"
             });
         }
+        // ─── Sector-specific dark pattern prohibitions ────────────────────────
+        // These sectors have explicit legal/ethical obligations against deceptive patterns
+        this.collectDarkPatternConstraints(genome);
+    }
+    /**
+     * Sector-specific dark pattern constraints.
+     * Healthcare, fintech, government, insurance, nonprofit carry explicit trust obligations.
+     * Any fake urgency, fake scarcity, or pre-selected upsells are forbidden by sector.
+     */
+    collectDarkPatternConstraints(genome) {
+        const sector = genome.chromosomes.ch0_sector_primary?.sector;
+        const trustRequirement = genome.traits.trustRequirement;
+        const highTrustSectors = ['healthcare', 'fintech', 'government', 'insurance', 'nonprofit'];
+        const isHighTrust = highTrustSectors.includes(sector) || trustRequirement > 0.75;
+        if (isHighTrust) {
+            // Fake urgency is a regulatory risk in healthcare/fintech (FTC, FCA, CMA enforcement)
+            this.addConstraint({
+                id: "sector_no_fake_urgency",
+                target: "constraints.forbiddenPatterns",
+                value: "fake_urgency_timer",
+                priority: 10,
+                source: `sector: ${sector}, trustRequirement: ${trustRequirement.toFixed(2)}`,
+                reason: `${sector} sector — fake urgency timers violate sector regulations and WCAG trust guidelines`
+            });
+            this.addConstraint({
+                id: "sector_no_fake_scarcity",
+                target: "constraints.forbiddenPatterns",
+                value: "fake_scarcity",
+                priority: 10,
+                source: `sector: ${sector}`,
+                reason: `${sector} sector — fabricated scarcity is legally actionable under FTC/CMA dark pattern enforcement`
+            });
+            this.addConstraint({
+                id: "sector_no_preselected_upsell",
+                target: "constraints.forbiddenPatterns",
+                value: "preselected_upsell",
+                priority: 10,
+                source: `sector: ${sector}`,
+                reason: `${sector} sector — pre-selected opt-ins violate GDPR Article 7 and consumer protection law`
+            });
+        }
+        // All sectors: confirmshaming is always forbidden (pure manipulation, no legal basis)
+        this.addConstraint({
+            id: "no_confirmshaming",
+            target: "constraints.forbiddenPatterns",
+            value: "confirmshaming",
+            priority: 9,
+            source: "universal_ethics",
+            reason: "Confirmshaming manipulates through guilt — forbidden regardless of sector"
+        });
+        // Sectors where infinite scroll is inappropriate
+        const focusedSectors = ['healthcare', 'government', 'fintech', 'insurance', 'education'];
+        if (focusedSectors.includes(sector)) {
+            this.addConstraint({
+                id: "sector_no_infinite_scroll",
+                target: "constraints.forbiddenPatterns",
+                value: "infinite_scroll_no_escape",
+                priority: 8,
+                source: `sector: ${sector}`,
+                reason: `${sector} sector requires users to find specific information — infinite scroll makes this impossible`
+            });
+        }
+        // Accessibility: always require visible focus styles (WCAG 2.4.11)
+        this.addConstraint({
+            id: "universal_focus_visible",
+            target: "constraints.forbiddenPatterns",
+            value: "outline_none_no_replacement",
+            priority: 10,
+            source: "WCAG 2.4.11",
+            reason: "Focus visibility is non-negotiable for keyboard users — outline:none without replacement is a WCAG failure"
+        });
+        // Motion: always require prefers-reduced-motion wrapping
+        this.addConstraint({
+            id: "universal_reduced_motion",
+            target: "constraints.requiredPatterns",
+            value: "prefers_reduced_motion_wrap",
+            priority: 9,
+            source: "WCAG 2.3.3",
+            reason: "All CSS animations must be wrapped in @media (prefers-reduced-motion: no-preference)"
+        });
     }
     /**
      * Collect WCAG accessibility constraints based on genome traits.
