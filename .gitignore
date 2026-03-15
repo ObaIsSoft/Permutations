@@ -42,3 +42,12 @@ website-*.png
 
 # Test data files (large binaries)
 test/data/
+
+# Generated output artifacts
+output/
+
+# Build info
+tsconfig.tsbuildinfo
+
+# Local dev config (may contain API keys)
+inspector-config.json
