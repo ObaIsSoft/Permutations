@@ -181,17 +181,21 @@ export function generateSentenceFromTemplate(structure, sector, register, b) {
     const banks = COPY_PATTERN_BANKS;
     const safeStructure = structure || "balanced";
     const safeRegister = register || "professional";
-    const adj = (banks.adjectives[safeRegister] || banks.adjectives.professional)[Math.floor(b(180) * 6)];
-    const verb = (banks.verbs[safeRegister] || banks.verbs.professional)[Math.floor(b(181) * 6)];
+    const adjArr = banks.adjectives[safeRegister] || banks.adjectives.professional;
+    const verbArr = banks.verbs[safeRegister] || banks.verbs.professional;
+    const adj = adjArr[Math.floor(b(180) * adjArr.length) % adjArr.length];
+    const verb = verbArr[Math.floor(b(181) * verbArr.length) % verbArr.length];
     const terms = banks.industryTerms[sector] || banks.industryTerms.technology;
-    const noun = terms[Math.floor(b(182) * terms.length)];
-    const audience = banks.taglineFragments.audience[Math.floor(b(183) * banks.taglineFragments.audience.length)];
+    const noun = terms[Math.floor(b(182) * terms.length) % terms.length];
+    const audienceArr = banks.taglineFragments.audience;
+    const audience = audienceArr[Math.floor(b(183) * audienceArr.length) % audienceArr.length];
+    const cap = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : "";
     if (safeStructure === "short_punchy") {
-        return `${adj.charAt(0).toUpperCase() + adj.slice(1)} ${noun}. ${verb.charAt(0).toUpperCase() + verb.slice(1)} more.`;
+        return `${cap(adj)} ${noun}. ${cap(verb)} more.`;
     }
     if (safeStructure === "complex_periodic") {
         return `For ${audience} who demand ${adj} ${noun}, we ${verb} what others can't.`;
     }
     // balanced
-    return `${verb.charAt(0).toUpperCase() + verb.slice(1)} ${adj} ${noun} for ${audience} who expect more.`;
+    return `${cap(verb)} ${adj} ${noun} for ${audience} who expect more.`;
 }

@@ -1,12 +1,13 @@
 {
   "meta": {
     "title": "Permutations MCP: The Complete Journey",
-    "version": "0.0.7",
-    "last_updated": "2026-03-14",
+    "version": "0.0.9",
+    "last_updated": "2026-03-15",
     "author": "ObaIsSoft",
     "repository": "https://github.com/ObaIsSoft/Permutations",
-    "lines_of_code": 15550,
-    "test_count": 49
+    "lines_of_code": 13200,
+    "test_count": 49,
+    "tool_count": 8
   },
   
   "origin_story": {
@@ -123,6 +124,35 @@
         "Added ecosystem/civilization bridge for organism-based websites"
       ],
       "lines_of_code": 12361,
+      "test_coverage": "49 tests: Genome, Sequencer, Production, Ecosystem/Civilization"
+    },
+    "v0_0_9_design_constitution": {
+      "date": "March 2026",
+      "philosophy_shift": "Tool identity clarified: Permutations is a design constitution generator, not a code generator. The genome provides direction. The agent implements from it.",
+      "features": [
+        "forbiddenRanges replaces hueRange in all 23 sector profiles — sectors define what's psychologically wrong, hash selects freely from the rest (technology now fully unrestricted: Cloudflare=orange, GitHub=dark, Stripe=purple — all valid)",
+        "darkModeHex added to ch5_color_primary — primary at 22–35% lightness was invisible on dark surfaces; lifted variant (58–74%) emitted as --color-primary-interactive for buttons/links on dark backgrounds",
+        "14 tools reduced to 8 — removed: generate_from_archetype (merged into generate_design_genome via offline: true), list_archetypes, write_design_files, generate_preview, generate_component, mutate_genome",
+        "generate_design_genome: added offline: boolean param (skips LLM, uses hash-based inference), added suggested_next array (dynamic workflow guide based on complexity score)",
+        "generate_civilization: generate_code default flipped to false — returns architecture specs by default; code generation is explicit opt-in",
+        "All 8 tool descriptions updated with workflow position (STEP 1, STEP 2, FINAL STEP, etc.)",
+        "genome_report added to generate_design_genome response — markdown explaining every chromosome sequenced, sector detected, constraints in effect, and workflow map",
+        "ecosystem_report added to generate_ecosystem response — organism hierarchy, containment map, what each organism means for implementation",
+        "civilization_report added to generate_civilization response — tier reached, architecture direction, design system constraints",
+        "Dead code removed: component-generator.ts (382 LOC), file-writer.ts (650 LOC), mutation.ts (953 LOC) — ~1,985 lines of unreachable code deleted",
+        ".cursorrules rewritten: 10 rules, 8-tool workflow map, darkModeHex usage, ecosystem/civilization specs-not-code mandate, validate-before-shipping requirement",
+        "README.md updated: offline mode, color philosophy section, forbidden ranges table, genome_report field"
+      ],
+      "architecture_changes": [
+        "SECTOR_COLOR_BIAS table: all 23 sectors converted from hueRange: [min, max] to forbiddenRanges: [[min, max], ...]",
+        "buildValidRanges() helper inverts forbidden zones to valid spectrum — hash maps into valid ranges only",
+        "generateHueFromForbidden() replaces generateHueFromBias() — deprecated wrapper maintained for compatibility",
+        "generatePrimaryColor() now returns darkModeLightness and darkModeHex on all 3 code paths (base, brand, epigenetic)",
+        "CSSGenerator emits --color-primary-interactive using darkModeHex; .btn-primary adapts background in dark mode",
+        "buildGenomeReport() private method on server — generates explainability markdown from any genome",
+        "generate_civilization condition fixed: was (args.generate_code !== false) which ran by default; changed to (args.generate_code === true) to match new default"
+      ],
+      "lines_of_code": 13200,
       "test_coverage": "49 tests: Genome, Sequencer, Production, Ecosystem/Civilization"
     },
     "v0_0_7_full_rendering": {
@@ -245,9 +275,9 @@
     },
     
     "gap_4_color_psychology": {
-      "problem": "Random colors don't respect industry conventions",
-      "solution": "Sector-biased hue ranges with brand override capability",
-      "mechanism": "Healthcare biases blue/green (trust/calm), Fintech biases purple/navy (stability/innovation)"
+      "problem": "Fixed hue ranges trap every sector into the same narrow palette — all tech products got blue-purple (hue 240–270°) regardless of seed",
+      "solution": "Sector-defined forbiddenRanges replace hueRange — sectors define what's psychologically wrong, hash selects freely from everything else across the full 360°",
+      "mechanism": "Technology has no forbidden ranges (Cloudflare=orange, GitHub=dark, Stripe=purple — all correct). Healthcare forbids blood red + magenta [0–20°, 320–360°]. Food forbids cold corporate blue [220–280°]. Two different tech products with different seeds always get different hues."
     },
     
     "gap_5_reproducibility": {
@@ -318,24 +348,43 @@
       "problem": "Only 20 of 32 chromosomes had mutation handlers—12 were static",
       "impact": "Limited design space exploration, constrained breeding",
       "breakthrough": "Full coverage: mutation handlers for ch0, ch1, ch2, ch9-ch25"
+    },
+    "struggle_10_hue_prison": {
+      "problem": "hueRange: [240, 270] for technology meant every tech product got blue-purple — two different products under the same sector looked identical",
+      "impact": "The exact problem the tool was built to prevent was happening in the color system itself",
+      "discovery": "Generated 3 tech sites with different seeds, compared screenshots — all had hue ≈ 245°–265°",
+      "breakthrough": "forbiddenRanges inverts the constraint. Define what's psychologically wrong (not what's right). Hash picks freely from what remains. Technology: no forbidden ranges at all."
+    },
+    "struggle_11_dark_mode_invisibility": {
+      "problem": "Primary color generated at lightness 22–35%. On dark backgrounds (5–10% lightness), primary buttons were near-invisible",
+      "impact": "Dark mode sites had invisible CTAs — fundamental usability failure",
+      "breakthrough": "darkModeLightness = clamp(lightness + 0.35, 0.58, 0.74). Every genome now ships a dark-safe interactive variant alongside the base primary."
+    },
+    "struggle_12_tool_identity_crisis": {
+      "problem": "14 tools exposed; agents called generate_component and generate_preview to build UIs, treating the tool as a code generator",
+      "impact": "Tool was generating TSX that contradicted the agent's design intent. generate_component's output competed with the genome's direction.",
+      "discovery": "The tool's mandate is design direction, not implementation. When a tool generates code, it skips the agent's judgment.",
+      "breakthrough": "Removed 6 tools. Added suggested_next to genome response so agents know the workflow. Ecosystem + civilization return specs not code by default."
     }
   },
 
   "technical_achievements": {
     "determinism": "Same seed produces identical hash and genome—verified across 1000+ seeds",
-    "uniqueness": "Different seeds produce different designs—10 seeds = 10 unique outputs",
+    "uniqueness": "Different seeds produce different designs—10 seeds = 10 unique outputs. forbiddenRanges ensures two seeds in the same sector still produce different hues.",
     "constraint_enforcement": "Epistasis rules prevent 8 known 'slop' patterns",
-    "sector_coverage": "13 sectors with distinct color psychology, hero types, trust signals",
-    "offline_mode": "Archetype generation works without LLM (6 functional archetypes)",
+    "sector_coverage": "23 sectors with forbidden hue ranges, hero type weightings, trust signal requirements",
+    "offline_mode": "offline: true param skips LLM entirely — hash-based trait inference, fully deterministic, no API cost",
     "multi_provider": "6 LLM providers supported: Groq, OpenAI, Anthropic, Gemini, OpenRouter, HuggingFace",
     "test_coverage": "49 production tests: determinism, uniqueness, sector-awareness, epistasis, pattern detection",
     "url_extraction": "Triple backend: Playwright (JS sites), Scrapy (pro crawling), Native fetch (zero deps)",
     "css_validation": "AST-based genome-aware validation with drift scoring 0-100",
-    "full_mutation_coverage": "All 32 chromosomes mutable with viability scoring",
+    "dark_mode_safety": "Every genome ships darkModeHex (lightness 58–74%) — visible on dark surfaces. Base hex (22–35%) for light mode. CSS var --color-primary-interactive for interactive elements.",
+    "explainability": "Every tool response includes a _report field: genome_report (chromosomes sequenced + constraints), ecosystem_report (organism hierarchy + containment map), civilization_report (tier reached + architecture direction)",
+    "workflow_guidance": "suggested_next array in genome response — dynamic list of which tools to call next, when, and why. Based on complexity score.",
+    "tool_surface": "8 tools with STEP-prefixed descriptions. Agents know workflow order without documentation.",
     "zero_hardcoding": "All values derived from SHA-256 hash and LLM extraction—no magic numbers, no placeholder fallbacks",
-    "full_chromosome_rendering": "All 32 chromosomes produce output — ch30 state_topology, ch31 routing_pattern, ch32 token_inheritance drive civilization architecture; ch27 motion choreography, ch28 iconography, ch11 texture fully rendered",
     "complete_page_css": "CSSGenerator covers every HTML section: navigation, hero variants, trust grid, social proof, features, FAQ, CTA, footer — zero unstyled elements",
-    "api_optimization": "50% cost reduction through unified analysis calls"
+    "api_optimization": "50% cost reduction through unified analysis calls. offline: true = 0 API calls."
   },
 
   "motivation": {

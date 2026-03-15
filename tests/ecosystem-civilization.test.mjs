@@ -21,13 +21,13 @@ const sequencer = new GenomeSequencer();
 
 console.log('\n🧬 Ecosystem → Civilization Bridge Test\n');
 
-// Required ContentTraits
+// Required ContentTraits — high complexity to guarantee organisms above abiotic tier
 const baseTraits = {
-    informationDensity: 0.5,
-    temporalUrgency: 0.5,
+    informationDensity: 0.85,
+    temporalUrgency: 0.7,
     emotionalTemperature: 0.5,
     playfulness: 0.5,
-    spatialDependency: 0.5,
+    spatialDependency: 0.75,
     trustRequirement: 0.3,
     visualEmphasis: 0.3,
     conversionFocus: 0.4
@@ -50,8 +50,11 @@ console.log(`     - Flora: ${ecosystem.organisms.flora.length}`);
 console.log(`     - Fauna: ${ecosystem.organisms.fauna.length}`);
 
 // Test 2: Organisms have genome-derived properties
-const microbe = ecosystem.organisms.microbial[0];
 console.log(`\nTest 2: Organisms have genome-derived properties`);
+if (ecosystem.organisms.microbial.length === 0) {
+    throw new Error('No microbial organisms generated — complexity too low. Check baseTraits informationDensity.');
+}
+const microbe = ecosystem.organisms.microbial[0];
 console.log(`  ✅ Color treatment: ${microbe.characteristics.colorTreatment}`);
 console.log(`  ✅ Motion style: ${microbe.characteristics.motionStyle}`);
 console.log(`  ✅ Scale: ${microbe.characteristics.scale}`);

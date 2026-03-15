@@ -48,7 +48,7 @@ export class SemanticTraitExtractor {
         const key = apiKey || groqKey || openaiKey || anthropicKey || geminiKey || openrouterKey || huggingfaceKey;
         if (!key) {
             // M-16: Don't crash at boot. Set a flag so analyze() throws gracefully at call time.
-            // This allows offline tools (generate_from_archetype, etc.) to work without an LLM key.
+            // This allows offline: true mode (generate_design_genome with offline: true) to work without an LLM key.
             this.apiKeyMissing = true;
             return;
         }
@@ -95,7 +95,7 @@ export class SemanticTraitExtractor {
     async analyze(intent, projectContext) {
         // M-16: Graceful error if no API key — deferred from constructor so offline tools still work
         if (this.apiKeyMissing) {
-            throw new Error("No LLM API key configured. Set one of: GROQ_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY, or HUGGINGFACE_API_KEY. Offline tools (generate_from_archetype, mutate_genome, etc.) work without a key.");
+            throw new Error("No LLM API key configured. Set one of: GROQ_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY, or HUGGINGFACE_API_KEY. Pass offline: true to generate_design_genome to skip LLM extraction.");
         }
         const prompt = this.buildPrompt(intent, projectContext);
         let lastError = null;

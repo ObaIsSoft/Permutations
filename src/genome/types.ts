@@ -547,8 +547,12 @@ export interface DesignGenome {
             hue: number;
             saturation: number;
             lightness: number;
+            /** Lifted lightness (0.58–0.74) for interactive elements on dark surfaces */
+            darkModeLightness: number;
             temperature: ColorTemp;
-            hex: string;  // computed hex
+            hex: string;  // computed hex — use for light mode surfaces
+            /** Hex at darkModeLightness — use for buttons/links on dark backgrounds */
+            darkModeHex: string;
             sectorAppropriate: boolean;  // flag if brand override
         };
         ch6_color_temp: {

@@ -1,4 +1,3 @@
-import * as fs from "fs/promises";
 import * as fsSync from "fs";
 import * as path from "path";
 // Load .env if present (no dotenv dep — pure Node.js)
@@ -26,17 +25,13 @@ import { WebGLGenerator } from "./generators/webgl-generator.js";
 import { FXGenerator } from "./generators/fx-generator.js";
 import { SVGGenerator } from "./generators/svg-generator.js";
 import { EpigeneticParser } from "./genome/epigenetics.js";
-import { detectArchetype } from "./genome/archetypes.js";
 import { PatternDetector } from "./constraints/pattern-detector.js";
 import { ecosystemGenerator } from "./genome/ecosystem.js";
 import { CivilizationGenerator } from "./genome/civilization.js";
 import { ComplexityAnalyzer } from "./genome/complexity-analyzer.js";
 import { generateCivilizationOutput } from "./generators/civilization-generators.js";
-import { DesignFileWriter } from "./generators/file-writer.js";
 import { formatGenerator } from "./generators/format-generators.js";
-import { componentGenerator } from "./generators/component-generator.js";
 import { designBriefGenerator } from "./generators/design-brief-generator.js";
-import { genomeMutator } from "./genome/mutation.js";
 import { urlGenomeExtractor } from "./genome/extractor-url.js";
 class DesignGenomeServer {
     server;
@@ -51,7 +46,6 @@ class DesignGenomeServer {
     patternDetector;
     civilizationGen;
     complexityAnalyzer;
-    fileWriter;
     constructor() {
         this.server = new Server({ name: "permutations", version: "0.0.7" }, { capabilities: { tools: {} } });
         this.extractor = new SemanticTraitExtractor();
@@ -65,7 +59,6 @@ class DesignGenomeServer {
         this.patternDetector = new PatternDetector();
         this.civilizationGen = new CivilizationGenerator();
         this.complexityAnalyzer = new ComplexityAnalyzer();
-        this.fileWriter = new DesignFileWriter();
         this.setupHandlers();
     }
     setupHandlers() {
@@ -73,7 +66,7 @@ class DesignGenomeServer {
             tools: [
                 {
                     name: "generate_design_genome",
-                    description: "Calculates the mathematical design DNA constraints from a fuzzy user prompt",
+                    description: "STEP 1 — Start here for every design task. Sequences a 32-chromosome design genome from a natural language intent. Returns CSS tokens, color system, typography, spacing, motion constraints, and a suggested_next workflow guide. All other tools require the genome this produces.",
                     inputSchema: {
                         type: "object",
                         properties: {
@@ -89,51 +82,19 @@ class DesignGenomeServer {
                                 type: "string",
                                 enum: ["bunny", "google"],
                                 description: "Typography provider (default: bunny)"
+                            },
+                            offline: {
+                                type: "boolean",
+                                description: "Skip LLM semantic extraction — use hash-based trait inference instead. Faster, no API cost, deterministic. Use when you have a clear seed and don't need sector detection.",
+                                default: false
                             }
                         },
                         required: ["intent", "seed"]
                     }
                 },
                 {
-                    name: "generate_from_archetype",
-                    description: "Generates design DNA from a functional archetype without requiring LLM API calls. Works offline.",
-                    inputSchema: {
-                        type: "object",
-                        properties: {
-                            archetype: {
-                                type: "string",
-                                enum: [
-                                    "dashboard", "documentation", "dev-tool",
-                                    "portfolio", "agency-portfolio",
-                                    "commerce", "luxury-commerce",
-                                    "landing", "saas-landing", "fintech-landing", "medical-landing",
-                                    "blog", "magazine",
-                                    "real-estate", "restaurant", "non-profit"
-                                ],
-                                description: "Functional archetype defining the content purpose"
-                            },
-                            seed: { type: "string", description: "Unique project seed for deterministic generation" },
-                            intent: { type: "string", description: "Optional: Natural language intent for archetype auto-detection" },
-                            font_provider: {
-                                type: "string",
-                                enum: ["bunny", "google"],
-                                description: "Typography provider (default: bunny)"
-                            }
-                        },
-                        required: ["seed"]
-                    }
-                },
-                {
-                    name: "list_archetypes",
-                    description: "Returns all available functional archetypes with descriptions",
-                    inputSchema: {
-                        type: "object",
-                        properties: {}
-                    }
-                },
-                {
                     name: "validate_design",
-                    description: "Validates CSS/HTML against DNA constraints and forbidden slop patterns",
+                    description: "FINAL STEP — Call before shipping any CSS or HTML. Validates code against genome DNA constraints and checks for forbidden slop patterns (gradients on text, bootstrap shadows, AI tells). Returns violation list and slop score.",
                     inputSchema: {
                         type: "object",
                         properties: {
@@ -146,7 +107,7 @@ class DesignGenomeServer {
                 },
                 {
                     name: "generate_ecosystem",
-                    description: "Generates a complete ecosystem of design components - microbial (atomic), flora (growing), fauna (complex) - all sharing ONE genome. Returns component specs, relationships, and civilization readiness.",
+                    description: "STEP 3 (optional) — Call after generate_design_genome when building a component library or design system. Returns a biological component hierarchy: microbial (atomic), flora (composite), fauna (complex). Provides component specs, prop contracts, containment relationships, and civilization readiness — NOT generated code.",
                     inputSchema: {
                         type: "object",
                         properties: {
@@ -167,7 +128,7 @@ class DesignGenomeServer {
                 },
                 {
                     name: "generate_civilization",
-                    description: "Generates architecture layer for a civilization-tier design system. Takes ecosystem organisms as input and adds state management, routing, and advanced patterns. If ecosystem not provided, generates standalone.",
+                    description: "STEP 4 (optional) — Call after generate_ecosystem when complexity >= 0.68. Returns application architecture direction: state topology, routing patterns, token inheritance rules, and component composition contracts. Does NOT generate code by default (set generate_code: true to opt in). The agent implements from these specs.",
                     inputSchema: {
                         type: "object",
                         properties: {
@@ -185,8 +146,8 @@ class DesignGenomeServer {
                             },
                             generate_code: {
                                 type: "boolean",
-                                description: "Whether to generate actual React/TypeScript code (default: true)",
-                                default: true
+                                description: "Whether to generate actual React/TypeScript code (default: false — returns architecture specs only)",
+                                default: false
                             },
                             font_provider: {
                                 type: "string",
@@ -198,75 +159,8 @@ class DesignGenomeServer {
                     }
                 },
                 {
-                    name: "write_design_files",
-                    description: "Writes generated design outputs to disk as organized component files, styles, and configuration. Creates a complete file structure ready for development.",
-                    inputSchema: {
-                        type: "object",
-                        properties: {
-                            genome: {
-                                type: "object",
-                                description: "The design genome from generate_design_genome or generate_civilization"
-                            },
-                            outputs: {
-                                type: "object",
-                                description: "Generated outputs to write",
-                                properties: {
-                                    components: { type: "string" },
-                                    animations: { type: "string" },
-                                    architecture: { type: "string" },
-                                    tokens: { type: "string" },
-                                    interactions: { type: "string" },
-                                    css: { type: "string" },
-                                    html: { type: "string" },
-                                    webgl: { type: "string" },
-                                    fx: { type: "string" },
-                                    svg: { type: "string" }
-                                }
-                            },
-                            output_dir: {
-                                type: "string",
-                                description: "Directory to write files to (absolute path)"
-                            },
-                            framework: {
-                                type: "string",
-                                enum: ["react", "vue", "svelte", "vanilla"],
-                                default: "react"
-                            },
-                            styling: {
-                                type: "string",
-                                enum: ["css", "tailwind", "css-in-js", "scss"],
-                                default: "css"
-                            },
-                            typescript: {
-                                type: "boolean",
-                                default: true
-                            },
-                            include_preview: {
-                                type: "boolean",
-                                description: "Generate standalone HTML preview file",
-                                default: true
-                            }
-                        },
-                        required: ["genome", "output_dir"]
-                    }
-                },
-                {
-                    name: "generate_preview",
-                    description: "Generates a standalone HTML preview file that can be opened in a browser to visualize the design without implementation.",
-                    inputSchema: {
-                        type: "object",
-                        properties: {
-                            genome: { type: "object", description: "Design genome" },
-                            css: { type: "string", description: "Generated CSS" },
-                            html: { type: "string", description: "Generated HTML" },
-                            output_path: { type: "string", description: "Optional: path to write preview HTML" }
-                        },
-                        required: ["genome", "css", "html"]
-                    }
-                },
-                {
                     name: "update_design_genome",
-                    description: "Updates an existing design genome with specific changes. Returns a diff showing what changed and the new genome.",
+                    description: "ITERATE — Call after generate_design_genome to adjust specific chromosomes. Use for 'make it warmer', 'increase motion', 'change the sector to fintech' workflows. Returns a diff of changed chromosomes and the updated genome.",
                     inputSchema: {
                         type: "object",
                         properties: {
@@ -294,7 +188,7 @@ class DesignGenomeServer {
                 },
                 {
                     name: "generate_formats",
-                    description: "Generates design outputs in alternative formats: Vue, Svelte, Figma Tokens, Style Dictionary, styled-components, or Emotion.",
+                    description: "EXPORT — Call after generate_design_genome to export design tokens for external tools. Outputs Figma Tokens, Style Dictionary (CSS/SCSS/iOS/Android), styled-components theme, Emotion theme, Vue 3 SFC, or Svelte scoped styles.",
                     inputSchema: {
                         type: "object",
                         properties: {
@@ -313,41 +207,8 @@ class DesignGenomeServer {
                     }
                 },
                 {
-                    name: "generate_component",
-                    description: "Generates ANY UI component dynamically from description + genome. No hardcoded templates - structure is inferred from purpose and elements. Uses ch27_motion_choreography and ch26_color_system.",
-                    inputSchema: {
-                        type: "object",
-                        properties: {
-                            genome: {
-                                type: "object",
-                                description: "The design genome from generate_design_genome or generate_civilization"
-                            },
-                            purpose: {
-                                type: "string",
-                                description: "Component purpose (e.g., 'pricing', 'navigation', 'content_display', 'testimonial', 'stats')"
-                            },
-                            elements: {
-                                type: "array",
-                                items: { type: "string" },
-                                description: "Elements to include (e.g., ['title', 'price', 'cta', 'feature_list'])"
-                            },
-                            layout: {
-                                type: "string",
-                                enum: ["horizontal", "vertical", "grid", "layered"],
-                                description: "Layout direction (default: vertical)"
-                            },
-                            complexity: {
-                                type: "string",
-                                enum: ["atomic", "molecular", "organism"],
-                                description: "Component complexity (default: molecular)"
-                            }
-                        },
-                        required: ["genome", "purpose", "elements"]
-                    }
-                },
-                {
                     name: "generate_design_brief",
-                    description: "Generates a human-readable design brief from a genome. This is what a designer hands to a developer or a client approves before implementation. Includes visual direction, strategic decisions, and copy intelligence.",
+                    description: "STEP 2 — Call after generate_design_genome before writing any code. Converts the genome into a human/agent-readable design brief: visual direction, strategic decisions, copy intelligence, and implementation guidance. This is what a designer hands to a developer or an agent reads before making implementation choices.",
                     inputSchema: {
                         type: "object",
                         properties: {
@@ -366,44 +227,8 @@ class DesignGenomeServer {
                     }
                 },
                 {
-                    name: "mutate_genome",
-                    description: "Generates variant genomes by mutating specific chromosomes while preserving others. The 'breeding' part of the biological metaphor. Keep what you love, explore variations.",
-                    inputSchema: {
-                        type: "object",
-                        properties: {
-                            genome: {
-                                type: "object",
-                                description: "The parent genome to mutate"
-                            },
-                            target_chromosomes: {
-                                type: "array",
-                                items: { type: "string" },
-                                description: "Chromosomes to mutate (default: all except preserved)"
-                            },
-                            preserve: {
-                                type: "array",
-                                items: { type: "string" },
-                                description: "Chromosomes to preserve exactly (e.g., ['ch3_type_display', 'ch9_grid'])"
-                            },
-                            mutation_rate: {
-                                type: "number",
-                                minimum: 0,
-                                maximum: 1,
-                                description: "Mutation intensity 0.0-1.0 (0.1=subtle, 0.5=dramatic)",
-                                default: 0.3
-                            },
-                            count: {
-                                type: "number",
-                                description: "Number of variants to generate",
-                                default: 3
-                            }
-                        },
-                        required: ["genome"]
-                    }
-                },
-                {
                     name: "extract_genome_from_url",
-                    description: "Reverse-engineers an approximate genome from any website URL using browser automation (Playwright). Scrapes CSS, extracts colors/fonts/spacing from computed styles, and builds a genome approximation. Use for 'I love this site, make something similar' workflows. No manual CSS required.",
+                    description: "ALTERNATIVE ENTRY — Use instead of generate_design_genome when you have a reference site. Reverse-engineers an approximate genome from a URL using Playwright browser automation. Extracts colors, fonts, spacing, and animation from computed styles. Best for 'I love this site, make something like it' workflows.",
                     inputSchema: {
                         type: "object",
                         properties: {
@@ -450,10 +275,22 @@ class DesignGenomeServer {
                             );
                         }
                         // 2. Semantic Extraction (single LLM call: traits + sector + archetype + copy intelligence)
+                        // When offline: true, skip LLM and use hash-based trait inference
                         const finalContext = epigeneticData?.brandContext || context;
-                        const analysis = await this.extractor.analyze(intent, finalContext);
-                        const { traits, sector, copyIntelligence, copy } = analysis;
-                        const detectedSector = sector.primary;
+                        let traits, detectedSector, copyIntelligence, copy;
+                        if (args.offline) {
+                            traits = await this.extractor.extractTraits(intent, finalContext ?? "");
+                            detectedSector = "technology";
+                            copyIntelligence = undefined;
+                            copy = undefined;
+                        }
+                        else {
+                            const analysis = await this.extractor.analyze(intent, finalContext);
+                            traits = analysis.traits;
+                            detectedSector = analysis.sector.primary;
+                            copyIntelligence = analysis.copyIntelligence;
+                            copy = analysis.copy;
+                        }
                         // 4. DNA Sequencing (pass copy intelligence + LLM copy to sequencer)
                         const genome = this.sequencer.generate(seed, traits, {
                             primarySector: detectedSector,
@@ -552,6 +389,37 @@ class DesignGenomeServer {
                         // 8. Auto pattern detection on generated output
                         const patternViolations = this.patternDetector.detectInGenome(genome, css, html ?? "");
                         const patternReport = this.patternDetector.generateReport(patternViolations);
+                        const genome_report = this.buildGenomeReport(genome, {
+                            intent,
+                            seed,
+                            sector: detectedSector,
+                            complexity: finalComplexity,
+                            tier: String(tier),
+                            offline: args.offline ?? false,
+                            traits
+                        });
+                        const suggested_next = [
+                            {
+                                tool: "generate_design_brief",
+                                reason: "Human/agent-readable design direction — call this before writing any code",
+                                always: true
+                            },
+                            {
+                                tool: "generate_ecosystem",
+                                reason: "Component library architecture — call when building a design system or multiple components",
+                                when: "building multiple components or a full UI library"
+                            },
+                            ...(finalComplexity >= 0.68 ? [{
+                                    tool: "generate_civilization",
+                                    reason: `Application architecture direction — complexity ${finalComplexity.toFixed(2)} qualifies`,
+                                    when: `complexity >= 0.68 — this genome qualifies (${finalComplexity.toFixed(2)})`
+                                }] : []),
+                            {
+                                tool: "validate_design",
+                                reason: "Run before shipping any CSS or HTML to catch slop patterns",
+                                always: true
+                            }
+                        ];
                         return {
                             content: [{
                                     type: "text",
@@ -573,60 +441,10 @@ class DesignGenomeServer {
                                         fxAtmosphere,
                                         svgBiomarker,
                                         patternReport,
-                                        patternViolations: patternViolations.filter(v => v.severity === "error")
+                                        patternViolations: patternViolations.filter(v => v.severity === "error"),
+                                        suggested_next,
+                                        genome_report
                                     }, null, 2)
-                                }]
-                        };
-                    }
-                    case "generate_from_archetype": {
-                        if (!args.seed) {
-                            throw new McpError(ErrorCode.InvalidParams, "Missing seed");
-                        }
-                        if (!args.archetype && !args.intent) {
-                            throw new McpError(ErrorCode.InvalidParams, "Provide either archetype or intent for auto-detection");
-                        }
-                        // Auto-detect archetype from intent if provided
-                        let archetype = args.archetype;
-                        if (args.intent && !args.archetype) {
-                            const detected = detectArchetype(args.intent);
-                            if (detected)
-                                archetype = detected;
-                        }
-                        // Generate from archetype (no API calls needed)
-                        const genome = this.sequencer.generateFromArchetype(archetype, args.seed);
-                        // Component Generation
-                        const tailwindConfig = this.cssGen.generate(genome, { format: "compressed" });
-                        const topology = this.htmlGen.generateTopology(genome);
-                        const webglComponents = this.webglGen.generateR3F(genome);
-                        const fxAtmosphere = this.fxGen.generateCSSClass(genome);
-                        const svgBiomarker = this.svgGen.generateBiomarker(genome);
-                        return {
-                            content: [{
-                                    type: "text",
-                                    text: JSON.stringify({
-                                        genome,
-                                        topology,
-                                        tailwindConfig,
-                                        webglComponents,
-                                        fxAtmosphere,
-                                        svgBiomarker,
-                                        mode: "archetype",
-                                        archetype
-                                    }, null, 2)
-                                }]
-                        };
-                    }
-                    case "list_archetypes": {
-                        const { ARCHETYPES } = await import("./genome/archetypes.js");
-                        const list = Object.entries(ARCHETYPES).map(([key, value]) => ({
-                            id: key,
-                            name: value.name,
-                            description: value.description
-                        }));
-                        return {
-                            content: [{
-                                    type: "text",
-                                    text: JSON.stringify({ archetypes: list }, null, 2)
                                 }]
                         };
                     }
@@ -713,10 +531,44 @@ class DesignGenomeServer {
                             contained: r.organisms[1],
                             pattern: r.pattern
                         }));
+                        const ecosystemReportLines = [
+                            `# Ecosystem Report`,
+                            ``,
+                            `## Seed → Organisms`,
+                            `| Field | Value |`,
+                            `|---|---|`,
+                            `| Intent | ${args.intent} |`,
+                            `| Seed | \`${args.seed}\` |`,
+                            `| Sector | **${ecoSector}** |`,
+                            `| Complexity | ${ecosystem.evolution.complexity.toFixed(3)} |`,
+                            `| Civilization ready | ${ecosystem.civilizationReady ? "Yes — call generate_civilization" : `No — gap: ${(ecosystem.civilizationThreshold - ecosystem.evolution.complexity).toFixed(3)}`} |`,
+                            ``,
+                            `## Organism Hierarchy`,
+                            ``,
+                            `### Microbial (atomic components) — ${ecosystem.organisms.microbial.length}`,
+                            ...ecosystem.organisms.microbial.map(o => `- **${o.name}** (${o.id}) — color: ${o.characteristics.colorTreatment}`),
+                            ``,
+                            `### Flora (composite components) — ${ecosystem.organisms.flora.length}`,
+                            ...ecosystem.organisms.flora.map(o => `- **${o.name}** (${o.id}) — motion: ${o.characteristics.motionStyle}`),
+                            ``,
+                            `### Fauna (complex components) — ${ecosystem.organisms.fauna.length}`,
+                            ...ecosystem.organisms.fauna.map(o => `- **${o.name}** (${o.id}) — entropy: ${o.adaptation.entropy.toFixed(2)}`),
+                            ``,
+                            `## Containment Map`,
+                            ...ecosystem.relationships.filter((r) => r.type === "containment").slice(0, 10).map((r) => `- **${r.organisms[0]}** → contains → **${r.organisms[1]}** (pattern: ${r.pattern})`),
+                            ``,
+                            `## What This Means for Implementation`,
+                            `- Microbial = atoms: build these first`,
+                            `- Flora = molecules: compose from microbial`,
+                            `- Fauna = organisms: compose from flora + microbial`,
+                            `- All components share one genome — colors, spacing, and motion are inherited, not redefined per component`,
+                        ];
+                        const ecosystem_report = ecosystemReportLines.join("\n");
                         return {
                             content: [{
                                     type: "text",
                                     text: JSON.stringify({
+                                        ecosystem_report,
                                         ecosystem: {
                                             environment: {
                                                 dnaHash: ecosystem.environment.genome.dnaHash,
@@ -755,8 +607,8 @@ class DesignGenomeServer {
                                             whenCivilizationReady: ecosystem.civilizationReady
                                                 ? "Call generate_civilization with the same seed to get architecture, state management, and advanced patterns"
                                                 : `Add complexity (dashboard, 3D, real-time keywords) or increase counts to reach threshold ${ecosystem.civilizationThreshold}`,
-                                            componentHierarchy: "Fauna contain Flora contain Microbial - use relationships.containment for composition",
-                                            fileStructure: "Each organism maps to a component file - use write_design_files to output"
+                                            componentHierarchy: "Fauna contain Flora contain Microbial — use relationships.containment for composition",
+                                            implementation: "Each organism is a component spec. Implement from its prop contract and colorTreatment — the agent writes the actual code."
                                         }
                                     }, null, 2)
                                 }]
@@ -798,7 +650,7 @@ class DesignGenomeServer {
                         // Generate code and structured file outputs
                         let codeOutputs = null;
                         let fileStructure = null;
-                        if (args.generate_code !== false) {
+                        if (args.generate_code === true) {
                             // UNIFIED CSS: Use CSSGenerator like other tools
                             const css = this.cssGen.generate(baseGenome, { format: "compressed" });
                             const topology = this.htmlGen.generateTopology(baseGenome);
@@ -821,10 +673,37 @@ class DesignGenomeServer {
                                 config: ["tailwind.config.js"]
                             };
                         }
+                        const civReportLines = [
+                            `# Civilization Report`,
+                            ``,
+                            `## Intent → Architecture`,
+                            `| Field | Value |`,
+                            `|---|---|`,
+                            `| Intent | ${args.intent} |`,
+                            `| Seed | \`${args.seed}\` |`,
+                            `| Sector | **${civSector}** |`,
+                            `| Tier reached | **${tier.tier}** (complexity: ${tier.complexity.toFixed(3)}) |`,
+                            `| Source | ${ecosystem ? "ecosystem-derived" : "standalone (no ecosystem provided)"} |`,
+                            `| Code generated | ${args.generate_code === true ? "Yes" : "No — architecture specs only"} |`,
+                            ``,
+                            `## Architecture Direction`,
+                            ...(tier.architecture ? Object.entries(tier.architecture).map(([k, v]) => `- **${k}:** ${JSON.stringify(v)}`) : ["- (no architecture data)"]),
+                            ``,
+                            `## Design System Constraints`,
+                            ...(tier.designSystem ? Object.entries(tier.designSystem).map(([k, v]) => `- **${k}:** ${JSON.stringify(v)}`) : ["- (no design system data)"]),
+                            ``,
+                            `## What This Means for Implementation`,
+                            `- This is architecture direction, NOT code — implement from these specs`,
+                            `- State topology, routing patterns, and token inheritance tell you HOW to structure your app`,
+                            `- Component composition contracts tell you WHAT components to build and how they nest`,
+                            `- Run validate_design on any CSS/HTML you produce from this direction`,
+                        ];
+                        const civilization_report = civReportLines.join("\n");
                         return {
                             content: [{
                                     type: "text",
                                     text: JSON.stringify({
+                                        civilization_report,
                                         tier: tier.tier,
                                         complexity: tier.complexity,
                                         architecture: tier.architecture,
@@ -856,62 +735,6 @@ class DesignGenomeServer {
                                             flora: organisms.flora.length,
                                             fauna: organisms.fauna.length
                                         } : null
-                                    }, null, 2)
-                                }]
-                        };
-                    }
-                    case "write_design_files": {
-                        if (!args.genome || !args.output_dir) {
-                            throw new McpError(ErrorCode.InvalidParams, "Missing genome or output_dir");
-                        }
-                        const outputs = args.outputs || {};
-                        const options = {
-                            baseDir: args.output_dir,
-                            framework: args.framework || "react",
-                            styling: args.styling || "css",
-                            typescript: args.typescript !== false,
-                            includePreview: args.include_preview !== false
-                        };
-                        // Generate preview if requested and HTML/CSS provided
-                        if (options.includePreview && outputs.css && outputs.html) {
-                            outputs.html = this.fileWriter.generatePreviewHTML(args.genome, outputs.css, outputs.html);
-                        }
-                        const result = await this.fileWriter.writeDesignSystem(args.genome, outputs, options);
-                        const fileStructure = this.fileWriter.generateFileStructure(result.files, options.baseDir);
-                        return {
-                            content: [{
-                                    type: "text",
-                                    text: JSON.stringify({
-                                        success: result.success,
-                                        filesWritten: result.files.length,
-                                        fileList: result.files.map(f => path.relative(options.baseDir, f)),
-                                        structure: fileStructure,
-                                        errors: result.errors,
-                                        baseDir: result.baseDir
-                                    }, null, 2)
-                                }]
-                        };
-                    }
-                    case "generate_preview": {
-                        if (!args.genome || !args.css || !args.html) {
-                            throw new McpError(ErrorCode.InvalidParams, "Missing genome, css, or html");
-                        }
-                        const previewHTML = this.fileWriter.generatePreviewHTML(args.genome, args.css, args.html);
-                        // Optionally write to disk
-                        if (args.output_path) {
-                            await fs.mkdir(path.dirname(args.output_path), { recursive: true });
-                            await fs.writeFile(args.output_path, previewHTML, "utf-8");
-                        }
-                        return {
-                            content: [{
-                                    type: "text",
-                                    text: JSON.stringify({
-                                        previewHTML: previewHTML.slice(0, 2000) + (previewHTML.length > 2000 ? "..." : ""),
-                                        fullLength: previewHTML.length,
-                                        writtenTo: args.output_path || null,
-                                        instructions: args.output_path
-                                            ? `Preview written to ${args.output_path}. Open in browser to visualize.`
-                                            : "Use output_path parameter to write to disk, or embed previewHTML in an iframe."
                                     }, null, 2)
                                 }]
                         };
@@ -1043,23 +866,6 @@ class DesignGenomeServer {
                                 }]
                         };
                     }
-                    case "generate_component": {
-                        if (!args.genome || !args.purpose || !args.elements) {
-                            throw new McpError(ErrorCode.InvalidParams, "Missing required parameters: genome, purpose, elements");
-                        }
-                        const component = componentGenerator.generate({
-                            purpose: args.purpose,
-                            elements: args.elements,
-                            layout: args.layout || "vertical",
-                            complexity: args.complexity || "molecular"
-                        }, args.genome);
-                        return {
-                            content: [{
-                                    type: "text",
-                                    text: JSON.stringify(component, null, 2)
-                                }]
-                        };
-                    }
                     case "generate_design_brief": {
                         if (!args.genome) {
                             throw new McpError(ErrorCode.InvalidParams, "Missing genome");
@@ -1077,34 +883,6 @@ class DesignGenomeServer {
                             content: [{
                                     type: "text",
                                     text: output
-                                }]
-                        };
-                    }
-                    case "mutate_genome": {
-                        if (!args.genome) {
-                            throw new McpError(ErrorCode.InvalidParams, "Missing genome");
-                        }
-                        const variants = genomeMutator.mutate(args.genome, {
-                            targetChromosomes: args.target_chromosomes || [],
-                            preserve: args.preserve || [],
-                            rate: args.mutation_rate || 0.3,
-                            count: args.count || 3
-                        });
-                        return {
-                            content: [{
-                                    type: "text",
-                                    text: JSON.stringify({
-                                        parent: { dnaHash: args.genome.dnaHash, seed: args.genome.seed },
-                                        variants: variants.map((v, i) => ({
-                                            index: i + 1,
-                                            id: v.id,
-                                            similarityScore: v.similarityScore,
-                                            mutations: v.mutations.map(m => ({
-                                                chromosome: m.chromosome,
-                                                changeType: m.changeType
-                                            }))
-                                        }))
-                                    }, null, 2)
                                 }]
                         };
                     }
@@ -1144,6 +922,91 @@ class DesignGenomeServer {
                 };
             }
         });
+    }
+    buildGenomeReport(genome, opts) {
+        const ch = genome?.chromosomes ?? {};
+        const primary = ch.ch5_color_primary ?? {};
+        const temp = ch.ch6_color_temp ?? {};
+        const structure = ch.ch1_structure ?? {};
+        const motion = ch.ch8_motion ?? {};
+        const edge = ch.ch7_edge ?? {};
+        const typeDisplay = ch.ch3_type_display ?? {};
+        const typeBody = ch.ch4_type_body ?? {};
+        const hero = ch.ch19_hero_type ?? {};
+        const texture = ch.ch11_texture ?? {};
+        const hierarchy = ch.ch10_hierarchy ?? {};
+        const colorSystem = ch.ch26_color_system ?? {};
+        const pHue = typeof primary.hue === "number" ? `${primary.hue}°` : "–";
+        const pSat = typeof primary.saturation === "number" ? `${Math.round(primary.saturation * 100)}%` : "–";
+        const pLight = typeof primary.lightness === "number" ? `${Math.round(primary.lightness * 100)}%` : "–";
+        const pDark = typeof primary.darkModeLightness === "number" ? `${Math.round(primary.darkModeLightness * 100)}%` : "–";
+        const lines = [
+            `# Genome Report`,
+            ``,
+            `## Intent → DNA`,
+            `| Field | Value |`,
+            `|---|---|`,
+            `| Intent | ${opts.intent} |`,
+            `| Seed | \`${opts.seed}\` |`,
+            `| DNA Hash | \`${genome?.dnaHash ?? "–"}\` |`,
+            `| Sector detected | **${opts.sector}**${opts.offline ? " *(offline — hash-inferred, not LLM)*" : ""} |`,
+            `| Complexity | ${opts.complexity.toFixed(3)} → **${opts.tier}** tier |`,
+            ``,
+            `## Chromosomes Sequenced`,
+            ``,
+            `### ch0 — Sector Identity`,
+            `- Primary: **${ch.ch0_sector_primary?.name ?? opts.sector}**`,
+            ...(ch.ch0_sector_secondary?.name ? [`- Secondary: ${ch.ch0_sector_secondary.name}`] : []),
+            ``,
+            `### ch5 + ch6 — Color System`,
+            `- Primary hex: \`${primary.hex ?? "–"}\` (hue ${pHue}, sat ${pSat}, light ${pLight})`,
+            `- Dark mode interactive: \`${primary.darkModeHex ?? "–"}\` (lightness ${pDark} — visible on dark surfaces)`,
+            `- Temperature: ${primary.temperature ?? "–"} | Mode: ${temp.isDark ? "dark" : "light"}`,
+            ...(colorSystem.palette ? [`- Palette scale: ${Array.isArray(colorSystem.palette) ? colorSystem.palette.length : "–"} steps`] : []),
+            ``,
+            `### ch3 + ch4 — Typography`,
+            `- Display: **${typeDisplay.family ?? typeDisplay.name ?? "–"}** @ ${typeDisplay.size ?? "–"}`,
+            `- Body: **${typeBody.family ?? typeBody.name ?? "–"}** @ ${typeBody.size ?? "–"}`,
+            ``,
+            `### ch1 + ch9 — Layout & Grid`,
+            `- Structure: ${structure.layout ?? structure.type ?? structure.name ?? JSON.stringify(structure).slice(0, 80)}`,
+            ``,
+            `### ch7 — Edge Geometry`,
+            `- Radius: ${edge.radius ?? edge.corner ?? edge.value ?? JSON.stringify(edge).slice(0, 60)}`,
+            ``,
+            `### ch8 — Motion`,
+            `- Physics: ${motion.physics ?? motion.type ?? motion.name ?? JSON.stringify(motion).slice(0, 60)}`,
+            ``,
+            `### ch11 — Texture`,
+            `- Treatment: ${texture.type ?? texture.name ?? JSON.stringify(texture).slice(0, 60)}`,
+            ``,
+            `### ch10 — Visual Hierarchy`,
+            `- Strategy: ${hierarchy.strategy ?? hierarchy.type ?? JSON.stringify(hierarchy).slice(0, 60)}`,
+            ``,
+            `### ch19 — Hero`,
+            `- Type: ${hero.type ?? hero.name ?? JSON.stringify(hero).slice(0, 60)}`,
+            ``,
+            `## Active Constraints`,
+            `- Sector **${opts.sector}** forbidden hue ranges excluded from palette — primary is freely selected from valid spectrum`,
+            `- Dark mode buttons use \`darkModeHex\` (${pDark} lightness) to remain visible on dark surfaces`,
+            `- All slop patterns (gradient text, generic shadows, generic font stacks) are enforced by \`validate_design\``,
+            ``,
+            `## Suggested Workflow`,
+            `\`\`\``,
+            `generate_design_genome  ← you are here`,
+            `  ↓`,
+            `generate_design_brief   ← read before writing any code`,
+            `  ↓ (if building a UI library)`,
+            `generate_ecosystem      ← component specs + containment map`,
+            ...(opts.complexity >= 0.68 ? [
+                `  ↓ (complexity ${opts.complexity.toFixed(2)} qualifies)`,
+                `generate_civilization   ← architecture direction`
+            ] : []),
+            `  ↓`,
+            `validate_design         ← run before shipping CSS/HTML`,
+            `\`\`\``,
+        ];
+        return lines.join("\n");
     }
     hslToHex(h, s, l) {
         const saturation = s;

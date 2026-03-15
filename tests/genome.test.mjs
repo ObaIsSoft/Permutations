@@ -162,26 +162,34 @@ console.log("\nTest 6: Pattern Detection");
     assert(violations.some(v => v.pattern === "tailwind_gradient"), "Detects Tailwind gradient");
 }
 
-// ─── Test 7: Color Range / Distribution (Sector-Biased) ───────────────────────
-console.log("\nTest 7: Color Distribution (Sector-Biased)");
+// ─── Test 7: Color Range / Distribution (forbiddenRanges philosophy) ──────────
+console.log("\nTest 7: Color Distribution (forbiddenRanges philosophy)");
 {
     const seq = new GenomeSequencer();
-    
-    // Test technology sector (hue range: 240-270)
+
+    // Technology has forbiddenRanges: [] — fully unrestricted across 360°
+    // Two different seeds must be able to produce hues across the full spectrum
     const techHues = [];
     for (let i = 0; i < 30; i++) {
         const genome = seq.generate(`color-test-${i}`, baseTraits, { primarySector: "technology" });
         techHues.push(genome.chromosomes.ch5_color_primary.hue);
     }
+    const techRange = Math.max(...techHues) - Math.min(...techHues);
+    assert(techHues.every(h => h >= 0 && h <= 360), "All technology hues are valid (0-360)");
+    assert(techRange > 60, `Technology hues span ${techRange}° — unrestricted sector produces diverse hues`);
 
-    const minTechHue = Math.min(...techHues);
-    const maxTechHue = Math.max(...techHues);
-    
-    // Technology sector hue range is 240-270, but with variance can extend ±15
-    assert(minTechHue >= 210 && maxTechHue <= 300, `Technology hues within sector range (${minTechHue}-${maxTechHue})`);
-    assert(techHues.every(h => h >= 0 && h <= 360), "All hues are valid (0-360)");
-    
-    // Test cross-sector diversity
+    // Healthcare has forbiddenRanges [[0,20],[320,360]] — blood red + magenta excluded
+    const healthcareHues = [];
+    for (let i = 0; i < 30; i++) {
+        const genome = seq.generate(`healthcare-test-${i}`, baseTraits, { primarySector: "healthcare" });
+        healthcareHues.push(genome.chromosomes.ch5_color_primary.hue);
+    }
+    assert(
+        healthcareHues.every(h => !(h >= 0 && h <= 20) && !(h >= 320 && h <= 360)),
+        `Healthcare hues avoid forbidden blood-red/magenta range (got: ${Math.min(...healthcareHues)}–${Math.max(...healthcareHues)})`
+    );
+
+    // Cross-sector diversity — unrestricted sectors allow dramatically wider distribution
     const sectorHues = [];
     const sectors = ["healthcare", "fintech", "food", "technology"];
     for (const sector of sectors) {
@@ -190,13 +198,17 @@ console.log("\nTest 7: Color Distribution (Sector-Biased)");
             sectorHues.push(genome.chromosomes.ch5_color_primary.hue);
         }
     }
-    
-    const minSectorHue = Math.min(...sectorHues);
-    const maxSectorHue = Math.max(...sectorHues);
-    const sectorRange = maxSectorHue - minSectorHue;
-    
-    // Cross-sector should have good distribution (>100° minimum)
+    const sectorRange = Math.max(...sectorHues) - Math.min(...sectorHues);
     assert(sectorRange > 100, `Cross-sector color range spans ${sectorRange}° (good distribution)`);
+
+    // darkModeHex present and lightness in safe range (58–74%)
+    const testGenome = seq.generate("dark-mode-test", baseTraits, { primarySector: "technology" });
+    const primary = testGenome.chromosomes.ch5_color_primary;
+    assert(primary.darkModeHex, "darkModeHex is present on ch5_color_primary");
+    assert(
+        primary.darkModeLightness >= 0.58 && primary.darkModeLightness <= 0.74,
+        `darkModeLightness ${primary.darkModeLightness.toFixed(2)} is in safe range 0.58–0.74`
+    );
 }
 
 // ─── Test 8: New Chromosomes (ch19-ch24) ─────────────────────────────────────

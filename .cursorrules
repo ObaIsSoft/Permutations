@@ -1,14 +1,34 @@
-# Permutations MCP — Agent Rules (v0.0.8)
+# Permutations MCP — Agent Rules (v0.0.9)
 
 These rules govern how AI coding agents must interact with this codebase. The Permutations MCP server generates **32-chromosome design DNA** from SHA-256 hashes across a **14-tier biological complexity model** (abiotic → prokaryotic → protist → bryophyte → vascular_flora → invertebrate_fauna → ectotherm_fauna → endotherm_fauna → tribal → city_state → nation_state → empire → network → singularity). **No aesthetic values may be invented manually.**
+
+This tool is a **design constitution generator**, not a code generator. It produces genome constraints, CSS tokens, and architecture direction. **You — the agent — write the actual code** from those constraints.
+
+---
+
+## Tool Workflow (8 tools, in order)
+
+```
+STEP 1  generate_design_genome    ← always start here
+STEP 2  generate_design_brief     ← read before writing any code
+STEP 3  generate_ecosystem        ← (optional) when building a component library
+STEP 4  generate_civilization     ← (optional) when complexity ≥ 0.68
+FINAL   validate_design           ← run before shipping any CSS/HTML
+
+ALTERNATIVE  extract_genome_from_url  ← use instead of STEP 1 when you have a reference site
+EXPORT       generate_formats         ← export tokens to Figma/Style Dictionary after STEP 1
+ITERATE      update_design_genome     ← adjust chromosomes after STEP 1 ("make it warmer")
+```
+
+The response from `generate_design_genome` includes `suggested_next` — read it. It tells you exactly which tools to call next based on the genome's complexity.
 
 ---
 
 ## Rule 1 — Always Call The Engine First
 
-Before creating any new UI component, page, section or design token, you MUST call the `generate_design_genome` MCP tool.
+Before creating any new UI component, page, section or design token, you MUST call `generate_design_genome`.
 
-```
+```json
 {
   "tool": "generate_design_genome",
   "arguments": {
@@ -20,50 +40,58 @@ Before creating any new UI component, page, section or design token, you MUST ca
 }
 ```
 
-`project_context` and `brand_asset_paths` are optional but recommended for contextual accuracy.
+`project_context` and `brand_asset_paths` are optional but improve accuracy.
 
-**REQUIREMENT:** One LLM API key MUST be set: GROQ_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY, or HUGGINGFACE_API_KEY.
+Use `offline: true` to skip LLM semantic extraction and use hash-based inference — faster, no API cost, deterministic. Use when the intent is precise and sector detection is not needed.
 
----
-
-## Rule 2 — Apply The Generated Config
-
-After calling the tool, you will receive a JSON response with multiple output fields. Apply each one:
-
-### `tailwindConfig`
-Copy this into `tailwind.config.js`. Do not merge manually — replace the `theme.extend` section entirely.
-
-### `cssVariableBlock` (from the `css` format output)
-Inject these CSS custom properties into `index.css` under `:root`. These are the live design tokens.
-
-### `webglComponents`
-If `ch18_rendering.primary` is `webgl`, paste the generated JSX into a `Procedural3D.tsx` file.
-
-### `fxAtmosphere`
-Paste the generated `.fx-atmosphere` CSS class into `index.css`. Apply the class to your hero/section containers.
-
-### `svgBiomarker`
-Use the generated SVG as the brand mark in your navbar/header. Do not substitute a generic icon.
+**REQUIREMENT:** One LLM API key MUST be set (unless using `offline: true`): GROQ_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY, or HUGGINGFACE_API_KEY.
 
 ---
 
-## Rule 3 — Respect Forbidden Patterns
+## Rule 2 — Read The Genome Report
+
+Every `generate_design_genome` response includes a `genome_report` field — a markdown document explaining:
+- Which sector was detected from your intent
+- Which chromosomes were sequenced and their values
+- What color constraints are in effect (including dark mode variants)
+- The suggested workflow for what to call next
+
+**Read this report before writing any code.** The genome is a black box without it.
+
+---
+
+## Rule 3 — Apply The Generated CSS Tokens
+
+The genome response includes a `css` field — the full design token stylesheet. Inject this into your project:
+
+- Copy CSS custom properties under `:root` into your `index.css` or global stylesheet
+- Use `var(--color-primary)` for light mode, `var(--color-primary-interactive)` for dark mode buttons
+- Use `var(--genome-easing)` and `var(--genome-duration)` for all animations
+- Use `var(--color-surface-0)` through `--color-surface-3` for backgrounds
+
+**Do not invent values not present in the genome.**
+
+---
+
+## Rule 4 — Respect Forbidden Patterns
 
 The `genome.constraints.forbiddenPatterns` array contains patterns you are **strictly prohibited from using**.
 
-Common examples and what they mean:
+Common examples:
 | Pattern | What to avoid |
 |---|---|
 | `large_hero_images` | No full-bleed background images in hero sections |
 | `scroll_animations` | No scroll-triggered fade/parallax effects |
 | `bounce_animations` | No spring-easing on bouncy elements |
-| `rounded_cards` | No heavily rounded cards (border-radius must be 0 or genome-defined) |
+| `rounded_cards` | No heavily rounded cards (border-radius must be genome-defined) |
 | `heavy_blur_effects` | No backdrop-filter or gaussian blur greater than genome intensity |
-| `generous_whitespace` | No padding > genome-unit * 2 between sections |
+| `generous_whitespace` | No padding > genome-unit × 2 between sections |
+
+Run `validate_design` before shipping to catch violations automatically.
 
 ---
 
-## Rule 4 — Respect Required Patterns
+## Rule 5 — Respect Required Patterns
 
 The `genome.constraints.requiredPatterns` array contains patterns you **must implement**.
 
@@ -76,30 +104,53 @@ Common examples:
 
 ---
 
-## Rule 5 — Typography Must Use Genome Values
+## Rule 6 — Typography Must Use Genome Values
 
-Do not invent font sizes. Use the `fontSize.*` values from the generated Tailwind config:
+Do not invent font sizes. Use the values from `ch3_type_display` (headings) and `ch4_type_body` (body text):
 - `text-display` for hero headings
 - `text-h1`, `text-h2`, `text-h3` for hierarchy
 - `text-body` for paragraphs
 - `text-small` for captions and metadata
 
-Font families are defined by `ch3_type_display.family` (headings) and `ch4_type_body.family` (body text). Do not use fonts not in these families.
+Do not use font families not defined in the genome.
 
 ---
 
-## Rule 6 — Color Is Derived From The Genome
+## Rule 7 — Color Is Derived From The Genome
 
-The primary color is defined by `ch5_color_primary`. Never use hex/RGB colors that are not derived from this chromosome. Use `var(--primary-hue)`, `var(--primary-sat)`, `var(--primary-light)` in CSS, or the `primary` Tailwind token.
+The primary color is defined by `ch5_color_primary.hex`. Never use hardcoded hex values.
 
-Background colors are defined by `ch6_color_temp.surfaceStack` (array of derived surface colors). Use CSS variables: `--color-surface-0` through `--color-surface-3`.
+Dark mode: use `ch5_color_primary.darkModeHex` (lightness 58–74%) for buttons and interactive elements on dark surfaces. The base `hex` (lightness 22–35%) is invisible on dark backgrounds.
+
+Background colors come from `ch6_color_temp.surfaceStack`. Use `--color-surface-0` through `--color-surface-3`.
 
 ---
 
-## Rule 7 — Motion Must Respect The Genome
+## Rule 8 — Motion Must Respect The Genome
 
 Use `transition-timing-function: var(--genome-easing)` and `transition-duration: var(--genome-duration)` for all animations.
 If `ch17_accessibility.respectMotionPreference` is `true`, wrap all animations with `@media (prefers-reduced-motion: no-preference)`.
+
+---
+
+## Rule 9 — Ecosystem And Civilization Return Specs, Not Code
+
+`generate_ecosystem` returns a component hierarchy (microbial/flora/fauna) with prop contracts, containment relationships, and color treatments. **You write the components from these specs.** The tool does not generate TSX.
+
+`generate_civilization` returns architecture direction: state topology, routing patterns, token inheritance. **You implement the architecture from these constraints.** The tool does not generate application files by default.
+
+To opt into code generation: pass `generate_code: true` to `generate_civilization`. This is an explicit opt-in — default is `false`.
+
+---
+
+## Rule 10 — Validate Before Shipping
+
+Always call `validate_design` with your final CSS and HTML before shipping. It checks:
+- Forbidden pattern violations from the genome constraints
+- Dark pattern detection (AI slop tells, generic shadow stacks, gradient text)
+- Contrast and accessibility requirements
+
+A `slop_score: 0` and `valid: true` is the target.
 
 ---
 
@@ -107,4 +158,5 @@ If `ch17_accessibility.respectMotionPreference` is `true`, wrap all animations w
 
 - When starting a new feature area (e.g. switching from landing page to dashboard)
 - When the user provides brand assets (logos, style guides)
+- When the user changes the direction ("make it warmer", "change sector to fintech") — use `update_design_genome`
 - Never re-run with the same seed for the same component unless you want deterministic regeneration

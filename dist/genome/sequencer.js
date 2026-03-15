@@ -6,7 +6,7 @@
  */
 import * as crypto from "crypto";
 import { GenomeConstraintSolver } from "./constraint-solver.js";
-import { getSectorProfile, generateHueFromBias, generateSaturationFromBias, generateLightnessFromBias, selectHeroType, selectTrustApproach, SUB_SECTOR_KEYWORDS } from "./sector-profiles.js";
+import { getSectorProfile, generateHueFromForbidden, generateSaturationFromBias, generateLightnessFromBias, selectHeroType, selectTrustApproach, SUB_SECTOR_KEYWORDS } from "./sector-profiles.js";
 import { COPY_PATTERN_BANKS, generateHeadlineFromPatterns, generateCTAFromPatterns, generateTaglineFromPatterns, generateSentenceFromTemplate } from "./copy-patterns.js";
 export class GenomeSequencer {
     /**
@@ -782,11 +782,11 @@ export class GenomeSequencer {
         const actions = banks.headlineFragments.benefit_action;
         const outcomes = banks.headlineFragments.benefit_outcome;
         return [0, 1, 2].map(i => {
-            const term = terms[Math.floor(b(210 + i) * terms.length)];
-            const adj = adjs[Math.floor(b(213 + i) * adjs.length)];
-            const action = actions[Math.floor(b(216 + i) * actions.length)];
-            const outcome = outcomes[Math.floor(b(219 + i) * outcomes.length)];
-            const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+            const term = terms[Math.floor(b(210 + i) * terms.length) % terms.length];
+            const adj = adjs[Math.floor(b(213 + i) * adjs.length) % adjs.length];
+            const action = actions[Math.floor(b(216 + i) * actions.length) % actions.length];
+            const outcome = outcomes[Math.floor(b(219 + i) * outcomes.length) % outcomes.length];
+            const cap = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : "";
             return {
                 title: `${action} ${cap(term)}`,
                 description: `${cap(adj)} ${term} that ${outcome.toLowerCase()}s your results.`
@@ -1068,47 +1068,61 @@ export class GenomeSequencer {
         if (brand?.colors?.primary && brandWeight > 0.5) {
             const brandHSL = this.hexToHSL(brand.colors.primary);
             const isAppropriate = this.isColorAppropriateForSector(brandHSL.h, primaryProfile.sector);
+            const brandL = brandHSL.l / 100;
+            const brandDarkL = Math.max(0.58, Math.min(0.74, brandL + 0.35));
             return {
                 hue: brandHSL.h,
                 saturation: brandHSL.s / 100,
-                lightness: brandHSL.l / 100,
+                lightness: brandL,
+                darkModeLightness: brandDarkL,
                 temperature: this.getTemperatureFromHue(brandHSL.h),
                 hex: brand.colors.primary,
+                darkModeHex: this.hslToHex(brandHSL.h, brandHSL.s, brandDarkL * 100),
                 sectorAppropriate: isAppropriate
             };
         }
         // Check for epigenetic override (uploaded brand assets)
         if (epigenetics?.epigeneticHue !== undefined) {
             const hue = epigenetics.epigeneticHue;
+            const epiL = Math.max(0.2, b(12));
+            const epiDarkL = Math.max(0.58, Math.min(0.74, epiL + 0.35));
             return {
                 hue,
                 saturation: Math.max(0.2, b(11)),
-                lightness: Math.max(0.2, b(12)),
+                lightness: epiL,
+                darkModeLightness: epiDarkL,
                 temperature: this.getTemperatureFromHue(hue),
-                hex: this.hslToHex(hue, b(11) * 100, b(12) * 100),
+                hex: this.hslToHex(hue, b(11) * 100, epiL * 100),
+                darkModeHex: this.hslToHex(hue, b(11) * 100, epiDarkL * 100),
                 sectorAppropriate: true
             };
         }
-        // MATHEMATICAL: Generate from sector bias ranges, NOT named colors
+        // MATHEMATICAL: Generate from sector forbidden zones, NOT named colors
+        // Hash selects freely from full 360° minus psychologically wrong hues
         const primarySector = primaryProfile.sector;
-        let hue = generateHueFromBias(primarySector, Math.floor(b(10) * 255));
+        let hue = generateHueFromForbidden(primarySector, Math.floor(b(10) * 255));
         let saturation = generateSaturationFromBias(primarySector, Math.floor(b(11) * 255));
         let lightness = generateLightnessFromBias(primarySector, Math.floor(b(12) * 255));
         // Blend with secondary sector if present
         if (secondaryProfile && b(13) > 0.5) {
-            const secondaryHue = generateHueFromBias(secondaryProfile.sector, Math.floor(b(14) * 255));
+            const secondaryHue = generateHueFromForbidden(secondaryProfile.sector, Math.floor(b(14) * 255));
             // Blend 70% primary, 30% secondary
             hue = this.blendHue(hue, secondaryHue, 0.3);
         }
         // Add entropy variation (±15 degrees)
         const variation = (b(15) - 0.5) * 30;
         hue = (hue + variation + 360) % 360;
+        // Dark-mode-safe interactive variant — lifted lightness for buttons/links on dark surfaces
+        // Primary at low lightness (e.g. 22%) is near-invisible on dark backgrounds (5-10% lightness)
+        const darkModeLightness = Math.max(0.58, Math.min(0.74, lightness + 0.35));
         return {
             hue: Math.round(hue),
             saturation: Math.round(saturation * 100) / 100,
             lightness: Math.round(lightness * 100) / 100,
+            darkModeLightness: Math.round(darkModeLightness * 100) / 100,
             temperature: this.getTemperatureFromHue(hue),
             hex: this.hslToHex(hue, saturation * 100, lightness * 100),
+            darkModeHex: this.hslToHex(hue, saturation * 100, darkModeLightness * 100),
             sectorAppropriate: true
         };
     }

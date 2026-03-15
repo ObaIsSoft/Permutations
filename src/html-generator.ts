@@ -101,9 +101,9 @@ export class HTMLGenerator {
       <a href="#" class="logo">${copy.companyName}</a>
       <ul class="nav-links">
         ${contentDepth.hasHero ? '<li><a href="#hero">Home</a></li>' : ''}
-        ${contentDepth.level !== 'minimal' ? '<li><a href="#features">Features</a></li>' : ''}
-        ${contentDepth.hasTestimonials ? '<li><a href="#testimonials">Reviews</a></li>' : ''}
-        ${contentDepth.hasFAQ ? '<li><a href="#faq">FAQ</a></li>' : ''}
+        ${contentDepth.level !== 'minimal' && copy.sectionTitleFeatures ? `<li><a href="#features">${copy.sectionTitleFeatures}</a></li>` : ''}
+        ${contentDepth.hasTestimonials && copy.sectionTitleTestimonials ? `<li><a href="#testimonials">${copy.sectionTitleTestimonials}</a></li>` : ''}
+        ${contentDepth.hasFAQ && copy.sectionTitleFAQ ? `<li><a href="#faq">${copy.sectionTitleFAQ}</a></li>` : ''}
         ${contentDepth.hasCTA ? `<li><a href="#cta" class="btn btn-primary">${copy.cta}</a></li>` : ''}
       </ul>
     </nav>
@@ -124,8 +124,8 @@ export class HTMLGenerator {
 
     // Video background
     if (visual.hasVideo) {
-      parts.push(`  <video class="hero-video" autoplay muted loop playsinline>`);
-      parts.push(`    <source src="hero-video.mp4" type="video/mp4">`);
+      parts.push(`  <video class="hero-video" autoplay muted loop playsinline data-genome-asset="hero-video">`);
+      parts.push(`    <source src="" type="video/mp4" data-placeholder="hero video — replace src with actual video path">`);
       parts.push(`  </video>`);
     }
 
@@ -211,19 +211,21 @@ export class HTMLGenerator {
 
     const visual = `  <div class="hero-visual">
     <div class="hero-screenshot">
-      <img src="product-screenshot.jpg" alt="${copy.companyName}" />
+      <img src="" alt="${copy.companyName}" data-genome-asset="product-screenshot" data-placeholder="product UI screenshot — replace src with actual image path" />
     </div>
   </div>`;
 
     if (layout === 'split_left') {
       return visual + '\n' + content;
     } else if (layout === 'floating_cards') {
+      const feat1 = copy.features?.[0]?.title ?? '';
+      const feat2 = copy.features?.[1]?.title ?? '';
       return content + `\n  <div class="hero-cards">
     <div class="hero-card">
-      <img src="feature-1.jpg" alt="Feature 1" />
+      <img src="" alt="${feat1}" data-genome-asset="feature-card-1" data-placeholder="feature card image — replace src" />
     </div>
     <div class="hero-card">
-      <img src="feature-2.jpg" alt="Feature 2" />
+      <img src="" alt="${feat2}" data-genome-asset="feature-card-2" data-placeholder="feature card image — replace src" />
     </div>
   </div>`;
     }
@@ -304,7 +306,7 @@ export class HTMLGenerator {
         "${copy.testimonial}"
       </blockquote>
       <div class="testimonial-author">
-        <img src="avatar.jpg" alt="${copy.authorName}" class="author-avatar" />
+        <img src="" alt="${copy.authorName}" class="author-avatar" data-genome-asset="testimonial-avatar" data-placeholder="testimonial author photo — replace src" />
         <div class="author-info">
           <div class="author-name">${copy.authorName}</div>
           <div class="author-title">${copy.authorTitle}, ${copy.companyName}</div>
@@ -383,7 +385,7 @@ export class HTMLGenerator {
     const items = copy.features.map((feat, idx) => {
       return `
       <div class="carousel-item">
-        <img src="content-${idx + 1}.jpg" alt="${feat.title}" />
+        <img src="" alt="${feat.title}" data-genome-asset="carousel-item-${idx + 1}" data-placeholder="carousel image ${idx + 1} — replace src" />
         <h3>${feat.title}</h3>
         <p>${feat.description}</p>
       </div>`;

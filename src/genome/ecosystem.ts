@@ -159,7 +159,9 @@ export class EcosystemGenerator {
             inferredSector = "manufacturing";
         }
         // Generate the shared environment (ONE genome for entire ecosystem)
-        const genome = this.sequencer.generate(seed, traits, { primarySector: inferredSector });
+        // enable3D: true so ch15_biomarker.complexity reflects trait-driven values,
+        // which determines organism counts (microbial/flora/fauna tier thresholds)
+        const genome = this.sequencer.generate(seed, traits, { primarySector: inferredSector, options: { enable3D: true } });
         
         // Calculate how well this environment supports life
         const habitabilityScore = this.calculateHabitability(traits);

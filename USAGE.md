@@ -68,20 +68,23 @@ npm run build
 |---|---|---|
 | `intent` | ✅ | Natural language design prompt. Can be vague ("street fashion brand") or specific ("minimal data dashboard for a crypto trading desk") |
 | `seed` | ✅ | Unique string that determines the DNA hash. Same seed always produces the same genome. Use `projectName-componentName` |
-| `project_context` | Optional | Overarching brand narrative. If provided, even a partial intent like "pricing table" will be shaped by this context (e.g. "biological planetary adaptation theme") |
+| `project_context` | Optional | Overarching brand narrative. If provided, even a partial intent like "pricing table" will be shaped by this context |
 | `brand_asset_paths` | Optional | Array of absolute paths to brand PDFs or logos. Images → dominant hue extraction. PDFs → text context extraction. These epigenetically override the hash |
+| `offline` | Optional | `true` to skip LLM entirely — uses hash-based trait inference. No API key needed. Deterministic. |
+| `font_provider` | Optional | `"bunny"` (default) or `"google"` — typography CDN |
 
 ### Output Fields
 
 | Field | Description |
 |---|---|
 | `genome` | Full 32-chromosome JSON object. All design decisions encoded (ch0-sector through ch32-token_inheritance) |
-| `tailwindConfig` | Ready-to-paste `tailwind.config.js` with all chromosome values injected |
-| `cssVariableBlock` | CSS custom properties file for runtime injection |
+| `css` | Complete CSS token stylesheet — inject into `:root`. Includes `--color-primary`, `--color-primary-interactive` (dark mode safe), full type scale, spacing, and motion vars |
 | `topology` | Structural sections object describing the layout skeleton |
 | `webglComponents` | JSX code for the DNA-driven 3D element (if `ch18_rendering.primary === "webgl"`) |
 | `fxAtmosphere` | `.fx-atmosphere` CSS class (glassmorphism, CRT noise, fluid mesh, or glitch) |
 | `svgBiomarker` | Parametric SVG brand mark derived from `ch15_biomarker.geometry` and `ch12_signature.entropy` |
+| `genome_report` | Markdown explainability doc — which chromosomes were sequenced, sector detected, forbidden hue ranges in effect, dark mode handling, workflow map |
+| `suggested_next` | Array of tool recommendations — which tools to call next and when, based on this genome's complexity score |
 
 ---
 
@@ -163,36 +166,51 @@ const civilization = generate_civilization(
 
 ---
 
-## Design Exploration Tools
+## All 8 Tools
 
-### Generate Dynamic Component
-
-Generate ANY component type from description + genome. No hardcoded templates—structure is derived from purpose and elements:
+### Tool Workflow
 
 ```
-generate_dynamic_component(
+STEP 1  generate_design_genome    ← always start here
+STEP 2  generate_design_brief     ← read before writing any code
+STEP 3  generate_ecosystem        ← (optional) component library
+STEP 4  generate_civilization     ← (optional) complexity ≥ 0.68
+FINAL   validate_design           ← before shipping any CSS/HTML
+
+ALTERNATIVE  extract_genome_from_url  ← when you have a reference site
+EXPORT       generate_formats         ← export to Figma/Style Dictionary
+ITERATE      update_design_genome     ← adjust specific chromosomes
+```
+
+### Iterate: Update Genome
+
+Adjust specific chromosomes without re-running the full pipeline:
+
+```
+update_design_genome(
+  original_genome: genome_result.genome,
+  changes: {
+    primary_hue: 28,          // override hue directly
+    motion_physics: "spring", // "none" | "spring" | "step" | "glitch"
+    edge_radius: 0,           // sharp edges
+    sector: "fintech",        // re-classify sector
+    new_seed: "v2"            // completely new DNA from this seed
+  }
+)
+→ Returns: diff of changed chromosomes + updated genome
+```
+
+### Export: Generate Formats
+
+Export design tokens for external tools:
+
+```
+generate_formats(
   genome: genome_result.genome,
-  purpose: "pricing",
-  elements: ["title", "price", "period", "feature_list", "cta"],
-  layout: "vertical",
-  complexity: "molecular"
+  formats: ["figma-tokens", "style-dictionary", "styled-components"]
+  // options: "figma-tokens" | "style-dictionary" | "styled-components" | "emotion" | "vue" | "svelte" | "all"
 )
-→ Returns: HTML, CSS, JS with full derivation tracking
-```
-
-### Mutate Genome (Breeding)
-
-Generate design variants while preserving what you love:
-
-```
-mutate_genome(
-  genome: parent_genome,
-  preserve: ["ch3_type_display", "ch5_color_primary"],  // Keep these
-  target_chromosomes: ["ch7_edge", "ch11_texture"],      // Vary these
-  mutation_rate: 0.3,  // 0.1=subtle, 0.5=dramatic
-  count: 3             // Generate 3 variants
-)
-→ Returns: Array of variants with similarity scores
+→ Returns: Token outputs for each requested format
 ```
 
 ### Extract Genome from URL
@@ -263,7 +281,7 @@ generate_design_brief(
 | ch2 | rhythm | Spacing density + vertical rhythm |
 | ch3 | type_display | Display font family + weight |
 | ch4 | type_body | Body font family |
-| ch5 | color_primary | Primary hue/saturation/lightness |
+| ch5 | color_primary | Primary hue/saturation/lightness. Also `darkModeHex` (lightness 58–74%) for buttons on dark surfaces, `darkModeLightness`. Use `--color-primary-interactive` CSS var in dark mode. |
 | ch6 | color_temp | Background temperature |
 | ch7 | edge | Border radius + corner treatment |
 | ch8 | motion | Animation physics (spring/tween/physics) |

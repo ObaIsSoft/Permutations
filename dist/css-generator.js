@@ -83,8 +83,12 @@ ${indent}outline-offset: 2px;
         const primarySat = Math.round(chromosomes.ch5_color_primary.saturation * 100);
         const primaryLight = Math.round(chromosomes.ch5_color_primary.lightness * 100);
         const primaryHex = chromosomes.ch5_color_primary.hex;
+        // Dark-mode-safe interactive variant — lifted lightness for buttons on dark surfaces
+        const darkModeHex = chromosomes.ch5_color_primary.darkModeHex ?? primaryHex;
+        const darkModeLightPct = Math.round((chromosomes.ch5_color_primary.darkModeLightness ?? chromosomes.ch5_color_primary.lightness) * 100);
         parts.push(`${indent}/* Colors */`);
         parts.push(`${indent}--color-primary: ${primaryHex};`);
+        parts.push(`${indent}--color-primary-interactive: ${darkModeHex}; /* use for buttons/links on dark surfaces */`);
         parts.push(`${indent}--color-primary-h: ${primaryHue};`);
         parts.push(`${indent}--color-primary-s: ${primarySat}%;`);
         parts.push(`${indent}--color-primary-l: ${primaryLight}%;`);
@@ -289,12 +293,14 @@ ${indent}border: none;
 ${indent}cursor: pointer;
 ${indent}transition: all var(--duration-fast) var(--ease-smooth);
 }`);
-        // M-10: Contrast-aware text color for btn-primary
-        // If primary is very light (lightness > 60%) use dark text; else use white
+        // M-10: Contrast-aware btn-primary — uses --color-primary-interactive on dark surfaces
+        // (interactive has lifted lightness 58-74%, visible on dark backgrounds)
         const primaryLightness = Math.round(genome.chromosomes.ch5_color_primary.lightness * 100);
-        const btnTextColor = primaryLightness > 60 ? 'var(--color-text)' : 'white';
+        const isDarkMode = genome.chromosomes.ch6_color_temp?.isDark ?? primaryLightness < 45;
+        const btnBg = isDarkMode ? 'var(--color-primary-interactive)' : 'var(--color-primary)';
+        const btnTextColor = isDarkMode ? 'var(--color-surface)' : (primaryLightness > 60 ? 'var(--color-text)' : 'white');
         parts.push(`.btn-primary {
-${indent}background: var(--color-primary);
+${indent}background: ${btnBg};
 ${indent}color: ${btnTextColor};
 }`);
         // Hash-derived hover lift: 1-4px

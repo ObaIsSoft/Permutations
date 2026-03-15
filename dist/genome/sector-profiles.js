@@ -13,9 +13,8 @@
  */
 const SECTOR_COLOR_BIAS = {
     healthcare: {
-        // Blue-cyan range (200-220°): trust, calm, clinical
-        // NOT "blue" - a mathematical range
-        hueRange: [200, 220],
+        // Forbidden: blood red [0-20] and garish magenta [320-360] — signal danger/emergency
+        forbiddenRanges: [[0, 20], [320, 360]],
         saturationBase: 0.45,
         saturationVariance: 0.15,
         lightnessBase: 0.40,
@@ -23,8 +22,8 @@ const SECTOR_COLOR_BIAS = {
         temperature: "neutral"
     },
     fintech: {
-        // Purple-blue range (250-270°): innovation, premium, trust
-        hueRange: [250, 270],
+        // Forbidden: casual yellow-green [60-100] — reads amateur/untrustworthy
+        forbiddenRanges: [[60, 100]],
         saturationBase: 0.50,
         saturationVariance: 0.20,
         lightnessBase: 0.35,
@@ -32,8 +31,8 @@ const SECTOR_COLOR_BIAS = {
         temperature: "cool"
     },
     automotive: {
-        // Wide range - depends on brand, but tends toward neutral/cool
-        hueRange: [0, 360], // Unrestricted - automotive varies wildly by brand
+        // Unrestricted — automotive varies wildly by brand (Ferrari=red, BMW=blue, etc.)
+        forbiddenRanges: [],
         saturationBase: 0.60,
         saturationVariance: 0.30,
         lightnessBase: 0.35,
@@ -41,8 +40,8 @@ const SECTOR_COLOR_BIAS = {
         temperature: "neutral"
     },
     education: {
-        // Blue-green range (180-210°): knowledge, growth, trust
-        hueRange: [180, 210],
+        // Forbidden: aggressive warm tones [0-20] and garish magenta [320-360] — unsafe for learning
+        forbiddenRanges: [[0, 20], [320, 360]],
         saturationBase: 0.40,
         saturationVariance: 0.15,
         lightnessBase: 0.35,
@@ -50,8 +49,8 @@ const SECTOR_COLOR_BIAS = {
         temperature: "neutral"
     },
     commerce: {
-        // Wide range - depends on brand positioning
-        hueRange: [0, 360], // Unrestricted
+        // Unrestricted — brand-led positioning (Amazon=orange, eBay=multi, Shopify=green)
+        forbiddenRanges: [],
         saturationBase: 0.55,
         saturationVariance: 0.25,
         lightnessBase: 0.40,
@@ -59,8 +58,8 @@ const SECTOR_COLOR_BIAS = {
         temperature: "warm"
     },
     entertainment: {
-        // Red-purple range (320-280°): excitement, drama, creativity
-        hueRange: [280, 340],
+        // Unrestricted — energy and drama can come from any hue
+        forbiddenRanges: [],
         saturationBase: 0.65,
         saturationVariance: 0.20,
         lightnessBase: 0.40,
@@ -68,8 +67,8 @@ const SECTOR_COLOR_BIAS = {
         temperature: "warm"
     },
     manufacturing: {
-        // Blue-gray range (200-220°): industrial, reliable, professional
-        hueRange: [200, 220],
+        // Forbidden: garish pinks/magentas [300-360] and warm reds [0-20] — feel unsafe/industrial-wrong
+        forbiddenRanges: [[300, 360], [0, 20]],
         saturationBase: 0.30,
         saturationVariance: 0.10,
         lightnessBase: 0.35,
@@ -77,8 +76,8 @@ const SECTOR_COLOR_BIAS = {
         temperature: "cool"
     },
     legal: {
-        // Deep blue range (220-240°): authority, trust, tradition
-        hueRange: [220, 240],
+        // Forbidden: warm/playful [0-50] and casual greens [80-150] — undermine authority
+        forbiddenRanges: [[0, 50], [80, 150]],
         saturationBase: 0.35,
         saturationVariance: 0.10,
         lightnessBase: 0.25,
@@ -86,8 +85,8 @@ const SECTOR_COLOR_BIAS = {
         temperature: "cool"
     },
     real_estate: {
-        // Warm neutral range (30-50°): homes, warmth, welcoming
-        hueRange: [30, 60],
+        // Forbidden: cold corporate blue [220-280] — undermines warmth/welcome
+        forbiddenRanges: [[220, 280]],
         saturationBase: 0.35,
         saturationVariance: 0.15,
         lightnessBase: 0.45,
@@ -95,8 +94,8 @@ const SECTOR_COLOR_BIAS = {
         temperature: "warm"
     },
     travel: {
-        // Teal-cyan range (170-190°): ocean, escape, adventure
-        hueRange: [170, 200],
+        // Forbidden: cold corporate blue [220-280] — undermines escape/adventure warmth
+        forbiddenRanges: [[220, 280]],
         saturationBase: 0.50,
         saturationVariance: 0.20,
         lightnessBase: 0.40,
@@ -104,8 +103,8 @@ const SECTOR_COLOR_BIAS = {
         temperature: "warm"
     },
     food: {
-        // Warm earth tones (15-45°): appetizing, fresh, natural
-        hueRange: [15, 45],
+        // Forbidden: cold corporate blue [220-280] — kills appetite
+        forbiddenRanges: [[220, 280]],
         saturationBase: 0.55,
         saturationVariance: 0.20,
         lightnessBase: 0.45,
@@ -113,8 +112,8 @@ const SECTOR_COLOR_BIAS = {
         temperature: "warm"
     },
     sports: {
-        // High energy range (0-30° and 340-360): red, orange, energy
-        hueRange: [0, 30],
+        // Unrestricted — full spectrum valid (team colors span everything)
+        forbiddenRanges: [],
         saturationBase: 0.70,
         saturationVariance: 0.20,
         lightnessBase: 0.45,
@@ -122,17 +121,17 @@ const SECTOR_COLOR_BIAS = {
         temperature: "warm"
     },
     technology: {
-        // Wide range but tends blue-purple (240-270°): innovation, trust
-        hueRange: [240, 270],
-        saturationBase: 0.45,
-        saturationVariance: 0.20,
-        lightnessBase: 0.35,
+        // Unrestricted — tech spans full spectrum (Cloudflare=orange, GitHub=dark, Stripe=purple, Figma=multi)
+        forbiddenRanges: [],
+        saturationBase: 0.50,
+        saturationVariance: 0.25,
+        lightnessBase: 0.38,
         lightnessVariance: 0.15,
         temperature: "cool"
     },
     nonprofit: {
-        // Warm green-teal (120-160°): hope, growth, compassion
-        hueRange: [120, 160],
+        // Forbidden: alarming red [0-20] and garish magenta/red-pink [300-360] — undermine compassion
+        forbiddenRanges: [[0, 20], [300, 360]],
         saturationBase: 0.45,
         saturationVariance: 0.15,
         lightnessBase: 0.40,
@@ -140,8 +139,8 @@ const SECTOR_COLOR_BIAS = {
         temperature: "warm"
     },
     government: {
-        // Deep navy-blue (215-235°): authority, stability, public trust
-        hueRange: [215, 235],
+        // Forbidden: warm/casual [0-60] and casual greens [80-160] — undermine civic authority
+        forbiddenRanges: [[0, 60], [80, 160]],
         saturationBase: 0.35,
         saturationVariance: 0.10,
         lightnessBase: 0.28,
@@ -149,8 +148,8 @@ const SECTOR_COLOR_BIAS = {
         temperature: "cool"
     },
     media: {
-        // Unrestricted — editorial voice defines palette
-        hueRange: [0, 360],
+        // Unrestricted — editorial voice and brand define the palette
+        forbiddenRanges: [],
         saturationBase: 0.50,
         saturationVariance: 0.25,
         lightnessBase: 0.35,
@@ -158,8 +157,8 @@ const SECTOR_COLOR_BIAS = {
         temperature: "neutral"
     },
     crypto_web3: {
-        // Purple-violet (265-300°): speculation, technology, dark-first
-        hueRange: [265, 300],
+        // Forbidden: natural greens [60-130] — feel naïve/organic in speculative/tech context
+        forbiddenRanges: [[60, 130]],
         saturationBase: 0.65,
         saturationVariance: 0.20,
         lightnessBase: 0.45,
@@ -167,8 +166,8 @@ const SECTOR_COLOR_BIAS = {
         temperature: "cool"
     },
     gaming: {
-        // High-saturation purple-red (290-360°): energy, competition, dark
-        hueRange: [290, 360],
+        // Forbidden: clinical teal [160-200] — kills competitive energy
+        forbiddenRanges: [[160, 200]],
         saturationBase: 0.70,
         saturationVariance: 0.20,
         lightnessBase: 0.45,
@@ -176,8 +175,8 @@ const SECTOR_COLOR_BIAS = {
         temperature: "warm"
     },
     hospitality: {
-        // Warm neutrals (25-50°): welcome, comfort, luxury-adjacent
-        hueRange: [25, 55],
+        // Forbidden: cold corporate blue [220-280] — undermines welcome/warmth
+        forbiddenRanges: [[220, 280]],
         saturationBase: 0.40,
         saturationVariance: 0.15,
         lightnessBase: 0.48,
@@ -185,8 +184,8 @@ const SECTOR_COLOR_BIAS = {
         temperature: "warm"
     },
     beauty_fashion: {
-        // Brand-led but skews warm-neutral (15-50° or 330-360°)
-        hueRange: [0, 360],
+        // Unrestricted — brand-led, palette is the brand identity
+        forbiddenRanges: [],
         saturationBase: 0.45,
         saturationVariance: 0.30,
         lightnessBase: 0.50,
@@ -194,8 +193,8 @@ const SECTOR_COLOR_BIAS = {
         temperature: "warm"
     },
     insurance: {
-        // Trustworthy blue-green (190-215°): reliability, safety, calm
-        hueRange: [190, 215],
+        // Forbidden: casual yellow-green [60-100] and alarming red [0-20] — undermine reliability/safety
+        forbiddenRanges: [[0, 20], [60, 100]],
         saturationBase: 0.40,
         saturationVariance: 0.12,
         lightnessBase: 0.35,
@@ -203,8 +202,8 @@ const SECTOR_COLOR_BIAS = {
         temperature: "cool"
     },
     agency: {
-        // Expressive / brand-led — no constraint, design language defines it
-        hueRange: [0, 360],
+        // Unrestricted — expressive, design language defines palette
+        forbiddenRanges: [],
         saturationBase: 0.60,
         saturationVariance: 0.30,
         lightnessBase: 0.40,
@@ -212,8 +211,8 @@ const SECTOR_COLOR_BIAS = {
         temperature: "neutral"
     },
     energy: {
-        // Renewable: blue-green (160-200°) / Oil-gas: orange-amber (20-45°) — wide
-        hueRange: [20, 200],
+        // Unrestricted — renewable=greens, fossil=ambers, nuclear=blue, all valid
+        forbiddenRanges: [],
         saturationBase: 0.50,
         saturationVariance: 0.20,
         lightnessBase: 0.38,
@@ -1151,15 +1150,50 @@ export function getColorBias(sector) {
     return SECTOR_COLOR_BIAS[sector];
 }
 /**
- * Generate hue from sector bias using hash-derived entropy
- * Returns actual hue value (0-360), not a color name
+ * Build valid hue ranges from the full 0-360 spectrum minus forbidden zones.
+ * Merges and sorts forbidden ranges, then inverts them.
  */
-export function generateHueFromBias(sector, hashByte) {
+function buildValidRanges(forbidden) {
+    if (forbidden.length === 0)
+        return [[0, 360]];
+    // Sort forbidden ranges by start
+    const sorted = [...forbidden].sort((a, b) => a[0] - b[0]);
+    const valid = [];
+    let cursor = 0;
+    for (const [fMin, fMax] of sorted) {
+        if (cursor < fMin)
+            valid.push([cursor, fMin]);
+        cursor = Math.max(cursor, fMax);
+    }
+    if (cursor < 360)
+        valid.push([cursor, 360]);
+    return valid.length > 0 ? valid : [[0, 360]];
+}
+/**
+ * Generate hue from sector forbidden zones using hash-derived entropy.
+ * The hash selects freely from the full 360° spectrum minus psychologically
+ * wrong hues for the sector. Two products in the same sector will have
+ * different hues — only truly inappropriate choices are blocked.
+ * Returns actual hue value (0-360), not a color name.
+ */
+export function generateHueFromForbidden(sector, hashByte) {
     const bias = SECTOR_COLOR_BIAS[sector];
-    const [min, max] = bias.hueRange;
-    // Use hash byte to select position within range
-    const normalized = hashByte / 255;
-    return Math.round(min + (normalized * (max - min)));
+    const valid = buildValidRanges(bias.forbiddenRanges);
+    const totalDegrees = valid.reduce((sum, [a, b]) => sum + (b - a), 0);
+    const position = (hashByte / 255) * totalDegrees;
+    let accumulated = 0;
+    for (const [min, max] of valid) {
+        const size = max - min;
+        if (position <= accumulated + size) {
+            return Math.round(min + (position - accumulated));
+        }
+        accumulated += size;
+    }
+    return 0;
+}
+/** @deprecated Use generateHueFromForbidden instead */
+export function generateHueFromBias(sector, hashByte) {
+    return generateHueFromForbidden(sector, hashByte);
 }
 /**
  * Generate saturation from sector bias
