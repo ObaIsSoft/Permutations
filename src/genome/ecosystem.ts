@@ -498,7 +498,7 @@ export class EcosystemGenerator {
             });
         }
         
-        if (flora.length > 2) {
+        if (flora.length > 5) {
             relationships.push({
                 type: 'sequence',
                 organisms: [flora[2].id, flora[5].id],

@@ -39,6 +39,7 @@ import { ComplexityAnalyzer } from "./genome/complexity-analyzer.js";
 import { generateCivilizationOutput } from "./generators/civilization-generators.js";
 
 import { formatGenerator } from "./generators/format-generators.js";
+import { fontCatalog } from "./font-catalog.js";
 import { designBriefGenerator } from "./generators/design-brief-generator.js";
 import { urlGenomeExtractor } from "./genome/extractor-url.js";
 
@@ -78,6 +79,9 @@ class DesignGenomeServer {
         this.complexityAnalyzer = new ComplexityAnalyzer();
 
 
+        // Pre-warm font catalogs at startup — non-blocking, failures fall back to hardcoded lists
+        fontCatalog.warmCache(["bunny", "google", "fontshare"]);
+
         this.setupHandlers();
     }
 
@@ -100,8 +104,8 @@ class DesignGenomeServer {
                             },
                             font_provider: {
                                 type: "string",
-                                enum: ["bunny", "google"],
-                                description: "Typography provider (default: bunny)"
+                                enum: ["bunny", "google", "fontshare", "none"],
+                                description: "Typography CDN (default: bunny). bunny/google pull from their full live catalogs. fontshare pulls from Fontshare's full catalog with richer semantic tags (geometric, grotesque, humanist, slab…). none emits the font family name only — use when fonts are self-hosted or loaded via npm."
                             },
                             offline: {
                                 type: "boolean",
@@ -171,8 +175,8 @@ class DesignGenomeServer {
                             },
                             font_provider: {
                                 type: "string",
-                                enum: ["bunny", "google"],
-                                description: "Typography provider"
+                                enum: ["bunny", "google", "fontshare", "none"],
+                                description: "Typography CDN (default: bunny)"
                             }
                         },
                         required: ["intent", "seed"]
@@ -248,7 +252,7 @@ class DesignGenomeServer {
                 },
                 {
                     name: "extract_genome_from_url",
-                    description: "ALTERNATIVE ENTRY — Use instead of generate_design_genome when you have a reference site. Reverse-engineers an approximate genome from a URL using Playwright browser automation. Extracts colors, fonts, spacing, and animation from computed styles. Best for 'I love this site, make something like it' workflows.",
+                    description: "ALTERNATIVE ENTRY — Call BEFORE generate_design_genome when you have a reference site. Returns a flat style snapshot (colors, fonts, spacing, animation) — NOT a chromosome genome. Pass the output as project_context into generate_design_genome to influence the generated genome. Do NOT pass this output directly to generate_design_brief, generate_ecosystem, or generate_civilization — those require a chromosome genome from generate_design_genome.",
                     inputSchema: {
                         type: "object",
                         properties: {
@@ -1031,7 +1035,14 @@ class DesignGenomeServer {
                                     layout: extracted.layout,
                                     animation: extracted.animation,
                                     extractedAt: extracted.extractedAt,
-                                    note: "This is an approximation based on computed styles. For better results, use generate_design_genome() to create a purpose-built genome."
+                                    warning: "This is a flat style snapshot — NOT a chromosome genome. Do not pass this to generate_design_brief, generate_ecosystem, or generate_civilization.",
+                                    suggested_next: [
+                                        {
+                                            tool: "generate_design_genome",
+                                            how: "Pass this snapshot as project_context (stringified or summarized). Example: generate_design_genome({ intent: 'your intent here', seed: 'your-seed', project_context: JSON.stringify(this_output) })",
+                                            why: "generate_design_genome produces the chromosome genome that all other tools require. This URL extraction informs it — it does not replace it."
+                                        }
+                                    ]
                                 }, null, 2)
                             }]
                         };

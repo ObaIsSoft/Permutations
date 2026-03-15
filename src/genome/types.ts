@@ -357,7 +357,7 @@ export interface GenerationOptions {
     sectorWeight?: number;               // Override sector influence
     contentWeight?: number;              // Override content analysis influence
     enable3D?: boolean;                  // Global 3D toggle (default: context-appropriate)
-    fontProvider?: FontProvider;         // "bunny" | "google" (default: "bunny")
+    fontProvider?: FontProvider;         // "bunny" | "google" | "fontshare" | "none" (default: "bunny")
     copyIntelligence?: {                 // LLM-extracted copy guidance
         industryTerminology: string[];
         emotionalRegister: "clinical" | "professional" | "conversational" | "playful" | "luxury" | "urgent";
@@ -403,7 +403,7 @@ export type BreakpointStrategy = "mobile_first" | "desktop_first" | "fluid";
 export type ContentFlow = "reading_order" | "z_pattern" | "f_pattern";
 export type RhythmDensity = "airtight" | "breathing" | "maximal" | "empty";
 export type TypeCharge = "geometric" | "humanist" | "monospace" | "transitional" | "grotesque" | "slab_serif" | "expressive";
-export type FontProvider = "bunny" | "google";
+export type FontProvider = "bunny" | "google" | "fontshare" | "none";
 export type TypeTracking = "tight" | "normal" | "wide" | "ultra";
 export type TypeCasing = "normal" | "uppercase" | "small_caps";
 export type ColorTemp = "warm" | "cool" | "neutral";

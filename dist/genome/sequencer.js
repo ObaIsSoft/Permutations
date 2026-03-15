@@ -5,6 +5,7 @@
  * hero type selection, and brand integration.
  */
 import * as crypto from "crypto";
+import { fontCatalog } from "../font-catalog.js";
 import { GenomeConstraintSolver } from "./constraint-solver.js";
 import { getSectorProfile, generateHueFromForbidden, generateSaturationFromBias, generateLightnessFromBias, selectHeroType, selectTrustApproach, SUB_SECTOR_KEYWORDS } from "./sector-profiles.js";
 import { COPY_PATTERN_BANKS, generateHeadlineFromPatterns, generateCTAFromPatterns, generateTaglineFromPatterns, generateSentenceFromTemplate } from "./copy-patterns.js";
@@ -1806,42 +1807,7 @@ export class GenomeSequencer {
         return options[Math.floor(byte * options.length) % options.length];
     }
     selectDisplayFont(byte, charge, provider = "bunny") {
-        const fonts = {
-            geometric: [
-                "Space Grotesk", "DM Sans", "Outfit", "Cabinet Grotesk", "Plus Jakarta Sans",
-                "Barlow", "Syne", "Unbounded", "Lexend", "Urbanist", "Questrial",
-                "Work Sans", "Montserrat", "Jost", "Manrope", "Sen", "Tenor Sans"
-            ],
-            humanist: [
-                "Fraunces", "Playfair Display", "Cormorant", "Lora", "Libre Baskerville",
-                "Spectral", "DM Serif Display", "Gloock", "Cinzel", "Crimson Text",
-                "Eczar", "Gentium Book Plus", "Inknut Antiqua", "Quattrocento", "Unna"
-            ],
-            grotesque: [
-                "Inter", "Public Sans", "Arimo", "Heebo", "IBM Plex Sans", "Karla",
-                "Red Hat Display", "Sora", "Chivo",
-                "Figtree", "Instrument Sans", "Schibsted Grotesk", "Hanken Grotesk"
-            ],
-            transitional: [
-                "Libre Baskerville", "Cardo", "EB Garamond", "Literata", "Newsreader",
-                "Source Serif 4", "Bitter", "Baskervville", "Bodoni Moda", "Domine",
-                "Zilla Slab", "Prata", "Fraunces"
-            ],
-            slab_serif: [
-                "Arvo", "Josefin Slab", "Roboto Slab", "Zilla Slab", "BioRhyme",
-                "Alfa Slab One", "Cousine", "Martel Sans", "Poly", "Rokkitt"
-            ],
-            monospace: [
-                "Space Mono", "JetBrains Mono", "Fira Code", "IBM Plex Mono", "Geist Mono",
-                "Commit Mono", "Martian Mono", "Nanum Gothic Coding", "Overpass Mono",
-                "Roboto Mono", "Source Code Pro", "Ubuntu Mono", "VT323"
-            ],
-            expressive: [
-                "Syne", "Unbounded", "Bungee", "Faster One", "Monoton", "Nabla",
-                "Righteous", "Rubik Beastly", "Tourney", "Ultra", "Yeseva One"
-            ]
-        };
-        const fallbacks = {
+        const cssStackFallbacks = {
             geometric: "system-ui, -apple-system, sans-serif",
             humanist: "Georgia, 'Times New Roman', serif",
             grotesque: "Helvetica, Arial, sans-serif",
@@ -1850,47 +1816,19 @@ export class GenomeSequencer {
             slab_serif: "serif",
             expressive: "cursive, sans-serif"
         };
-        const pool = fonts[charge] ?? fonts.geometric;
+        const pool = fontCatalog.getFonts(charge, provider);
         const selected = pool[Math.floor(byte * pool.length) % pool.length];
+        const fallback = cssStackFallbacks[charge] || cssStackFallbacks.geometric;
         return {
-            family: `${selected}, ${fallbacks[charge] || fallbacks.geometric}`,
+            family: `${selected}, ${fallback}`,
             displayName: selected,
             importUrl: this.getFontImportUrl(selected, provider, [400, 700]),
             provider,
-            fallback: fallbacks[charge] || fallbacks.geometric
+            fallback
         };
     }
     selectBodyFont(byte, charge, provider = "bunny") {
-        const fonts = {
-            geometric: [
-                "DM Sans", "Inter", "Geist", "Nunito", "Atkinson Hyperlegible",
-                "Lexend Deca", "Plus Jakarta Sans", "Outfit", "Albert Sans"
-            ],
-            humanist: [
-                "Merriweather", "Source Serif 4", "Lora", "Literata", "Palatino Linotype",
-                "Crimson Text", "Domine", "Libre Franklin", "Spectral"
-            ],
-            grotesque: [
-                "Inter", "Public Sans", "IBM Plex Sans", "Karla", "Work Sans",
-                "Figtree", "Hanken Grotesk", "Chivo", "Schibsted Grotesk"
-            ],
-            transitional: [
-                "Newsreader", "Source Serif 4", "EB Garamond", "Cardo", "Libre Baskerville",
-                "Domine", "Cormorant", "Baskervville"
-            ],
-            slab_serif: [
-                "Roboto Slab", "Arvo", "Domine", "Josefin Slab", "Zilla Slab"
-            ],
-            monospace: [
-                "IBM Plex Mono", "Fira Code", "JetBrains Mono", "Geist Mono", "Roboto Mono"
-            ],
-            expressive: [
-                "Rubik", "Outfit", "Space Grotesk", "Syne"
-            ]
-        };
-        const pool = fonts[charge] ?? fonts.geometric;
-        const selected = pool[Math.floor(byte * pool.length) % pool.length];
-        const fallbacks = {
+        const cssStackFallbacks = {
             geometric: "system-ui, -apple-system, sans-serif",
             humanist: "Georgia, serif",
             grotesque: "Arial, sans-serif",
@@ -1899,23 +1837,30 @@ export class GenomeSequencer {
             slab_serif: "serif",
             expressive: "sans-serif"
         };
+        const pool = fontCatalog.getFonts(charge, provider);
+        const selected = pool[Math.floor(byte * pool.length) % pool.length];
+        const fallback = cssStackFallbacks[charge] || cssStackFallbacks.geometric;
         return {
-            family: `${selected}, ${fallbacks[charge] || fallbacks.geometric}`,
+            family: `${selected}, ${fallback}`,
             displayName: selected,
             importUrl: this.getFontImportUrl(selected, provider, [400, 700]),
             provider,
-            fallback: fallbacks[charge] || fallbacks.geometric
+            fallback
         };
     }
     getFontImportUrl(fontName, provider, weights) {
-        const slug = fontName.toLowerCase().replace(/ /g, '-');
-        const weightString = weights.join(';');
-        if (provider === "google") {
-            const googleName = fontName.replace(/ /g, '+');
-            return `https://fonts.googleapis.com/css2?family=${googleName}:wght@${weightString}&display=swap`;
+        if (provider === "none")
+            return "";
+        const slug = fontName.toLowerCase().replace(/ /g, "-");
+        if (provider === "fontshare") {
+            return `https://api.fontshare.com/v2/css?f[]=${slug}@${weights.join(",")}&display=swap`;
         }
-        // Bunny Fonts default
-        return `https://fonts.bunny.net/css?family=${slug}:${weights.join(',')}&display=swap`;
+        if (provider === "google") {
+            const googleName = fontName.replace(/ /g, "+");
+            return `https://fonts.googleapis.com/css2?family=${googleName}:wght@${weights.join(";")}&display=swap`;
+        }
+        // Bunny Fonts (default)
+        return `https://fonts.bunny.net/css?family=${slug}:${weights.join(",")}&display=swap`;
     }
     isColorAppropriateForSector(hue, sector) {
         // Simple appropriateness check

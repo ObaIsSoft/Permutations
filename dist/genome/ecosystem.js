@@ -355,7 +355,7 @@ export class EcosystemGenerator {
                 example: `<${microbial[0].name} onClick={() => ${flora[0].name}Ref.focus()} />`
             });
         }
-        if (flora.length > 2) {
+        if (flora.length > 5) {
             relationships.push({
                 type: 'sequence',
                 organisms: [flora[2].id, flora[5].id],
