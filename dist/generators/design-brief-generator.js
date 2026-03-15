@@ -44,10 +44,10 @@ export class DesignBriefGenerator {
     describeColor(c) {
         const primary = c.ch5_color_primary;
         let desc = `Primary: HSL(${primary.hue}°, ${Math.round(primary.saturation * 100)}%, ${Math.round(primary.lightness * 100)}%) — ${primary.temperature}`;
-        if (c.ch26_color_system) {
+        if (c.ch26_color_system?.secondary) {
             const cs = c.ch26_color_system;
             desc += `. Secondary: ${cs.secondary.relationship} at HSL(${cs.secondary.hue}°, ...). ` +
-                `Semantic success: HSL(${cs.semantic.success.hue}°, ...)`;
+                `Semantic success: HSL(${cs.semantic?.success?.hue}°, ...)`;
         }
         return desc;
     }
