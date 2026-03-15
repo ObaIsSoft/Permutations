@@ -1,5 +1,92 @@
 # Permutations MCP — Agent Rules (v1.0.0)
 
+## Setup — Connect The MCP Server First
+
+The 8 tools only exist once the MCP server is registered with your agent or IDE. Pick your environment:
+
+### Claude Code (CLI)
+**Global (recommended — works in every project automatically):** add to `~/.claude/settings.json`:
+```json
+{
+  "mcpServers": {
+    "permutations": {
+      "command": "node",
+      "args": ["/absolute/path/to/permutations/dist/server.js"],
+      "env": { "GROQ_API_KEY": "your-key" }
+    }
+  }
+}
+```
+**Project-scoped:** create `.mcp.json` in any project root — only active in that directory.
+
+Alternatively run `claude mcp add` from the CLI — Claude Code writes the config for you and prompts whether to save globally or per-project.
+
+### Cursor
+**Per-project only** — no global option. Create `.cursor/mcp.json` in each project root (or copy it once into any repo you want to use Permutations from):
+```json
+{
+  "mcpServers": {
+    "permutations": {
+      "command": "node",
+      "args": ["/absolute/path/to/permutations/dist/server.js"],
+      "env": { "GROQ_API_KEY": "your-key" }
+    }
+  }
+}
+```
+
+### Claude Desktop
+**Always global** — single user config, applies to all conversations automatically.
+Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (Mac) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+```json
+{
+  "mcpServers": {
+    "permutations": {
+      "command": "node",
+      "args": ["/absolute/path/to/permutations/dist/server.js"],
+      "env": { "GROQ_API_KEY": "your-key" }
+    }
+  }
+}
+```
+
+### Windsurf
+**Always global** — applies to all Windsurf workspaces automatically.
+Edit `~/.codeium/windsurf/mcp_config.json`:
+```json
+{
+  "mcpServers": {
+    "permutations": {
+      "command": "node",
+      "args": ["/absolute/path/to/permutations/dist/server.js"],
+      "env": { "GROQ_API_KEY": "your-key" }
+    }
+  }
+}
+```
+
+### VS Code (Copilot / Cline / Continue)
+Already configured in `.vscode/mcp.json` in this repo — no action needed if you're in the project folder.
+
+---
+
+### Notes
+- **Path**: use the absolute path to `dist/server.js`, not a relative path — agents run from different working directories
+- **API key**: set **any one** of the following — the server auto-detects whichever is present:
+  | Variable | Provider | Notes |
+  |---|---|---|
+  | `GROQ_API_KEY` | Groq | Free tier, fast inference — good default |
+  | `OPENAI_API_KEY` | OpenAI | GPT-4o / GPT-4-turbo |
+  | `ANTHROPIC_API_KEY` | Anthropic | Claude 3.5+ |
+  | `GEMINI_API_KEY` | Google Gemini | Gemini 1.5 Pro / Flash |
+  | `OPENROUTER_API_KEY` | OpenRouter | Access to 100+ models under one key |
+  | `HUGGINGFACE_API_KEY` | HuggingFace | Open-source models |
+  You do not need all of them — one is enough. Skip entirely only if using `offline: true`.
+- **Build first**: run `npm install && npm run build` in the permutations directory before registering the server — the config points to `dist/server.js`, not `src/`
+- **Verify**: after registering, the tools appear as `permutations__generate_design_genome`, `permutations__validate_design`, etc. If they don't appear, the server path or API key is wrong.
+
+---
+
 These rules govern how AI coding agents must interact with this codebase. The Permutations MCP server generates a **three-layer SHA-256 genome chain** — DesignGenome (32 chromosomes) → EcosystemGenome (11 chromosomes) → CivilizationGenome (10 chromosomes) — across a **14-tier biological complexity model** (abiotic → prokaryotic → protist → bryophyte → vascular_flora → invertebrate_fauna → ectotherm_fauna → endotherm_fauna → tribal → city_state → nation_state → empire → network → singularity). **No aesthetic values may be invented manually.**
 
 This tool is a **design constitution generator**, not a code generator. It produces genome constraints, CSS tokens, component relationships, and architecture direction. **You — the agent — write the actual code** from those constraints.
