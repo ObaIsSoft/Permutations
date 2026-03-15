@@ -1,3 +1,24 @@
+/** Returns true if the character at matchIndex is inside a CSS block whose opening
+ *  @-rule or selector header matches blockHeaderRegex. Walks backwards from matchIndex,
+ *  counting braces to find the enclosing block, then tests the 200 chars preceding the '{'. */
+function isInsideBlock(source, matchIndex, blockHeaderRegex) {
+    let depth = 0;
+    for (let i = matchIndex - 1; i >= 0; i--) {
+        if (source[i] === '}') {
+            depth++;
+        }
+        else if (source[i] === '{') {
+            if (depth === 0) {
+                // Found the brace that opens the block containing matchIndex
+                const headerStart = Math.max(0, i - 300);
+                const header = source.substring(headerStart, i);
+                return blockHeaderRegex.test(header);
+            }
+            depth--;
+        }
+    }
+    return false;
+}
 export const FORBIDDEN_PATTERNS = [
     {
         id: "font_inter",
@@ -242,7 +263,8 @@ export const FORBIDDEN_PATTERNS = [
         severity: "warning",
         category: "motion",
         suggestion: "Wrap looping animations in @media (prefers-reduced-motion: no-preference)",
-        reason: "Infinite animations trigger vestibular disorders and are distracting"
+        reason: "Infinite animations trigger vestibular disorders and are distracting",
+        skipIfInBlock: /prefers-reduced-motion:\s*no-preference/i
     },
     {
         id: "no_reduced_motion",
@@ -250,7 +272,8 @@ export const FORBIDDEN_PATTERNS = [
         severity: "info",
         category: "motion",
         suggestion: "Wrap all animations in @media (prefers-reduced-motion: no-preference)",
-        reason: "WCAG 2.3.3 — all motion must respect prefers-reduced-motion"
+        reason: "WCAG 2.3.3 — all motion must respect prefers-reduced-motion",
+        skipIfInBlock: /prefers-reduced-motion:\s*no-preference/i
     },
     // ─── Typography anti-patterns ─────────────────────────────────────────────
     {
@@ -282,6 +305,10 @@ export class PatternDetector {
                 : pattern.regex.flags + 'g';
             const globalRegex = new RegExp(pattern.regex.source, flags);
             for (const match of source.matchAll(globalRegex)) {
+                // Skip match if it falls inside a CSS block the pattern exempts
+                if (pattern.skipIfInBlock && isInsideBlock(source, match.index, pattern.skipIfInBlock)) {
+                    continue;
+                }
                 const lineIndex = source.substring(0, match.index).split('\n').length - 1;
                 const violationType = pattern.category === "dark_pattern" || pattern.category === "accessibility" ? "semantic"
                     : pattern.category === "layout" || pattern.category === "component" || pattern.category === "typography" ? "structural"
