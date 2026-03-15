@@ -1,10 +1,29 @@
 import { ComplexityAnalyzer } from "./complexity-analyzer.js";
+import { sequenceCivilizationGenome } from "./civilization-sequencer.js";
+// ── Civilization genome → architecture mappings ──────────────────────────────
+const GOVERNANCE_TO_STATE = {
+    centralized: 'local',
+    federated: 'distributed',
+    democratic: 'shared_context',
+    theocratic: 'local',
+    oligarchic: 'shared_context',
+    anarchic: 'distributed',
+    militaristic: 'reactive_store',
+    technocratic: 'reactive_store',
+};
+const KNOWLEDGE_TO_ROUTING = {
+    centralized: 'single_page',
+    distributed: 'federated',
+    oral: 'multi_page',
+    recorded: 'platform',
+    emergent: 'platform',
+};
 export class CivilizationGenerator {
     complexityAnalyzer;
     constructor() {
         this.complexityAnalyzer = new ComplexityAnalyzer();
     }
-    generate(intent, context, traits, genome, minTier) {
+    generate(intent, context, traits, genome, minTier, ecosystemGenome) {
         // minTier must be a civilization tier — reject ecosystem tiers at call site
         const civMinTier = minTier;
         const analysis = civMinTier
@@ -17,7 +36,20 @@ export class CivilizationGenerator {
                 `Add sophistication keywords (dashboard, platform, real-time, collaborative) ` +
                 `or specify minTier: 'tribal' to force it.`);
         }
-        return this.generateTier(analysis, genome);
+        const result = this.generateTier(analysis, genome);
+        // Layer 3: sequence civilization genome from ecosystem genome and apply overrides
+        if (ecosystemGenome) {
+            const civGenome = sequenceCivilizationGenome(ecosystemGenome);
+            result.civilizationGenome = civGenome;
+            // Governance model drives state topology; knowledge model drives routing pattern
+            const stateOverride = GOVERNANCE_TO_STATE[civGenome.chromosomes.civ_ch2_governance.model];
+            const routingOverride = KNOWLEDGE_TO_ROUTING[civGenome.chromosomes.civ_ch7_knowledge.model];
+            if (stateOverride)
+                result.architecture.stateTopology = stateOverride;
+            if (routingOverride)
+                result.architecture.routingPattern = routingOverride;
+        }
+        return result;
     }
     generateTier(analysis, genome) {
         switch (analysis.tier) {

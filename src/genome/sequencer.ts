@@ -1366,7 +1366,10 @@ export class GenomeSequencer {
         profile: ReturnType<typeof getSectorProfile>
     ) {
         const maxRadius = 32;
-        const baseRadius = Math.round(b(1) * maxRadius * traits.playfulness);
+        // Use a floor of 0.3 so low-playfulness sectors still get hash-driven edge diversity.
+        // Without the floor, playfulness=0.2 caps radius at 6.4, making every seed "soft".
+        const effectivePlayfulness = Math.max(0.3, traits.playfulness);
+        const baseRadius = Math.round(b(1) * maxRadius * effectivePlayfulness);
 
         // Apply sector preference
         let radius = baseRadius;
@@ -1376,9 +1379,17 @@ export class GenomeSequencer {
             radius = Math.max(radius, 8);
         }
 
+        // Style thresholds proportional to the effective range so hash bytes can reach
+        // all three styles even at low playfulness.
+        const organicThreshold = Math.round(maxRadius * effectivePlayfulness * 0.5);
+        // For sharp-preference sectors: radius is capped at 4, so "sharp" threshold must
+        // expand beyond radius===0 — otherwise radius 1–4 silently becomes "soft".
+        const sharpCeiling = profile.edgePreference === "sharp"
+            ? Math.max(1, Math.round(maxRadius * effectivePlayfulness * 0.3))
+            : 0;
         return {
             radius,
-            style: radius === 0 ? "sharp" : (radius > 16 ? "organic" : "soft") as EdgeStyle,
+            style: (radius <= sharpCeiling ? "sharp" : radius > organicThreshold ? "organic" : "soft") as EdgeStyle,
             variableRadius: traits.playfulness > 0.6,
             componentRadius: Math.round(radius * 0.6),   // smaller for buttons/inputs
             imageRadius: Math.round(radius * 0.4),        // even smaller for image crops
@@ -1396,10 +1407,25 @@ export class GenomeSequencer {
     ) {
         let physics: MotionPhysics = profile.motionPreference;
 
-        // Trait overrides
+        // Trait overrides (high-signal, dominant)
         if (traits.temporalUrgency > 0.8) physics = "none";
         else if (traits.playfulness > 0.7) physics = "spring";
         else if (traits.emotionalTemperature < 0.3) physics = "step";
+        else {
+            // Hash-driven variance: top 25% of b(30) deviates to an adjacent physics.
+            // Ensures two products in the same sector with similar traits can differ.
+            const varianceByte = b(30);
+            if (varianceByte > 0.75) {
+                const adjacent: Partial<Record<string, MotionPhysics>> = {
+                    spring: 'step',
+                    step:   'spring',
+                    none:   'step',
+                    ease:   'spring',
+                    glitch: 'spring',
+                };
+                physics = adjacent[physics] ?? physics;
+            }
+        }
 
         // Enter direction from physics + traits
         let enterDirection: "up" | "down" | "left" | "right" | "scale" | "fade" = "up";

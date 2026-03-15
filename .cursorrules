@@ -1,8 +1,13 @@
-# Permutations MCP — Agent Rules (v0.0.9)
+# Permutations MCP — Agent Rules (v1.0.0)
 
-These rules govern how AI coding agents must interact with this codebase. The Permutations MCP server generates **32-chromosome design DNA** from SHA-256 hashes across a **14-tier biological complexity model** (abiotic → prokaryotic → protist → bryophyte → vascular_flora → invertebrate_fauna → ectotherm_fauna → endotherm_fauna → tribal → city_state → nation_state → empire → network → singularity). **No aesthetic values may be invented manually.**
+These rules govern how AI coding agents must interact with this codebase. The Permutations MCP server generates a **three-layer SHA-256 genome chain** — DesignGenome (32 chromosomes) → EcosystemGenome (11 chromosomes) → CivilizationGenome (10 chromosomes) — across a **14-tier biological complexity model** (abiotic → prokaryotic → protist → bryophyte → vascular_flora → invertebrate_fauna → ectotherm_fauna → endotherm_fauna → tribal → city_state → nation_state → empire → network → singularity). **No aesthetic values may be invented manually.**
 
-This tool is a **design constitution generator**, not a code generator. It produces genome constraints, CSS tokens, and architecture direction. **You — the agent — write the actual code** from those constraints.
+This tool is a **design constitution generator**, not a code generator. It produces genome constraints, CSS tokens, component relationships, and architecture direction. **You — the agent — write the actual code** from those constraints.
+
+**Key v1.0.0 changes:**
+- Complexity tier is now vocabulary-invariant — computed from what the product DOES, not from keywords in the description
+- EcosystemGenome (L2) and CivilizationGenome (L3) are fully wired — generate_ecosystem and generate_civilization return genome data that feeds the next layer
+- Governance model (L3) overrides state topology; knowledge model (L3) overrides routing pattern
 
 ---
 
@@ -114,6 +119,19 @@ Do not invent font sizes. Use the values from `ch3_type_display` (headings) and 
 
 Do not use font families not defined in the genome.
 
+### Font Providers
+
+Pass `font_provider` to `generate_design_genome` to control which catalog the engine draws from:
+
+| Provider | Source | When To Use |
+|---|---|---|
+| `"google"` | Google Fonts (1000+ fonts) | Default. CDN import included. |
+| `"bunny"` | Bunny Fonts (mirrors Google) | Privacy-focused. Same catalog as Google. |
+| `"fontshare"` | Fontshare (~100 fonts) | High-quality editorial/display fonts (Satoshi, Cabinet Grotesk, etc.) |
+| `"none"` | No CDN | You manage font loading. Returns family name only — no `@import` URL. |
+
+**Do not pass a font name that belongs to a different provider.** If `extract_genome_from_url` returns a Fontshare font (e.g. `satoshi`, `cabinet-grotesk`), pass `font_provider: "fontshare"` — not `"google"`.
+
 ---
 
 ## Rule 7 — Color Is Derived From The Genome
@@ -151,6 +169,20 @@ Always call `validate_design` with your final CSS and HTML before shipping. It c
 - Contrast and accessibility requirements
 
 A `slop_score: 0` and `valid: true` is the target.
+
+---
+
+## Design Exploration Workflow
+
+Permutations has three modes of use — not just generation:
+
+**Direction** — You know what you want to build. Call `generate_design_genome` → `generate_design_brief` → implement.
+
+**Constraint** — You're building from an existing genome. Call `validate_design` before shipping. Use `genome.constraints.forbiddenPatterns` and `requiredPatterns` to guard your implementation.
+
+**Exploration** — You're figuring out what you want. Two paths:
+- "I love this site, build something inspired by it" → call `extract_genome_from_url` instead of STEP 1
+- "Make it warmer / more editorial / change sector to fintech" → call `update_design_genome` with the specific chromosome to mutate — do not regenerate from scratch
 
 ---
 

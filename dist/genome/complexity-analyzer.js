@@ -34,12 +34,57 @@ export class ComplexityAnalyzer {
         'dark mode': 0.06,
         'theme': 0.05,
     };
-    analyze(intent, context, traits) {
+    /**
+     * Deterministic complexity score from structural product properties.
+     * Vocabulary-invariant: computed from what the product DOES, not how it's described.
+     *
+     * Weights calibrated so:
+     *   simple landing page  → ~0.12  (prokaryotic)
+     *   blog / portfolio     → ~0.16  (prokaryotic)
+     *   workout tracker      → ~0.22  (protist)
+     *   e-commerce           → ~0.82  (tribal)
+     *   healthcare portal    → ~0.76  (endotherm_fauna)
+     *   trading dashboard    → ~1.00  (singularity, capped)
+     */
+    static computeComplexityFromStructure(s) {
+        let score = 0.10; // baseline — every product has some structure
+        if (s.realtimeState)
+            score += 0.15; // live data spikes architectural complexity
+        if (s.sensitiveData)
+            score += 0.18; // auth, compliance, encryption, trust signals
+        if (s.multiRole)
+            score += 0.12; // role-specific UI branches, permission guards
+        if (s.financialTransactions)
+            score += 0.10; // payment flows, receipts, security surface
+        if (s.complexWorkflows)
+            score += 0.08; // multi-step state machines, wizard routing
+        if (s.deepNavigation)
+            score += 0.06; // routing complexity, breadcrumbs, back-stacks
+        if (s.externalIntegrations)
+            score += 0.05; // API loading states, error handling, retries
+        // Entity count — 1 entity = minimal, 10+ = high relational complexity
+        score += Math.min(0.12, (s.entityCount / 10) * 0.12);
+        // Screen count — 1 screen = trivial, 15+ screens = significant routing surface
+        score += Math.min(0.08, (s.screenCount / 15) * 0.08);
+        // Primary surface bonus
+        if (s.primarySurface === 'data')
+            score += 0.06; // data surfaces need more component depth
+        else if (s.primarySurface === 'transaction')
+            score += 0.04; // transactions need flow/validation
+        return Math.min(1.0, score);
+    }
+    analyze(intent, context, traits, structural) {
         const intent_lower = intent.toLowerCase();
         const context_lower = context.toLowerCase();
-        // 1. Calculate base complexity from traits (normal range 0.3-0.6)
-        const baseComplexity = this.calculateBaseComplexity(traits);
-        // 2. Detect complexity keywords in intent
+        // 1. Base complexity — structural props (vocabulary-invariant) take priority over traits.
+        // When structural is available, use deterministic computation from product behavior.
+        // Fall back to trait-based scoring only in offline mode (no LLM structural analysis).
+        const baseComplexity = structural
+            ? ComplexityAnalyzer.computeComplexityFromStructure(structural)
+            : this.calculateBaseComplexity(traits);
+        // 2. Keywords are a small additive nudge — useful for offline mode (hash-based
+        // traits) or when intent is ambiguous. They are NOT the primary pathway to
+        // higher tiers. Cap at 0.12 so they can break a tie but not override traits.
         const detectedKeywords = [];
         let keywordBoost = 0;
         for (const [keyword, boost] of Object.entries(ComplexityAnalyzer.COMPLEXITY_KEYWORDS)) {
@@ -48,47 +93,39 @@ export class ComplexityAnalyzer {
                 keywordBoost += boost;
             }
         }
-        // Cap keyword boost at 0.5 (prevent guaranteed 1.0)
-        keywordBoost = Math.min(0.5, keywordBoost);
-        // 3. Calculate sophistication bonus from context quality
+        keywordBoost = Math.min(0.12, keywordBoost);
+        // 3. Sophistication bonus from context quality signals — additive, cap 0.08
         const sophisticationFactors = [];
         let sophisticationBonus = 0;
-        // Length bonus (detailed context = +0.05)
         if (context.length > 100) {
-            sophisticationBonus += 0.05;
+            sophisticationBonus += 0.02;
             sophisticationFactors.push('detailed_context');
         }
-        // Multiple user types mentioned
         if (/user|admin|guest|customer|client/i.test(context)) {
-            sophisticationBonus += 0.05;
+            sophisticationBonus += 0.02;
             sophisticationFactors.push('user_types');
         }
-        // Technical constraints specified
         if (/performance|speed|memory|bandwidth|load|cache/i.test(context)) {
-            sophisticationBonus += 0.05;
+            sophisticationBonus += 0.02;
             sophisticationFactors.push('technical_constraints');
         }
-        // Design system references
         if (/design.system|tokens|components|pattern/i.test(context)) {
-            sophisticationBonus += 0.05;
+            sophisticationBonus += 0.02;
             sophisticationFactors.push('design_system');
         }
-        // Accessibility requirements
         if (/accessibility|a11y|wcag|screen.reader|keyboard/i.test(context)) {
-            sophisticationBonus += 0.05;
+            sophisticationBonus += 0.02;
             sophisticationFactors.push('accessibility');
         }
-        // Performance needs
         if (/60fps|animation|smooth|optimize/i.test(context)) {
-            sophisticationBonus += 0.05;
+            sophisticationBonus += 0.02;
             sophisticationFactors.push('performance');
         }
-        // Cap sophistication bonus at 0.3
-        sophisticationBonus = Math.min(0.3, sophisticationBonus);
-        // 4. Calculate final complexity
-        const intentMultiplier = 1 + keywordBoost;
-        let finalComplexity = baseComplexity * intentMultiplier + sophisticationBonus;
-        // Ensure we don't exceed 1.0
+        sophisticationBonus = Math.min(0.08, sophisticationBonus);
+        // 4. Final: traits are primary, keywords and sophistication are additive nudges.
+        // intentMultiplier kept at 1.0 (no multiplication — traits already encode intent).
+        const intentMultiplier = 1.0;
+        let finalComplexity = baseComplexity + keywordBoost + sophisticationBonus;
         finalComplexity = Math.min(1.0, finalComplexity);
         // 5. Determine tier
         const tier = this.determineTier(finalComplexity);
@@ -103,23 +140,28 @@ export class ComplexityAnalyzer {
         };
     }
     calculateBaseComplexity(traits) {
-        // Information density is the primary driver of complexity
-        // Higher density = more components, more sophisticated layouts
-        const densityFactor = traits.informationDensity * 0.4;
-        // Spatial dependency adds 3D/complex layout requirements
-        const spatialFactor = traits.spatialDependency * 0.2;
-        // Playfulness adds animation/interaction complexity
-        const playfulnessFactor = traits.playfulness * 0.15;
-        // Emotional temperature affects theming complexity
-        const emotionalFactor = traits.emotionalTemperature * 0.15;
-        // Temporal urgency usually simplifies (get to the point)
-        // But can add real-time complexity if very high
-        const urgencyFactor = traits.temporalUrgency > 0.8
-            ? 0.15 // Real-time features
-            : 0.05;
-        const base = densityFactor + spatialFactor + playfulnessFactor + emotionalFactor + urgencyFactor;
-        // Normalize to 0.3-0.6 range for "normal" designs
-        return Math.min(0.6, Math.max(0.3, base));
+        // All 8 LLM-extracted traits contribute. Weights sum to 1.0.
+        // No artificial ceiling — traits drive the full 0.0–1.0 range.
+        // Primary: how much content/data/features the product manages
+        const densityFactor = traits.informationDensity * 0.30;
+        // Auth, permissions, multi-role UI — trust surface adds real component complexity
+        const trustFactor = traits.trustRequirement * 0.20;
+        // Proportional urgency: real-time features spike architectural complexity
+        const urgencyFactor = traits.temporalUrgency * 0.18;
+        // 3D, spatial layouts, maps, canvas
+        const spatialFactor = traits.spatialDependency * 0.12;
+        // Animation, microinteraction richness
+        const playfulnessFactor = traits.playfulness * 0.08;
+        // Rich media, photography, illustration density
+        const visualFactor = traits.visualEmphasis * 0.06;
+        // Theming surface and brand expression complexity
+        const emotionalFactor = traits.emotionalTemperature * 0.04;
+        // Funnel and CTA density
+        const conversionFactor = traits.conversionFocus * 0.02;
+        const base = densityFactor + trustFactor + urgencyFactor + spatialFactor
+            + playfulnessFactor + visualFactor + emotionalFactor + conversionFactor;
+        // Minimum 0.10 — even the simplest intent has baseline structural needs
+        return Math.max(0.10, base);
     }
     determineTier(complexity) {
         // Civilization tiers (0.81–1.00) — 6 tiers, emerge FROM ecosystem

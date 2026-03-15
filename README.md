@@ -1,6 +1,6 @@
 # Permutations MCP Engine
 
-A Model Context Protocol (MCP) server that generates **unique, reproducible design systems** using biological inheritance metaphors. Prevents AI-generated "slop" (identical Tailwind UI) by enforcing mathematical constraints.
+A Model Context Protocol (MCP) server that generates **unique, reproducible design systems** from a three-layer SHA-256 genome chain. Prevents AI-generated "slop" (identical Tailwind UI) by enforcing mathematical constraints at every layer.
 
 **No Templates. No Slop. Only Math.**
 
@@ -14,20 +14,32 @@ Every AI-generated website looks the same:
 - Generic hero section with "Trusted by" logos
 - Parallax scroll that makes you dizzy
 
-**This isn't a design choice—it's a failure of imagination.** LLMs default to "safe" patterns because they have no constraints forcing creativity.
+**This isn't a design choice — it's a failure of constraints.** LLMs default to "safe" patterns because they have no guardrails forcing creativity.
+
+## What This Tool Does
+
+Permutations generates three interlocking genomes from a single seed:
+
+**Layer 1 — DesignGenome:** *What does it look like?*
+32-chromosome DNA: color system (with dark-mode-safe variants), typography, motion physics, grid logic, edge style, hero strategy, trust signals, copy intelligence, state topology, routing pattern, token inheritance.
+
+**Layer 2 — EcosystemGenome:** *What kind of components are these?*
+11-chromosome ecology derived from the design genome. Biome, energy source, symbiosis pattern, trophic structure — each a functional metaphor that answers: how many components, how tightly coupled, how data flows between them.
+
+**Layer 3 — CivilizationGenome:** *How is the application structured?*
+10-chromosome architecture derived from the ecosystem. Governance model → state topology. Knowledge model → routing pattern. Archetype drives design philosophy. Each chromosome maps to a concrete architecture decision.
+
+**What it is not:** a code generator. Ecosystem and civilization tools return specs and architecture direction. You — or your agent — implement from those constraints.
+
+---
 
 ## The Solution
 
-Permutations is a **design constitution generator**, not a code generator. It produces 32-chromosome design DNA that gives agents, IDEs, and developers a precise design direction to implement from.
+**Three-layer SHA-256 hash chain:** `seed → DesignGenome → EcosystemGenome → CivilizationGenome`
 
-Each project gets unique DNA (ch0-sector through ch32-token_inheritance) that:
-- ✅ Guarantees unique output (different seed = different design)
-- ✅ Guarantees reproducibility (same seed = same design forever)
-- ✅ Forbids generic patterns (forbidden ranges replace fixed hue prisons)
-- ✅ Adapts to dark mode (dark-safe primary color lifted to 58–74% lightness)
-- ✅ Respects functional requirements (dashboards MUST be scannable)
+Each layer is deterministic (same seed = same result forever) and derived from the previous layer's hash. Predecessor chromosome values bias successor selections via a weighted gravity system — this is not just hash ancestry, the actual design values flow downstream.
 
-**Output:** A design constitution — CSS tokens, color system, typography, motion constraints, topology, and architecture direction. **You build from it. The tool doesn't build for you.**
+**Vocabulary-invariant complexity scoring:** Complexity tier is computed from what the product *does*, not how it's described. "A tool doctors use to track patients" and "clinical monitoring dashboard" produce the same tier. The LLM answers 10 binary/count structural questions about product behavior; deterministic code maps those answers to a complexity score.
 
 ---
 
@@ -62,24 +74,19 @@ Add to Cursor/Claude Desktop/Windsurf `mcp.json`:
 
 ### 3. Generate DNA
 
-Ask your AI to design something:
-
 ```
 "Generate a design genome for a Japanese Y2K football stats dashboard"
 ```
 
-Your AI receives:
-- 32-chromosome DNA (colors, typography, motion, grid, hero, trust signals, personalization, color system, motion choreography, iconography, state topology, routing pattern, token inheritance)
-- CSS custom property stylesheet
-- Dark-mode-safe primary color variant (`darkModeHex`)
-- WebGL component specs
-- **Forbidden patterns list** (enforced at generation)
-- **`genome_report`** — markdown explaining every chromosome sequenced and why
-- **`suggested_next`** — which tools to call next and when
+The tool runs a single LLM call to extract structural properties (complexity tier, entity types, real-time requirements) and design character (sector, traits, copy intelligence). Then it sequences all three genome layers deterministically from the SHA-256 hash.
 
-### 4. Build the UI
+### 4. Read the Brief
 
-Your AI reads the genome report and design brief, then builds code from the constraints. The `validate_design` tool checks for slop violations before shipping.
+Call `generate_design_brief` before writing any code. It converts all three genome layers into plain language: visual strategy, component relationships, architecture direction, copy tone.
+
+### 5. Build from It
+
+Your agent builds from the genome tokens and brief. Call `validate_design` before shipping — it checks constraint violations and slop patterns, returns a `slop_score`.
 
 ---
 
@@ -97,28 +104,36 @@ EXPORT       generate_formats         ← export tokens to Figma/Style Dictionar
 ITERATE      update_design_genome     ← adjust chromosomes after STEP 1 ("make it warmer")
 ```
 
-The `generate_design_genome` response includes `suggested_next` — a dynamic list telling the agent exactly which tools to call next based on the genome's complexity score.
+The `generate_design_genome` response includes `suggested_next` — a dynamic list telling the agent which tools to call next based on the genome's complexity score.
 
 ---
 
 ## Available MCP Tools
 
 ### `generate_design_genome` — STEP 1
-Full pipeline: content analysis → LLM extraction → DNA sequencing. Returns genome, CSS, topology, and a `genome_report` markdown explaining every chromosome.
+Full pipeline: structural analysis → LLM extraction → DNA sequencing across all three layers. Returns genome, CSS, topology, and `genome_report` markdown explaining every chromosome.
 
 Pass `offline: true` to skip LLM and use hash-based inference (no API key needed, fully deterministic).
 
+**Font providers:**
+- `"google"` — Google Fonts (1000+ fonts) *(default)*
+- `"bunny"` — Bunny Fonts, privacy-focused, mirrors Google catalog
+- `"fontshare"` — Fontshare (~100 curated fonts: Satoshi, Cabinet Grotesk, etc.)
+- `"none"` — returns family name only — use when you manage font loading yourself
+
+Match the provider to the font. If `extract_genome_from_url` returns a Fontshare font (e.g., `satoshi`), pass `font_provider: "fontshare"`.
+
 ### `generate_design_brief` — STEP 2
-Converts the genome into human/agent-readable design direction: visual strategy, copy tone, implementation guidance. Read this before writing any code.
+Converts all three genome layers into human/agent-readable design direction: visual strategy, component relationships, architecture direction, copy tone. Read this before writing any code.
 
 ### `generate_ecosystem` — STEP 3 (optional)
-Generates a biological component hierarchy: microbial (atomic), flora (composite), fauna (complex). Returns component specs, prop contracts, and containment relationships — **not code**. Includes `ecosystem_report` markdown.
+Generates a biological component hierarchy from the EcosystemGenome (L2): microbial (atomic), flora (composite), fauna (complex). Returns component specs, prop contracts, and containment relationships — **not code**. Includes `ecosystem_report` markdown and `ecosystemGenome` for the civilization layer.
 
 ### `generate_civilization` — STEP 4 (optional, complexity ≥ 0.68)
-Returns application architecture direction: state topology, routing patterns, token inheritance rules. **Specs by default** (`generate_code: false`). Pass `generate_code: true` to opt into TSX output. Includes `civilization_report` markdown.
+Returns application architecture direction from the CivilizationGenome (L3): state topology, routing patterns, token inheritance rules. **Specs by default.** Pass `generate_code: true` to opt into TSX output. Includes `civilization_report` markdown.
 
 ### `validate_design` — FINAL STEP
-Check generated CSS/HTML against genome DNA constraints and forbidden slop patterns. Returns violation list and `slop_score`.
+Checks generated CSS/HTML against genome DNA constraints and forbidden slop patterns. Returns violation list and `slop_score`.
 
 ### `extract_genome_from_url` — ALTERNATIVE ENTRY
 Reverse-engineer a genome from any website URL using Playwright. Use for "I love this site, make something like it" workflows.
@@ -135,22 +150,20 @@ Adjust specific chromosomes in an existing genome. Use for "make it warmer", "ch
 
 ### Mode 1: LLM-Aware (Default)
 
-Requires one API key. The engine runs a single LLM call that returns traits + sector + copy intelligence together.
+Requires one API key. Single LLM call returns structural props + traits + sector + copy intelligence.
 
 ```json
 {
   "intent": "Japanese Y2K football stats dashboard",
   "seed": "project-v1",
   "project_context": "Built for hardcore fans who live in the data",
-  "brand_asset_paths": ["/assets/logo.png", "/assets/brand-brief.pdf"]
+  "brand_asset_paths": ["/assets/logo.png"]
 }
 ```
 
 Supported providers: Groq, OpenAI, Anthropic, Google Gemini, OpenRouter, HuggingFace.
 
 ### Mode 2: Offline (No LLM)
-
-No API key required. Pass `offline: true` to use hash-based trait inference:
 
 ```json
 {
@@ -160,7 +173,7 @@ No API key required. Pass `offline: true` to use hash-based trait inference:
 }
 ```
 
-Fully deterministic. Sector defaults to `technology`. Best when intent is precise and sector detection isn't critical.
+No API key required. Hash-based trait inference. Sector defaults to `technology`. Fully deterministic.
 
 ---
 
@@ -179,51 +192,33 @@ Fully deterministic. Sector defaults to `technology`. Best when intent is precis
       },
       "ch3_type_display": { "family": "Space Grotesk", "charge": "geometric" },
       "ch8_motion": { "physics": "spring", "durationScale": 0.3 },
-      "ch9_grid": { "logic": "masonry", "asymmetry": 0.7 }
+      "ch9_grid": { "logic": "masonry", "asymmetry": 0.7 },
+      "ch30_state_topology": "distributed",
+      "ch31_routing_pattern": "federated"
+    }
+  },
+  "ecosystemGenome": {
+    "chromosomes": {
+      "eco_ch1_biome": { "class": "rainforest", "intensity": 0.74 },
+      "eco_ch3_symbiosis": { "pattern": "mutualistic", "depth": 0.68 },
+      "eco_ch4_trophic": { "structure": "web", "cascade": 0.51 }
+    }
+  },
+  "civilizationGenome": {
+    "chromosomes": {
+      "civ_ch1_archetype": { "class": "maritime", "intensity": 0.82 },
+      "civ_ch2_governance": { "model": "federated", "rigidity": 0.31 },
+      "civ_ch7_knowledge": { "model": "distributed", "entropy": 0.44 }
     }
   },
   "css": "/* Full design token stylesheet */",
-  "topology": { "gridType": "masonry", "sections": ["..."] },
-  "webglComponents": "/* React Three Fiber components */",
   "genome_report": "# Genome Report\n\n## Intent → DNA\n...",
   "suggested_next": [
     { "tool": "generate_design_brief", "reason": "Read before writing any code", "always": true },
-    { "tool": "validate_design", "reason": "Run before shipping any CSS/HTML", "always": true }
+    { "tool": "generate_ecosystem", "reason": "Building a component library", "when": "complexity >= 0.45" }
   ]
 }
 ```
-
----
-
-## Color Philosophy
-
-Sectors define **forbidden hue ranges** — what's psychologically wrong for that context. The hash then selects freely from the valid spectrum:
-
-| Sector | Forbidden | Rationale |
-|---|---|---|
-| technology | none | Cloudflare=orange, GitHub=dark, Stripe=purple — fully open |
-| healthcare | `[0°–20°]`, `[320°–360°]` | Blood red + magenta signal danger |
-| fintech | `[60°–100°]` | Casual yellow-green reads amateur |
-| food & beverage | `[220°–280°]` | Cold corporate blue kills appetite |
-| gaming | `[160°–200°]` | Clinical teal kills energy |
-
-Two different technology products with different seeds get different hues. Two different seeds in the same sector get different hues. **No more blue-purple prison.**
-
-Dark mode: `ch5_color_primary.darkModeHex` is always generated at 58–74% lightness — visible on dark surfaces. The base `hex` (22–35%) is for light mode only.
-
----
-
-## Anti-Slop Pattern Detection
-
-The system detects and forbids:
-
-| Pattern | Why It's Slop |
-|---------|---------------|
-| `font-inter` | Default AI font, overused |
-| `bg-gradient-to-r from-blue-* to-purple-*` | Ultimate SaaS trope |
-| `grid-cols-3` pricing | Most overused layout |
-| `parallax` | Motion sickness trigger |
-| `rounded-xl` cards | Generic component library look |
 
 ---
 
@@ -233,75 +228,100 @@ The system detects and forbids:
 Intent + Seed + Context
          │
          ▼
-  LLM Semantic Analysis  (traits + sector + copy intelligence — single call)
+  LLM: 10 structural questions (binary/count)    ← vocabulary-invariant complexity
+  + 8 design character traits (0.0–1.0)          ← visual/interaction character
+  + sector detection + copy intelligence
          │
          ▼
-  SHA-256 Hash → 32 Chromosomes  (deterministic, reproducible)
+  computeComplexityFromStructure()               ← deterministic — no LLM
+  → finalComplexity → tier
          │
          ▼
-  Epistasis Rules  (cross-chromosome constraint enforcement)
-  ├─ Warm color primary → Cool background surface
-  ├─ Geometric font → Sharp edge radius
-  ├─ Dashboard archetype → No decorative animations
-  └─ Sector forbidden ranges → Hue excluded from palette
+  SHA-256 → 32 Chromosomes (L1: DesignGenome)
+  Epistasis rules  + forbiddenRanges + gravity
+         │ sha256(dnaHash)
+         ▼
+  EcosystemGenome (L2: 11 chromosomes)
+  Gravity: design values → ecological selections
+  ├─ dark + metallic  → hydrothermal biome
+  ├─ spring physics   → photosynthetic energy
+  └─ deep topology    → top-down trophic
+         │ sha256(ecoHash)
+         ▼
+  CivilizationGenome (L3: 10 chromosomes)
+  Gravity: ecosystem values → architecture selections
+  ├─ mutualistic symbiosis → federated governance → distributed state
+  ├─ web trophic           → distributed knowledge → federated routing
+  └─ predatory energy      → warrior archetype
          │
     ┌────┴────┐
     ▼         ▼
-  CSS       genome_report
-  Tokens    (explainability markdown)
+  CSS       genome_report + ecosystem_report + civilization_report
+  Tokens    (explainability markdown for every decision)
 ```
+
+---
+
+## Color Philosophy
+
+Sectors define **forbidden hue ranges** — what's psychologically wrong. The hash selects freely from the rest.
+
+| Sector | Forbidden | Rationale |
+|---|---|---|
+| technology | none | Cloudflare=orange, GitHub=dark, Stripe=purple — all correct |
+| healthcare | `[0°–20°]`, `[320°–360°]` | Blood red + magenta signal danger |
+| fintech | `[60°–100°]` | Casual yellow-green reads amateur |
+| food | `[220°–280°]` | Cold corporate blue kills appetite |
+| gaming | `[160°–200°]` | Clinical teal kills energy |
+
+Two different technology products with different seeds get different hues. **No more blue-purple prison.**
+
+Dark mode: `darkModeHex` is always generated at 58–74% lightness. The base `hex` (22–35%) is for light mode only. Use `--color-primary-interactive` for buttons and links on dark backgrounds.
+
+---
+
+## Anti-Slop Pattern Detection
+
+| Pattern | Why It's Slop |
+|---|---|
+| `font: Inter` + blue gradient | Ultimate SaaS trope |
+| `bg-gradient-to-r from-blue-* to-purple-*` | Signals zero design intent |
+| `grid-cols-3` pricing | Most overused layout |
+| `parallax` | Motion sickness trigger |
+| `rounded-xl` on every card | Generic component library look |
 
 ---
 
 ## Supported LLM Providers
 
-| Provider | Model | Best For | Environment Variable |
-|----------|-------|----------|---------------------|
-| Groq | llama-3.3-70b-versatile | Speed, cost | `GROQ_API_KEY` |
-| OpenAI | gpt-4o-mini | JSON reliability | `OPENAI_API_KEY` |
-| Anthropic | claude-3-5-sonnet | Reasoning quality | `ANTHROPIC_API_KEY` |
-| Google | gemini-1.5-flash | Lowest latency | `GEMINI_API_KEY` |
-| OpenRouter | configurable | Model flexibility | `OPENROUTER_API_KEY` |
-| HuggingFace | configurable | Open source models | `HUGGINGFACE_API_KEY` |
+| Provider | Environment Variable |
+|---|---|
+| Groq (llama-3.3-70b) | `GROQ_API_KEY` |
+| OpenAI (gpt-4.1) | `OPENAI_API_KEY` |
+| Anthropic (claude-3-7-sonnet) | `ANTHROPIC_API_KEY` |
+| Google Gemini (gemini-2.0-flash) | `GEMINI_API_KEY` |
+| OpenRouter | `OPENROUTER_API_KEY` |
+| HuggingFace | `HUGGINGFACE_API_KEY` |
 
 Auto-detection priority: Groq → OpenAI → Anthropic → Gemini → OpenRouter → HuggingFace
-
----
-
-## Website Demo
-
-The `website/` directory is built entirely from Permutations DNA:
-
-```bash
-cd website
-npm install
-npm run build
-npm run preview
-```
 
 ---
 
 ## Development
 
 ```bash
-# Run tests
-npm test
-
-# Type check
-npx tsc --noEmit
-
-# Build
-npm run build
-
-# Watch mode
-npm run dev
+npm run build   # compile TypeScript
+npm test        # run 49 tests (requires Node.js 20+)
+npm run dev     # watch mode
 ```
+
+Tests cover: determinism, uniqueness (10 seeds), sector-awareness, epistasis enforcement, ecosystem-civilization bridge, pattern detection.
 
 ---
 
 ## Documentation
 
-- **[ARCHITECTURE.md](./ARCHITECTURE.md)** — Full technical architecture, epistasis rules, 32-chromosome reference
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** — Three-layer genome chain, StructuralProps, chromosome reference, gravity system, tier calibration
 - **[.cursorrules](./.cursorrules)** — Agent workflow rules (10 rules for correct tool usage)
 
 ---

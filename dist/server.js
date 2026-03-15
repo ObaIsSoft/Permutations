@@ -1,5 +1,6 @@
 import * as fsSync from "fs";
 import * as path from "path";
+import * as crypto from "crypto";
 // Load .env if present (no dotenv dep — pure Node.js)
 // Does NOT override vars already set in the environment, so shell vars win.
 try {
@@ -30,10 +31,132 @@ import { ecosystemGenerator } from "./genome/ecosystem.js";
 import { CivilizationGenerator } from "./genome/civilization.js";
 import { ComplexityAnalyzer } from "./genome/complexity-analyzer.js";
 import { generateCivilizationOutput } from "./generators/civilization-generators.js";
+import { applyArchetypeBias, ARCHETYPE_BIASES } from "./genome/archetype-biases.js";
 import { formatGenerator } from "./generators/format-generators.js";
 import { fontCatalog } from "./font-catalog.js";
 import { designBriefGenerator } from "./generators/design-brief-generator.js";
 import { urlGenomeExtractor } from "./genome/extractor-url.js";
+// ── Ecosystem biomes: hash-selectable structural character per tier ─────────
+// Different seeds at same tier get different biome characters.
+// Intent + sector constrain which branches are valid; the hash picks the branch.
+const ECOSYSTEM_BIOMES = {
+    prokaryotic: ['iron-oxidizing', 'sulfur-reducing', 'methane-producing', 'nitrifying', 'photosynthetic'],
+    protist: ['predatory', 'symbiotic', 'colonial', 'parasitic', 'chemosynthetic'],
+    bryophyte: ['xeric', 'hydric', 'lithophytic', 'epiphytic', 'volcanic'],
+    vascular_flora: ['rainforest', 'desert', 'alpine', 'mangrove', 'riparian'],
+    invertebrate_fauna: ['coral-reef', 'deep-sea', 'tidal-pool', 'cave', 'thermophilic'],
+    ectotherm_fauna: ['savanna', 'wetland', 'volcanic', 'temperate', 'island'],
+    endotherm_fauna: ['arctic', 'tropical', 'montane', 'grassland', 'boreal'],
+};
+// Civilization archetypes: hash-selectable civilizational character per tier
+const CIVILIZATION_ARCHETYPES = {
+    tribal: ['totemic', 'shamanistic', 'nomadic', 'warrior', 'maritime'],
+    city_state: ['mercantile', 'theocratic', 'democratic', 'scholarly', 'militaristic'],
+    nation_state: ['industrial', 'maritime', 'agrarian', 'federated', 'bureaucratic'],
+    empire: ['colonial', 'theological', 'scientific', 'mercantile', 'maritime'],
+    network: ['distributed', 'federated', 'mesh', 'autonomous', 'quantum'],
+    singularity: ['convergent', 'transcendent', 'recursive', 'emergent', 'metamorphic'],
+};
+// Archetype context: character description passed to LLM component naming
+const ARCHETYPE_CONTEXT = {
+    totemic: 'each component embodies a symbol — bold, iconic, each has ritual significance',
+    shamanistic: 'components feel organic and liminal, as if channeling invisible forces',
+    nomadic: 'lightweight and portable — each component is self-contained, context-independent',
+    warrior: 'bold and direct — components are tools for action, not decoration',
+    maritime: 'navigational and fluid — components follow wave-like rhythm and flow',
+    mercantile: 'transactional and efficient — every component serves exchange above all',
+    theocratic: 'hierarchical and reverent — components follow sacred prescribed arrangement',
+    democratic: 'egalitarian and accessible — every component has equal voice and visibility',
+    scholarly: 'annotated and referenced — components carry their reasoning',
+    militaristic: 'ordered and ranked — components follow strict command hierarchy',
+    industrial: 'modular and mass-produced — components are interchangeable precision parts',
+    agrarian: 'seasonal and cyclical — components grow and harvest data in structured patterns',
+    federated: 'autonomous regions that agree on shared protocols — loosely coupled modules',
+    bureaucratic: 'process-driven and documented — every component has a form and a procedure',
+    colonial: 'expansionist — components aggressively capture and route data across surfaces',
+    theological: 'doctrine-driven — components serve a higher purpose with ceremonial weight',
+    scientific: 'empirical and hypothesis-driven — components measure, test, and log results',
+    distributed: 'no center of gravity — every node is both producer and consumer',
+    mesh: 'fully connected — every component can communicate with every other component',
+    autonomous: 'self-organizing — components make independent decisions, emergent behavior',
+    quantum: 'superposition — components exist in multiple contexts and states simultaneously',
+    convergent: 'all systems merge into a unified intelligence substrate',
+    transcendent: 'components operate beyond conventional UI paradigms',
+    recursive: 'components that generate themselves — infinitely self-referential',
+    emergent: 'no single designer — the system design emerges from component interactions',
+    metamorphic: 'components morph between states, forms, and contexts continuously',
+};
+// Biome context: character description passed to LLM organism naming
+const BIOME_CONTEXT = {
+    'iron-oxidizing': 'metallic and structural — catalyzes heavy data transformation',
+    'sulfur-reducing': 'reductive — simplifies and distills complex inputs to essentials',
+    'methane-producing': 'generative — produces outputs from minimal raw inputs',
+    'nitrifying': 'enriching — adds metadata, context, and structure to raw data',
+    'photosynthetic': 'light-converting — captures ambient signals and renders them visible',
+    'predatory': 'aggressive data consumers — hunts and captures information from the surface',
+    'symbiotic': 'co-dependent — components only reach full function in relationship',
+    'colonial': 'aggregate — gains power and capability by clustering',
+    'parasitic': 'dependent — attaches to and draws capability from host systems',
+    'chemosynthetic': 'energy from reactions — transforms one data type to another',
+    'xeric': 'adapted to scarcity — minimal and efficient with sparse data',
+    'hydric': 'water-adapted — fluid and overflow-friendly with abundant data',
+    'lithophytic': 'rock-clinging — permanent structural anchors that never move',
+    'epiphytic': 'surface-dwelling — attaches to and enhances other components',
+    'volcanic': 'intense and high-energy — handles bursts, spikes, and eruption-scale events',
+    'rainforest': 'dense and layered — stratified with canopy and understory hierarchy',
+    'desert': 'sparse and resilient — minimal components that survive extreme scarcity',
+    'alpine': 'high-altitude — adapted for extreme edge cases and boundary conditions',
+    'mangrove': 'boundary-dwelling — bridges two different data environments',
+    'riparian': 'stream-adjacent — lives at the edge of data flow, filters and routes',
+    'coral-reef': 'symbiotic colony — builds on others in dense colorful collaborative clusters',
+    'deep-sea': 'pressure-adapted — works in low-information environments, bioluminescent outputs',
+    'tidal-pool': 'periodic exposure — handles intermittent connectivity gracefully',
+    'cave': 'light-independent — works without visual feedback, sensation-first',
+    'thermophilic': 'heat-adapted — designed for high-throughput hot paths and sustained load',
+    'savanna': 'open and visible — high visual surface area, clear spatial hierarchy',
+    'wetland': 'filtration-focused — cleans, normalizes, and validates data streams',
+    'temperate': 'balanced and seasonal — adapts between different usage contexts',
+    'island': 'isolated and self-sufficient — works without external dependencies',
+    'arctic': 'cold and efficient — conserves computational energy aggressively',
+    'tropical': 'rich and abundant — high feature density and visual richness',
+    'montane': 'high-altitude specialist — edge computing and altitude scenarios',
+    'grassland': 'open-range and scalable — extends across flat wide information landscapes',
+    'boreal': 'coniferous and structured — regular repeating tree-like component structure',
+};
+/**
+ * SHA-256 hash chain helpers.
+ * Layer 1: sha256(seed)                       → genome.dnaHash      (chromosomes)
+ * Layer 2: sha256(genome.dnaHash)             → ecosystemHash       (biome / organisms)
+ * Layer 3: sha256(ecosystemHash)              → civilizationHash    (archetype / components)
+ *
+ * Each layer is derived FROM the previous layer's hash, not from a parallel tap on the seed.
+ * Same seed → same chain. Different seeds → avalanche effect ensures differentiation per layer.
+ */
+function ecoHashFromGenomeHash(genomeDnaHash) {
+    return crypto.createHash("sha256").update(genomeDnaHash).digest("hex");
+}
+function civHashFromEcoHash(ecosystemHash) {
+    return crypto.createHash("sha256").update(ecosystemHash).digest("hex");
+}
+function hashByte(hexHash, bytePos, modulo) {
+    return parseInt(hexHash.slice(bytePos * 2, bytePos * 2 + 2), 16) % modulo;
+}
+/** Maps ecosystem complexity to the appropriate biological tier key for biome lookup */
+function ecosystemTierKey(complexity) {
+    if (complexity >= 0.74)
+        return 'endotherm_fauna';
+    if (complexity >= 0.66)
+        return 'ectotherm_fauna';
+    if (complexity >= 0.57)
+        return 'invertebrate_fauna';
+    if (complexity >= 0.45)
+        return 'vascular_flora';
+    if (complexity >= 0.34)
+        return 'bryophyte';
+    if (complexity >= 0.23)
+        return 'protist';
+    return 'prokaryotic';
+}
 class DesignGenomeServer {
     server;
     extractor;
@@ -280,12 +403,13 @@ class DesignGenomeServer {
                         // 2. Semantic Extraction (single LLM call: traits + sector + archetype + copy intelligence)
                         // When offline: true, skip LLM and use hash-based trait inference
                         const finalContext = epigeneticData?.brandContext || context;
-                        let traits, detectedSector, copyIntelligence, copy;
+                        let traits, detectedSector, copyIntelligence, copy, structural;
                         if (args.offline) {
                             traits = await this.extractor.extractTraits(intent, finalContext ?? "");
                             detectedSector = "technology";
                             copyIntelligence = undefined;
                             copy = undefined;
+                            structural = undefined;
                         }
                         else {
                             const analysis = await this.extractor.analyze(intent, finalContext);
@@ -293,6 +417,7 @@ class DesignGenomeServer {
                             detectedSector = analysis.sector.primary;
                             copyIntelligence = analysis.copyIntelligence;
                             copy = analysis.copy;
+                            structural = analysis.structural;
                         }
                         // 4. DNA Sequencing (pass copy intelligence + LLM copy to sequencer)
                         const genome = this.sequencer.generate(seed, traits, {
@@ -303,8 +428,10 @@ class DesignGenomeServer {
                                 copy
                             }
                         }, epigeneticData);
-                        // 5. Complexity Analysis — determines output tier
-                        const complexityResult = this.complexityAnalyzer.analyze(intent, finalContext ?? "", traits);
+                        // 5. Complexity Analysis — structural props take priority over traits.
+                        // structural is vocabulary-invariant (computed from what the product DOES).
+                        // Falls back to trait-based scoring in offline mode.
+                        const complexityResult = this.complexityAnalyzer.analyze(intent, finalContext ?? "", traits, structural);
                         const { finalComplexity, tier } = complexityResult;
                         // 6. CSS (always generated)
                         const css = this.cssGen.generate(genome, { format: "expanded" });
@@ -332,8 +459,19 @@ class DesignGenomeServer {
                             includeFooter: true,
                             includeSections: true
                         });
+                        // For civilization tiers: label the HTML as design token reference only.
+                        // Agents must implement from civilizationOutput.architecture — not from this HTML.
+                        const html_context = finalComplexity >= 0.81
+                            ? `CIVILIZATION TIER (${tier}): This HTML is a DESIGN TOKEN REFERENCE LAYOUT only. ` +
+                                `Do NOT implement your application from this HTML. ` +
+                                `Use civilizationOutput.architecture for state topology, routing patterns, and component structure. ` +
+                                `The HTML renders genome color/spacing tokens visually — it is not the application architecture.`
+                            : undefined;
                         let ecosystemOutput;
                         let civilizationOutput;
+                        // SHA-256 hash chain — each layer derived from the previous layer's output
+                        const genomeEcoHash = ecoHashFromGenomeHash(genome.dnaHash);
+                        const genomeCivHash = civHashFromEcoHash(genomeEcoHash);
                         // Ecosystem always runs — organism counts scale from 0 (abiotic) to max (endotherm_fauna)
                         {
                             const eco = ecosystemGenerator.generate(seed, traits, {
@@ -344,7 +482,13 @@ class DesignGenomeServer {
                                 ...eco.organisms.flora,
                                 ...eco.organisms.fauna
                             ];
+                            const ecoTierKey2 = ecosystemTierKey(finalComplexity < 0.81 ? finalComplexity : 0.79);
+                            const ecoBiomeOptions2 = ECOSYSTEM_BIOMES[ecoTierKey2] ?? ['balanced'];
+                            const ecoBiome2 = ecoBiomeOptions2[hashByte(genomeEcoHash, 0, ecoBiomeOptions2.length)];
+                            const ecoBiomeDesc2 = BIOME_CONTEXT[ecoBiome2] ?? ecoBiome2;
                             ecosystemOutput = {
+                                biome: ecoBiome2,
+                                biomeDescription: ecoBiomeDesc2,
                                 organisms: {
                                     counts: {
                                         microbial: eco.organisms.microbial.length,
@@ -382,9 +526,18 @@ class DesignGenomeServer {
                             if (finalComplexity >= 0.81) {
                                 try {
                                     const civTier = this.civilizationGen.generate(intent, finalContext ?? "", traits, genome);
-                                    // Pass ecosystem organisms — civilization uses topology-derived
-                                    // organism specs, not the generic tier component list
-                                    civilizationOutput = generateCivilizationOutput(civTier, genome, css, undefined, allOrganisms);
+                                    const civArchetypeOptions2 = CIVILIZATION_ARCHETYPES[civTier.tier] ?? ['balanced'];
+                                    const civArch2 = civArchetypeOptions2[hashByte(genomeCivHash, 0, civArchetypeOptions2.length)];
+                                    const civArchDesc2 = ARCHETYPE_CONTEXT[civArch2] ?? civArch2;
+                                    // Apply archetype chromosome biases to genome before generating civilization output
+                                    const archetypedGenome2 = applyArchetypeBias(genome, civArch2);
+                                    const archetypedCss2 = this.cssGen.generate(archetypedGenome2, { format: "compressed" });
+                                    civilizationOutput = {
+                                        archetype: civArch2,
+                                        archetypeDescription: civArchDesc2,
+                                        designPhilosophy: ARCHETYPE_BIASES[civArch2]?.designPhilosophy ?? civArchDesc2,
+                                        ...generateCivilizationOutput(civTier, archetypedGenome2, archetypedCss2, undefined, allOrganisms)
+                                    };
                                 }
                                 catch { /* ecosystem output still valid without civilization */ }
                             }
@@ -433,6 +586,7 @@ class DesignGenomeServer {
                                         topology,
                                         css,
                                         html,
+                                        html_context: html_context ?? null,
                                         // ecosystem: always present — organism counts scale with complexity tier
                                         // abiotic returns empty organism arrays, not null
                                         ecosystemOutput: ecosystemOutput ?? null,
@@ -489,10 +643,37 @@ class DesignGenomeServer {
                             // Offline fallback
                             ecoTraits = await this.extractor.extractTraits(args.intent, context);
                         }
+                        // Estimate organism counts from traits to size the LLM naming call.
+                        // Uses informationDensity as a proxy for complexity — close enough
+                        // for the naming call; exact counts are genome-derived inside the generator.
+                        const ecoComplexityProxy = Math.max(0, (ecoTraits.informationDensity ?? 0.5) * 0.6 +
+                            (ecoTraits.trustRequirement ?? 0.5) * 0.2 +
+                            (ecoTraits.spatialDependency ?? 0.5) * 0.2);
+                        const estimatedCounts = {
+                            microbial: ecoComplexityProxy < 0.11 ? 0
+                                : Math.min(16, Math.floor(2 + ((ecoComplexityProxy - 0.11) / 0.69) * 14)),
+                            flora: ecoComplexityProxy < 0.34 ? 0
+                                : Math.min(12, Math.floor(((ecoComplexityProxy - 0.34) / 0.46) * 12)),
+                            fauna: ecoComplexityProxy < 0.57 ? 0
+                                : Math.min(10, Math.floor(((ecoComplexityProxy - 0.57) / 0.23) * 10)),
+                        };
+                        // SHA-256 chain: ecosystem hash derived from genome hash (sha256(sha256(seed)))
+                        // Keeps biome selection on the same chain as chromosomes, not a parallel tap
+                        const ecoSeedHash = crypto.createHash("sha256").update(args.seed).digest("hex");
+                        const ecoBiomeHash = ecoHashFromGenomeHash(ecoSeedHash);
+                        const ecoTierKey = ecosystemTierKey(ecoComplexityProxy);
+                        const ecoBiomeOptions = ECOSYSTEM_BIOMES[ecoTierKey] ?? ['balanced'];
+                        const ecoBiome = ecoBiomeOptions[hashByte(ecoBiomeHash, 0, ecoBiomeOptions.length)];
+                        const ecoBiomeDesc = BIOME_CONTEXT[ecoBiome] ?? ecoBiome;
+                        const ecoBiomeContext = `${ecoBiome} — ${ecoBiomeDesc}`;
+                        // LLM names the organisms — product-specific, not abstract topology names.
+                        // Non-fatal: ecosystemGenerator falls back to topology-derived names if this fails.
+                        const organismsDefinition = await this.extractor.analyzeOrganisms(args.intent, ecoSector, estimatedCounts, ecoBiomeContext);
                         // Generate ecosystem - pass inferred sector so organisms reflect correct domain
                         const ecosystem = ecosystemGenerator.generate(args.seed, ecoTraits, {
                             ...(args.options || {}),
-                            primarySector: ecoSector
+                            primarySector: ecoSector,
+                            organismsDefinition,
                         });
                         // Generate CSS from the shared genome
                         const css = this.cssGen.generate(ecosystem.environment.genome, { format: "compressed" });
@@ -546,16 +727,19 @@ class DesignGenomeServer {
                             `| Complexity | ${ecosystem.evolution.complexity.toFixed(3)} |`,
                             `| Civilization ready | ${ecosystem.civilizationReady ? "Yes — call generate_civilization" : `No — gap: ${(ecosystem.civilizationThreshold - ecosystem.evolution.complexity).toFixed(3)}`} |`,
                             ``,
+                            `## Ecosystem Character`,
+                            `**Biome:** ${ecoBiome} — *${ecoBiomeDesc}*`,
+                            ``,
                             `## Organism Hierarchy`,
                             ``,
                             `### Microbial (atomic components) — ${ecosystem.organisms.microbial.length}`,
-                            ...ecosystem.organisms.microbial.map(o => `- **${o.name}** (${o.id}) — color: ${o.characteristics.colorTreatment}`),
+                            ...ecosystem.organisms.microbial.map(o => `- **${o.name}** (${o.id}) — ${o.purpose || `color: ${o.characteristics.colorTreatment}`}`),
                             ``,
                             `### Flora (composite components) — ${ecosystem.organisms.flora.length}`,
-                            ...ecosystem.organisms.flora.map(o => `- **${o.name}** (${o.id}) — motion: ${o.characteristics.motionStyle}`),
+                            ...ecosystem.organisms.flora.map(o => `- **${o.name}** (${o.id}) — ${o.purpose || `motion: ${o.characteristics.motionStyle}`}`),
                             ``,
                             `### Fauna (complex components) — ${ecosystem.organisms.fauna.length}`,
-                            ...ecosystem.organisms.fauna.map(o => `- **${o.name}** (${o.id}) — entropy: ${o.adaptation.entropy.toFixed(2)}`),
+                            ...ecosystem.organisms.fauna.map(o => `- **${o.name}** (${o.id}) — ${o.purpose || `entropy: ${o.adaptation.entropy.toFixed(2)}`}`),
                             ``,
                             `## Containment Map`,
                             ...ecosystem.relationships.filter((r) => r.type === "containment").slice(0, 10).map((r) => `- **${r.organisms[0]}** → contains → **${r.organisms[1]}** (pattern: ${r.pattern})`),
@@ -576,7 +760,8 @@ class DesignGenomeServer {
                                             environment: {
                                                 dnaHash: ecosystem.environment.genome.dnaHash,
                                                 habitabilityScore: ecosystem.environment.habitabilityScore,
-                                                carryingCapacity: ecosystem.environment.carryingCapacity
+                                                carryingCapacity: ecosystem.environment.carryingCapacity,
+                                                ecosystemGenome: ecosystem.environment.ecosystemGenome
                                             },
                                             organisms: {
                                                 counts: {
@@ -604,6 +789,8 @@ class DesignGenomeServer {
                                             }
                                         },
                                         sharedGenome: ecosystem.environment.genome,
+                                        biome: ecoBiome,
+                                        biomeDescription: ecoBiomeDesc,
                                         css,
                                         topology,
                                         usage: {
@@ -638,27 +825,50 @@ class DesignGenomeServer {
                         let ecosystem = args.ecosystem;
                         let baseGenome = null;
                         let organisms = null;
+                        let civEcoGenome = null;
                         if (ecosystem) {
                             // Use ecosystem's organisms and genome
                             baseGenome = ecosystem.environment?.genome;
                             organisms = ecosystem.organisms;
+                            civEcoGenome = ecosystem.environment?.ecosystemGenome ?? null;
                         }
                         // If no ecosystem or genome, generate using already-derived sector (no second LLM call)
                         if (!baseGenome) {
                             baseGenome = this.sequencer.generate(args.seed, civTraits, { primarySector: civSector });
                         }
                         const traits = civTraits;
-                        // Generate civilization tier
-                        const tier = this.civilizationGen.generate(args.intent, context, traits, baseGenome, args.min_tier);
+                        // Generate civilization tier — pass ecosystem genome for Layer 3 genome chain
+                        const tier = this.civilizationGen.generate(args.intent, context, traits, baseGenome, args.min_tier, civEcoGenome ?? undefined);
+                        // SHA-256 chain: civilization hash derived from ecosystem hash derived from genome hash
+                        const civEcoHash = ecoHashFromGenomeHash(baseGenome.dnaHash);
+                        const civCivHash = civHashFromEcoHash(civEcoHash);
+                        const civArchetypeOptions = CIVILIZATION_ARCHETYPES[tier.tier] ?? ['balanced'];
+                        const civArchetype = civArchetypeOptions[hashByte(civCivHash, 0, civArchetypeOptions.length)];
+                        const civArchetypeDesc = ARCHETYPE_CONTEXT[civArchetype] ?? civArchetype;
+                        const civArchetypeContext = `${civArchetype} — ${civArchetypeDesc}`;
+                        // Apply archetype chromosome biases — mutates edge, motion, grid, material
+                        const archetypedGenome = applyArchetypeBias(baseGenome, civArchetype);
+                        // Regenerate CSS from the archetype-biased genome
+                        const archetypedCss = this.cssGen.generate(archetypedGenome, { format: "compressed" });
+                        // LLM names civilization components — product-specific, archetype-flavored
+                        const civComponentCount = Array.isArray(tier.components.count)
+                            ? tier.components.count[1]
+                            : tier.components.list.length;
+                        const civComponentDefs = await this.extractor.analyzeCivilizationComponents(args.intent, civSector, tier.tier, civArchetypeContext, Math.min(civComponentCount, 16));
+                        // Overlay LLM names onto existing component specs (keeps accessibility/prop contracts)
+                        const namedComponentList = tier.components.list.map((spec, i) => {
+                            const def = civComponentDefs[i];
+                            if (!def)
+                                return spec;
+                            return { ...spec, name: def.name, purpose: def.purpose };
+                        });
                         // Generate code and structured file outputs
                         let codeOutputs = null;
                         let fileStructure = null;
                         if (args.generate_code === true) {
-                            // UNIFIED CSS: Use CSSGenerator like other tools
-                            const css = this.cssGen.generate(baseGenome, { format: "compressed" });
-                            const topology = this.htmlGen.generateTopology(baseGenome);
-                            // Generate code using genome with unified CSS/topology
-                            codeOutputs = generateCivilizationOutput(tier, baseGenome, css, topology);
+                            const topology = this.htmlGen.generateTopology(archetypedGenome);
+                            // Generate code using archetype-biased genome + CSS
+                            codeOutputs = generateCivilizationOutput(tier, archetypedGenome, archetypedCss, topology);
                             // Use ecosystem organisms if available, otherwise use tier components
                             const componentList = organisms
                                 ? [...organisms.microbial, ...organisms.flora, ...organisms.fauna]
@@ -689,6 +899,18 @@ class DesignGenomeServer {
                             `| Source | ${ecosystem ? "ecosystem-derived" : "standalone (no ecosystem provided)"} |`,
                             `| Code generated | ${args.generate_code === true ? "Yes" : "No — architecture specs only"} |`,
                             ``,
+                            `## Civilization Character`,
+                            `**Tier:** ${tier.tier} · **Archetype:** ${civArchetype}`,
+                            ``,
+                            `### Design Philosophy`,
+                            ARCHETYPE_BIASES[civArchetype]?.designPhilosophy ?? civArchetypeDesc,
+                            ``,
+                            `### Architecture Intent`,
+                            ARCHETYPE_BIASES[civArchetype]?.architectureIntent ?? '',
+                            ``,
+                            `### Chromosome Mutations Applied`,
+                            ...Object.entries(ARCHETYPE_BIASES[civArchetype]?.chromosomeMutations ?? {}).map(([k, v]) => `- \`${k}\`: ${JSON.stringify(v)}`),
+                            ``,
                             `## Architecture Direction`,
                             ...(tier.architecture ? Object.entries(tier.architecture).map(([k, v]) => `- **${k}:** ${JSON.stringify(v)}`) : ["- (no architecture data)"]),
                             ``,
@@ -709,6 +931,10 @@ class DesignGenomeServer {
                                         civilization_report,
                                         tier: tier.tier,
                                         complexity: tier.complexity,
+                                        archetype: civArchetype,
+                                        archetypeDescription: civArchetypeDesc,
+                                        designPhilosophy: ARCHETYPE_BIASES[civArchetype]?.designPhilosophy ?? civArchetypeDesc,
+                                        architectureIntent: ARCHETYPE_BIASES[civArchetype]?.architectureIntent ?? '',
                                         architecture: tier.architecture,
                                         source: ecosystem ? "ecosystem" : "standalone",
                                         components: {
@@ -721,7 +947,7 @@ class DesignGenomeServer {
                                                     category: o.category,
                                                     variants: o.spec?.variants
                                                 }))
-                                                : tier.components.list,
+                                                : namedComponentList,
                                             categories: organisms
                                                 ? [...new Set([...organisms.microbial, ...organisms.flora, ...organisms.fauna].map(o => o.category))]
                                                 : [...new Set(tier.components.list.map(c => c.category))]

@@ -1,13 +1,16 @@
 {
   "meta": {
     "title": "Permutations MCP: The Complete Journey",
-    "version": "0.0.9",
+    "version": "1.0.0",
     "last_updated": "2026-03-15",
     "author": "ObaIsSoft",
     "repository": "https://github.com/ObaIsSoft/Permutations",
-    "lines_of_code": 13200,
+    "lines_of_code": 14800,
     "test_count": 49,
-    "tool_count": 8
+    "tool_count": 8,
+    "font_providers": 4,
+    "genome_layers": 3,
+    "chromosome_count": 53
   },
   
   "origin_story": {
@@ -155,6 +158,65 @@
       "lines_of_code": 13200,
       "test_coverage": "49 tests: Genome, Sequencer, Production, Ecosystem/Civilization"
     },
+    "v0_0_9_font_catalog": {
+      "date": "March 2026",
+      "theme": "From static font templating to live provider catalogs — font choices as varied as the design itself",
+      "motivation": "extract_genome_from_url returned headingFont: 'satoshi'. Agent passed font_provider: 'google'. Google doesn't host Satoshi. Tool looked up 'satoshi' in Google's registry → got undefined → .id on undefined → TypeError crash. Static lists of 6–15 fonts per provider were no better: every similar product got the same small pool. Font slop — the exact problem Permutations exists to prevent.",
+      "features": [
+        "FontCatalogService: fetches live font catalogs from Fontshare, Google Fonts, and Bunny at runtime with 24h in-memory cache — no API key required for any provider",
+        "'fontshare' and 'none' added as font providers (enum was 'bunny' | 'google' only)",
+        "'none' provider returns family name without CDN import URL — user manages font loading themselves",
+        "Google Fonts public metadata endpoint (fonts.google.com/metadata/fonts) — full 1000+ font catalog",
+        "Fontshare public API — returns full ~100-font catalog in one ~830KB response regardless of pagination params",
+        "Bunny mirrors Google catalog — separate cache key, same fetch logic",
+        "CHARGE_TAGS: maps TypeCharge → provider → category tags (normalized lowercase-hyphen across all providers: 'sans-serif', 'serif', 'display', 'monospace')",
+        "warmCache() pre-warms all providers at server startup — non-blocking, startup remains instant",
+        "FALLBACK_FONTS: hardcoded per-charge lists used when cache cold or API unavailable — graceful degradation"
+      ],
+      "bugs_fixed": [
+        "TypeError crash: font lookup returned undefined for fonts not in provider's catalog. .id on undefined → crash. Fixed: null-safety + provider-aware catalog lookup via FontCatalogService",
+        "Google category mismatch: fonts.google.com/metadata/fonts returns category 'Sans Serif' (space, title case). Code applied .toUpperCase() → 'SANS SERIF'. CHARGE_TAGS had 'SANS_SERIF' (underscore). Zero geometric/grotesque fonts matched — fell back to 7-font list instead of 709. Fixed: normalize all categories to lowercase-hyphen in fetchGoogle()",
+        "Fontshare timeout: res.json() on ~830KB response timed out at 10s. Fixed: 30s timeout. API ignores perpage param — full catalog returned in single response",
+        "Fontshare field mapping: assumed tags[] array and total_count field. Actual response uses category string and count_total. Fixed: use correct field names"
+      ],
+      "architecture_changes": [
+        "New file: src/font-catalog.ts — FontCatalogService class with per-provider fetch, 24h TTL Map cache, CHARGE_TAGS mapping, FALLBACK_FONTS per charge type",
+        "FontProvider type updated: 'bunny' | 'google' | 'fontshare' | 'none'",
+        "selectDisplayFont() and selectBodyFont() in sequencer.ts: use fontCatalog.getFonts(charge, provider) — pool expanded from 6–15 hardcoded fonts to 100–1000+ live provider fonts",
+        "getFontImportUrl() handles Fontshare URL format (api.fontshare.com/v2/css) and 'none' (returns empty string)",
+        "server.ts font_provider schema enum updated to include 'fontshare' and 'none'"
+      ]
+    },
+    "v1_0_0_genome_chain": {
+      "date": "March 2026",
+      "theme": "From single-layer design DNA to a living three-layer genome chain — design, ecosystem, civilization — each derived from the previous via SHA-256 hash, each layer's chromosome values biasing the next",
+      "milestone": "First stable release. The biological metaphor is now complete: a seed grows into a design genome, which grows into an ecological system of components, which grows into a civilizational architecture. Every decision is traceable back to the original seed.",
+      "features": [
+        "Three-layer SHA-256 genome chain: seed → sha256 → DesignGenome (L1, 32 chromosomes) → sha256 → EcosystemGenome (L2, 11 chromosomes) → sha256 → CivilizationGenome (L3, 10 chromosomes). Each layer deterministic, each parentHash tracked for provenance.",
+        "EcosystemGenome (L2): biome (16 types), energy source, symbiosis pattern, trophic structure, succession stage, adaptation axis, population pattern, temporal rhythm, spatial axis, capacity class, mutation rate. Fully wired into ecosystem.ts organism generation.",
+        "CivilizationGenome (L3): archetype, governance, economics, technology, culture, resilience, knowledge, expansion, age, fragility. Governance model overrides ch30_state_topology. Knowledge model overrides ch31_routing_pattern.",
+        "Gravity biasing system: each layer's gravity functions use predecessor chromosome VALUES (not just hash ancestry). Dark + metallic design → hydrothermal biome. Mutualistic symbiosis → federated governance → distributed state. Predatory energy → warrior archetype.",
+        "biasedPick weighted probability: replaces rotation+clamp which collapsed distinct gravity values. For 8-option arrays, gravity values 4/5/6/7 all produced the same ±2 rotation. New system: target index gets 4× weight, adjacent 2×, others 1×. Every distinct gravity produces a distinct probability distribution.",
+        "StructuralProps — vocabulary-invariant complexity scoring: LLM answers 10 binary/count questions about product behavior (realtimeState, entityCount, sensitiveData, multiRole, financialTransactions, complexWorkflows, deepNavigation, externalIntegrations, screenCount, primarySurface). computeComplexityFromStructure() maps answers to tier deterministically. Keyword boost removed from buildPrompt entirely.",
+        "Verified: 'a tool doctors use to check patient vitals' scores 0.913 (city_state) — higher than 'patient portal' (0.763, endotherm_fauna) — because vitals monitoring correctly implies real-time state. Plain language beats keywords at accuracy.",
+        "Edge diversity fix: effectivePlayfulness = Math.max(0.3, traits.playfulness) floors the radius range so all three styles (sharp/soft/organic) are reachable at every playfulness level. sharpCeiling proportionally expands sharp classification for sharp-preference sectors.",
+        "Motion diversity fix: 25% of seeds (b(30) > 0.75) deviate to adjacent physics regardless of sector default. Same sector, different seeds, genuinely different motion — not just different easing on the same physics.",
+        "Biome byte fix: was b[0] >> 4 (nibble, 0–15 range). New biasedPick uses Math.floor((rawByte/256) * total). With rawByte 0–15 and total ~21, positions 16–20 were unreachable — 5 biomes effectively blocked. Fixed to full byte b[0].",
+        "Gravity hole fixes: chemosynthetic energy → scientific archetype (was falling to mercantile default). Mixotrophic energy → maritime archetype (was falling to mercantile default). Economics: chemosynthetic → gift (free, self-contained), mixotrophic → market (adaptive, bidirectional). Three consecutive tests of healthcare yielded mercantile×3 before this fix.",
+        "Architecture fully wired in server.ts: generate_ecosystem returns ecosystemGenome in environment. generate_civilization receives ecosystemGenome, sequences CivilizationGenome, patches stateTopology and routingPattern post-hoc."
+      ],
+      "architecture_changes": [
+        "New files: src/genome/ecosystem-types.ts, src/genome/ecosystem-sequencer.ts, src/genome/civilization-types.ts, src/genome/civilization-sequencer.ts",
+        "ecosystem.ts: generateMicrobialColony/generateFloraEcosystem/generateFaunaPopulation all accept EcosystemGenome. eco_ch11_mutation.rate drives entropy multiplier. eco_ch3_symbiosis.depth drives containment depth. eco_ch4_trophic.cascade drives prey count.",
+        "civilization.ts: generate() accepts optional EcosystemGenome as 6th param. Post-hoc patching after generateTier(): civGenome.chromosomes.civ_ch2_governance.model → stateTopology, civ_ch7_knowledge.model → routingPattern.",
+        "complexity-analyzer.ts: computeComplexityFromStructure() static method — deterministic, no LLM. analyze() accepts optional StructuralProps — uses structural when present, falls back to trait-based scoring in offline mode.",
+        "extractor.ts: StructuralProps interface exported. structural field added to DesignAnalysis and LLMResponse. buildPrompt() replaced BOOST COMPLEXITY keyword block with 10 behavioral structural questions with concrete YES/NO examples.",
+        "server.ts: structural extracted from analysis.structural, passed to complexityAnalyzer.analyze() as 4th argument."
+      ],
+      "lines_of_code": 14800,
+      "chromosome_count": "53 total: 32 design (L1) + 11 ecosystem (L2) + 10 civilization (L3)",
+      "test_coverage": "49 tests: all passing. Semantic test (live LLM): vocabulary-invariant tier verified across 4 plain/keyword product pairs."
+    },
     "v0_0_7_full_rendering": {
       "date": "March 2026",
       "features": [
@@ -290,6 +352,22 @@
       "problem": "Multiple LLM calls per generation expensive",
       "solution": "Unified analysis: single call returns traits + sector + archetype",
       "mechanism": "Consolidated prompt with structured JSON output, 50% API cost reduction"
+    },
+
+    "gap_8_single_layer_genome": {
+      "problem": "A design genome told you what it should look like (colors, fonts, motion) but not what kind of system it is or how it should be structured. Two products with the same complexity score got the same architecture direction regardless of whether one was a tightly-coupled healthcare portal and the other a loosely-coupled marketplace. The genome was a visual brief, not a living system.",
+      "solution": "Three-layer SHA-256 genome chain. L1 sequences design character. L2 sequences ecological character (how components relate). L3 sequences civilizational character (how the application is structured). Each layer derived from the previous via sha256(parentHash) — same chain provenance, different concerns.",
+      "mechanism": "Predecessor chromosome VALUES gravity-bias successor selections. A dark+metallic design produces a hydrothermal ecosystem. Mutualistic symbiosis produces federated governance. Federated governance overrides ch30_state_topology to 'distributed'. The visual design literally grows into an application architecture."
+    },
+    "gap_9_vocabulary_bias": {
+      "problem": "Complexity tier — which determines how many components are generated, whether civilization architecture activates, and what state/routing patterns apply — was computed partly from keywords in the product description. 'Dashboard', 'platform', 'system' boosted tier. 'Tool', 'app', 'tracker' did not. A complex product described simply got the wrong tier. An architect who said 'a distributed transaction processing system' got a higher tier than one who said 'a way to handle purchases'.",
+      "solution": "StructuralProps: 10 binary/count questions about product behavior. computeComplexityFromStructure() maps answers deterministically. Keyword boost removed from LLM prompt entirely. Tier now computed from what the product does, not how it is described.",
+      "mechanism": "LLM answers: Does state change while user watches? How many entity types? Sensitive data? Multiple roles? Financial transactions? Multi-step workflows? Deep navigation? External APIs? Screen count? Primary surface? These are answerable from behavior description regardless of vocabulary. The mapping to tier is deterministic code — not LLM judgment — so it is consistent across providers, models, and prompt variations."
+    },
+    "gap_7_font_templating": {
+      "problem": "Hardcoded font lists of 6–15 per provider meant every product in the same sector-charge category drew from the same small pool — font slop alongside the color slop the tool was built to prevent",
+      "solution": "Live font catalogs fetched from provider APIs at runtime — pool reflects the full catalog, not a curated subset that creates templates",
+      "mechanism": "FontCatalogService with 24h cache. Fontshare (~100 fonts), Google Fonts (1000+), Bunny (mirrors Google). 'none' provider for self-managed loading. No API key required for any."
     }
   },
 
@@ -365,26 +443,60 @@
       "impact": "Tool was generating TSX that contradicted the agent's design intent. generate_component's output competed with the genome's direction.",
       "discovery": "The tool's mandate is design direction, not implementation. When a tool generates code, it skips the agent's judgment.",
       "breakthrough": "Removed 6 tools. Added suggested_next to genome response so agents know the workflow. Ecosystem + civilization return specs not code by default."
+    },
+    "struggle_14_biasedpick_gravity_collapse": {
+      "problem": "The original biasedPick used rotation + clamp: target = byte + floor(gravity) then clamped to valid indices. For an 8-option array with clamp window = floor(8×0.25) = 2, gravity values 4, 5, 6, and 7 all produced rotations of +2, +2, +2, +2 — the same shift. Warrior archetype (index 4), democratic (5), industrial (6), emergent (7) were indistinguishable from each other. The gravity function was computing different targets; the selection function was throwing that information away.",
+      "discovery": "Running six different healthcare product seeds: got mercantile archetype 3 times. Healthcare shouldn't produce mercantile — it has no energy source that maps there. Investigated: chemosynthetic and mixotrophic energy both fell to return 2 (mercantile default) because the gravity function had no cases for them. Fixed gravity holes. Still got clustering. Traced further: gravity=4 and gravity=6 were producing identical byte distributions.",
+      "breakthrough": "Replaced rotation+clamp with weighted probability. gravity is now a TARGET INDEX. Weight distribution: target=4×, target±1=2×, all others=1×. Cumulative weight array built per call. rawByte maps into weight-space via Math.floor((rawByte/256) * total). Every distinct target produces a genuinely distinct distribution. No two gravity values collapse to the same output.",
+      "impact": "Applied to both ecosystem-sequencer.ts and civilization-sequencer.ts. Also fixed two gravity holes: chemosynthetic→scientific(1), mixotrophic→maritime(3) in archetypeGravity; chemosynthetic→gift(2), mixotrophic→market(1) in economicsGravity."
+    },
+    "struggle_15_chromosome_clustering_root_causes": {
+      "problem": "After fixing biasedPick, still saw edge style 'soft' appearing repeatedly within a sector. Motion physics clustering similarly. Not biasedPick this time — three separate root causes operating simultaneously.",
+      "root_cause_1_edge": "generateEdge() used playfulness directly for max radius: maxRadius × playfulness. At playfulness=0.2 (fintech), max radius = 32×0.2 = 6.4. Organic threshold was hardcoded at 16. With max radius of 6, the radius could never exceed 16 — 'organic' was geometrically impossible. Every fintech site was soft by construction, not by hash.",
+      "root_cause_2_motion": "generateMotion() selected physics from sector profile then returned. No hash byte influenced the selection within the sector. Same sector, 100 different seeds — all got identical physics. The hash only affected motion IF the sector had multiple options, but single-physics sectors never deviated.",
+      "root_cause_3_biome": "After fixing biasedPick, biome byte was still b[0] >> 4 (nibble, values 0–15). New biasedPick maps rawByte via (rawByte/256) * total. With rawByte max=15 and total≈21, positions 16–20 were unreachable — 5 biomes blocked from appearing regardless of gravity.",
+      "fixes": "Edge: effectivePlayfulness = Math.max(0.3, playfulness). organicThreshold proportional to effective range (50% of max). sharpCeiling proportionally expands sharp zone for sharp-preference sectors. Motion: b(30) > 0.75 deviates to adjacent physics (25% of seeds). Biome: changed b[0] >> 4 to b[0].",
+      "verification": "10-seed distribution test across 5 sectors: fintech edge {soft:8, sharp:2}, healthcare edge {organic:4, soft:5, sharp:1}, gaming edge {sharp:6, soft:4}. Distribution appropriate to sector character. Motion: fintech {step:8, spring:2}, gaming {step:2, spring:8}. No single-value lock-in."
+    },
+    "struggle_16_vocabulary_complexity_bias": {
+      "problem": "The trait-extracting LLM was told to 'BOOST COMPLEXITY when intent includes these keywords: +0.20 dashboard, +0.18 platform, +0.15 real-time...' This made the tier depend on which words the user chose, not what the product actually does. 'A tool for tracking workouts' could score protist while 'fitness analytics dashboard' scored ectotherm_fauna — same product, different tier, different architecture direction, different component library depth.",
+      "the_deeper_issue": "The 8 trait vectors (informationDensity, temporalUrgency, etc.) were doing two jobs simultaneously: driving visual design character AND computing complexity tier. These are different concerns. A product can be architecturally complex but visually minimal. Collapsing both concerns into the same floating-point vectors caused keyword-bias in both design character AND tier assignment.",
+      "solution": "Separate the two concerns. Add StructuralProps — 10 binary/count questions about product BEHAVIOR answered by the LLM. computeComplexityFromStructure() maps those answers to a complexity score deterministically. The 8 trait vectors now drive only visual/interaction character. Remove keyword boost from buildPrompt entirely.",
+      "why_binary_count": "Binary/count outputs are much harder for an LLM to get wrong based on vocabulary than calibrated floating-point scores. 'Does state update while the user watches?' is answerable from product behavior, not from whether the user said 'dashboard' or 'tool'. 'How many entity types?' counts things — same count regardless of what synonym the user chose.",
+      "verified": "Live test with Groq API: 'a tool doctors use to check patient vitals and schedule follow-ups' → realtimeState=true, sensitiveData=true → 0.913 city_state. 'Patient portal for a family medicine clinic' → realtimeState=false, sensitiveData=true → 0.763 endotherm_fauna. Plain description scored HIGHER because describing doctor behavior (checking vitals) correctly implies real-time monitoring. Old keyword system would have scored 'portal' higher."
+    },
+    "struggle_13_font_provider_crash": {
+      "problem": "extract_genome_from_url returned headingFont: 'satoshi'. Agent called generate_design_genome with font_provider: 'google' — Satoshi is on Fontshare, not Google Fonts.",
+      "failure": "Tool looked up 'satoshi' from Google's catalog → got undefined → .id on undefined → TypeError crash. The agent had done everything right — the tool failed to handle the mismatch.",
+      "the_deeper_issue": "Even with the crash fixed, the right answer wasn't 'add Satoshi to the Google list.' That's still templating. Static font lists of 6–15 per provider create font slop: every similar product draws from the same small pool, the exact problem Permutations exists to prevent.",
+      "breakthrough": "FontCatalogService fetches live catalogs at runtime — Fontshare (~100 fonts), Google Fonts (1000+), Bunny (mirrors Google). 24h cache, no API keys, graceful fallback. Pool went from 6–15 curated fonts to 100–1000+ live provider fonts. Two seeds in the same sector-charge now pull from fundamentally different pools."
     }
   },
 
   "technical_achievements": {
-    "determinism": "Same seed produces identical hash and genome—verified across 1000+ seeds",
-    "uniqueness": "Different seeds produce different designs—10 seeds = 10 unique outputs. forbiddenRanges ensures two seeds in the same sector still produce different hues.",
-    "constraint_enforcement": "Epistasis rules prevent 8 known 'slop' patterns",
+    "determinism": "Same seed produces identical hash and genome across all three layers — verified across 1000+ seeds",
+    "uniqueness": "Different seeds produce different designs at all three layers. forbiddenRanges ensures two seeds in the same sector produce different hues. biasedPick weighted probability ensures distinct gravity values produce distinct distributions.",
+    "three_layer_chain": "SHA-256 hash chain: seed → DesignGenome (L1, 32 chromosomes) → EcosystemGenome (L2, 11 chromosomes) → CivilizationGenome (L3, 10 chromosomes). Total: 53 chromosomes. Predecessor values gravity-bias successor selections — the design literally grows into an architecture.",
+    "vocabulary_invariant_complexity": "StructuralProps: 10 binary/count behavioral questions. computeComplexityFromStructure() is deterministic code. Same product described differently → same structural answers → same tier. Verified live: 'a tool doctors use to check vitals' scores city_state (0.913). 'Patient portal' scores endotherm_fauna (0.763). Plain behavioral description beats keyword description at accuracy.",
+    "gravity_biasing": "biasedPick weighted probability: target index gets 4×, adjacent 2×, others 1×. Every distinct gravity value produces a distinct probability distribution. Gravity holes filled: chemosynthetic→scientific, mixotrophic→maritime (archetype); chemosynthetic→gift, mixotrophic→market (economics).",
+    "edge_diversity": "effectivePlayfulness = Math.max(0.3, playfulness). Proportional organicThreshold. sharpCeiling for sharp-preference sectors. All three styles reachable at every playfulness level. Verified: 10-seed distribution across 5 sectors — no single-value lock-in.",
+    "motion_diversity": "25% of seeds deviate to adjacent physics via b(30) > 0.75. Same sector, different seeds, genuinely different motion.",
+    "constraint_enforcement": "Epistasis rules prevent 8 known 'slop' patterns. Sector forbidden ranges prevent hue prison. biasedPick weighted probability prevents archetype collapse.",
     "sector_coverage": "23 sectors with forbidden hue ranges, hero type weightings, trust signal requirements",
-    "offline_mode": "offline: true param skips LLM entirely — hash-based trait inference, fully deterministic, no API cost",
+    "offline_mode": "offline: true skips LLM. Falls back to trait-based complexity scoring (structural unavailable). hash-based trait inference.",
     "multi_provider": "6 LLM providers supported: Groq, OpenAI, Anthropic, Gemini, OpenRouter, HuggingFace",
-    "test_coverage": "49 production tests: determinism, uniqueness, sector-awareness, epistasis, pattern detection",
+    "test_coverage": "49 production tests: determinism, uniqueness, sector-awareness, epistasis, ecosystem-civilization bridge, pattern detection. All passing.",
     "url_extraction": "Triple backend: Playwright (JS sites), Scrapy (pro crawling), Native fetch (zero deps)",
     "css_validation": "AST-based genome-aware validation with drift scoring 0-100",
     "dark_mode_safety": "Every genome ships darkModeHex (lightness 58–74%) — visible on dark surfaces. Base hex (22–35%) for light mode. CSS var --color-primary-interactive for interactive elements.",
     "explainability": "Every tool response includes a _report field: genome_report (chromosomes sequenced + constraints), ecosystem_report (organism hierarchy + containment map), civilization_report (tier reached + architecture direction)",
     "workflow_guidance": "suggested_next array in genome response — dynamic list of which tools to call next, when, and why. Based on complexity score.",
     "tool_surface": "8 tools with STEP-prefixed descriptions. Agents know workflow order without documentation.",
-    "zero_hardcoding": "All values derived from SHA-256 hash and LLM extraction—no magic numbers, no placeholder fallbacks",
+    "zero_hardcoding": "All values derived from SHA-256 hash and LLM extraction — no magic numbers, no placeholder fallbacks",
     "complete_page_css": "CSSGenerator covers every HTML section: navigation, hero variants, trust grid, social proof, features, FAQ, CTA, footer — zero unstyled elements",
-    "api_optimization": "50% cost reduction through unified analysis calls. offline: true = 0 API calls."
+    "api_optimization": "Single LLM call returns structural props + traits + sector + copy intelligence. offline: true = 0 API calls.",
+    "dynamic_font_catalog": "Live font catalogs fetched from provider APIs at runtime — Fontshare (~100), Google Fonts (1000+), Bunny (mirrors Google). 24h in-memory cache, no API key required.",
+    "font_provider_breadth": "4 font providers: google, bunny, fontshare, none. 'none' returns family name without CDN URL for self-managed loading."
   },
 
   "motivation": {

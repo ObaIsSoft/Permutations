@@ -17,6 +17,7 @@
  * generates the topology, not the name.
  */
 import { GenomeSequencer } from "./sequencer.js";
+import { sequenceEcosystemGenome } from "./ecosystem-sequencer.js";
 /**
  * Topology-derived organism descriptors
  * NOT templates - these describe mathematical patterns that emerge from chromosomes
@@ -80,14 +81,19 @@ export class EcosystemGenerator {
         // enable3D: true so ch15_biomarker.complexity reflects trait-driven values,
         // which determines organism counts (microbial/flora/fauna tier thresholds)
         const genome = this.sequencer.generate(seed, traits, { primarySector: inferredSector, options: { enable3D: true } });
+        // Layer 2: sequence ecosystem genome from design genome
+        const ecosystemGenome = sequenceEcosystemGenome(genome, genome.chromosomes.ch15_biomarker.complexity);
         // Calculate how well this environment supports life
         const habitabilityScore = this.calculateHabitability(traits);
         // CHROMOSOME-DRIVEN: Counts determined by genome, not just traits
         const counts = this.calculateOrganismCounts(genome, options);
-        // Generate organisms from the shared environment
-        const microbial = this.generateMicrobialColony(genome, counts.microbial);
-        const flora = this.generateFloraEcosystem(genome, microbial, counts.flora);
-        const fauna = this.generateFaunaPopulation(genome, flora, counts.fauna);
+        // Generate organisms from the shared environment.
+        // When organismsDefinition is provided, LLM-supplied names and purposes are used.
+        // Falls back to topology-derived abstract naming when not provided.
+        const defs = options?.organismsDefinition;
+        const microbial = this.generateMicrobialColony(genome, ecosystemGenome, counts.microbial, defs?.microbial);
+        const flora = this.generateFloraEcosystem(genome, ecosystemGenome, microbial, counts.flora, defs?.flora);
+        const fauna = this.generateFaunaPopulation(genome, ecosystemGenome, flora, counts.fauna, defs?.fauna);
         // Calculate ecosystem complexity
         const complexity = this.calculateComplexity(genome, microbial, flora, fauna);
         const diversity = this.calculateDiversity(microbial, flora, fauna);
@@ -99,6 +105,7 @@ export class EcosystemGenerator {
         return {
             environment: {
                 genome,
+                ecosystemGenome,
                 habitabilityScore,
                 carryingCapacity
             },
@@ -120,29 +127,31 @@ export class EcosystemGenerator {
         };
     }
     // === MICROBIAL COLONY ===
-    // Atomic components: topology-derived, not named templates
-    generateMicrobialColony(genome, count) {
+    // Atomic components: LLM-named when definitions provided, topology-derived as fallback
+    generateMicrobialColony(genome, eco, count, definitions) {
         const organisms = [];
         const baseEntropy = genome.chromosomes.ch12_signature.entropy;
+        // eco_ch11_mutation.rate modulates how much each organism drifts from base entropy
+        const mutationRate = eco.chromosomes.eco_ch11_mutation.rate;
         const patterns = TOPOLOGY_PATTERNS.microbial;
         for (let i = 0; i < count; i++) {
             const mutation = this.generateMutation(genome, i);
-            // CHROMOSOME-DRIVEN: Select pattern based on hash entropy
+            const def = definitions?.[i];
+            // LLM-supplied identity takes precedence; topology-derived naming as fallback
             const patternIndex = Math.floor(this.deriveFromHash(mutation, patterns.length));
             const pattern = patterns[patternIndex % patterns.length];
-            // CHROMOSOME-DRIVEN: Generate variants based on genome, not hardcoded list
-            const variantCount = Math.floor(this.deriveFromHash(mutation, 4)) + 2; // 2-5 variants
+            const variantCount = Math.floor(this.deriveFromHash(mutation, 4)) + 2;
             const variants = this.generateVariantNames(pattern.patterns, variantCount, mutation);
-            // CHROMOSOME-DRIVEN: Derive name from topology
-            const name = this.deriveOrganismName(pattern.prefix, mutation, i, 'microbial');
+            const name = def?.name ?? this.deriveOrganismName(pattern.prefix, mutation, i, 'microbial');
             organisms.push({
                 id: `M-${i}`,
                 name,
+                purpose: def?.purpose ?? '',
                 category: 'microbial',
                 spec: this.createComponentSpec(name, variants, 'microbial', genome),
                 adaptation: {
                     mutation,
-                    entropy: baseEntropy * (1 + i * 0.05),
+                    entropy: baseEntropy * (1 + i * 0.05) * (0.5 + mutationRate),
                     generation: 1
                 },
                 characteristics: {
@@ -168,23 +177,26 @@ export class EcosystemGenerator {
         return organisms;
     }
     // === FLORA ECOSYSTEM ===
-    // Growing components: containers with containment relationships
-    generateFloraEcosystem(genome, microbial, count) {
+    // Growing components: LLM-named when definitions provided, topology-derived as fallback
+    generateFloraEcosystem(genome, eco, microbial, count, definitions) {
         const organisms = [];
         const baseEntropy = genome.chromosomes.ch12_signature.entropy;
+        // eco_ch3_symbiosis.depth: how tightly flora contain microbes (0=shallow, 1=deep nesting)
+        const symbiosisDepth = eco.chromosomes.eco_ch3_symbiosis.depth;
+        // eco_ch4_trophic.cascade: high cascade → more prey connections per flora
+        const trophicCascade = eco.chromosomes.eco_ch4_trophic.cascade;
+        const mutationRate = eco.chromosomes.eco_ch11_mutation.rate;
         const patterns = TOPOLOGY_PATTERNS.flora;
         for (let i = 0; i < count; i++) {
             const mutation = this.generateMutation(genome, i + 100);
-            // CHROMOSOME-DRIVEN: Select pattern
+            const def = definitions?.[i];
             const patternIndex = Math.floor(this.deriveFromHash(mutation, patterns.length));
             const pattern = patterns[patternIndex % patterns.length];
-            // CHROMOSOME-DRIVEN: Generate variants
             const variantCount = Math.floor(this.deriveFromHash(mutation, 5)) + 2;
             const variants = this.generateVariantNames(pattern.patterns, variantCount, mutation);
-            // CHROMOSOME-DRIVEN: Derive name from topology
-            const name = this.deriveOrganismName(pattern.prefix, mutation, i, 'flora');
-            // CHROMOSOME-DRIVEN: Which microbes this flora contains
-            const preyCount = Math.min(4, Math.floor(this.deriveFromHash(mutation, 4)) + 1);
+            const name = def?.name ?? this.deriveOrganismName(pattern.prefix, mutation, i, 'flora');
+            // CHROMOSOME-DRIVEN: trophic cascade modulates how many microbes this flora contains
+            const preyCount = Math.min(4, Math.floor(this.deriveFromHash(mutation, 4) * (1 + trophicCascade)) + 1);
             const prey = [];
             for (let p = 0; p < preyCount && p < microbial.length; p++) {
                 const microIndex = Math.floor(this.deriveFromHash(mutation + p, microbial.length));
@@ -193,11 +205,12 @@ export class EcosystemGenerator {
             organisms.push({
                 id: `F-${i}`,
                 name,
+                purpose: def?.purpose ?? '',
                 category: 'flora',
                 spec: this.createComponentSpec(name, variants, 'flora', genome),
                 adaptation: {
                     mutation,
-                    entropy: baseEntropy * (1.2 + i * 0.08),
+                    entropy: baseEntropy * (1.2 + i * 0.08) * (0.5 + mutationRate),
                     generation: 2
                 },
                 characteristics: {
@@ -207,7 +220,7 @@ export class EcosystemGenerator {
                     texture: this.deriveTexture(genome)
                 },
                 topology: {
-                    containmentDepth: 1, // Flora contain microbes
+                    containmentDepth: Math.max(1, Math.round(1 + symbiosisDepth)), // eco_ch3_symbiosis.depth drives nesting depth
                     edgeProfile: genome.chromosomes.ch7_edge.radius / 32,
                     motionComplexity: genome.chromosomes.ch8_motion.physics === 'spring' ? 0.6 : 0.3,
                     interactionPattern: `${genome.chromosomes.ch8_motion.physics}-container`
@@ -222,23 +235,25 @@ export class EcosystemGenerator {
         return organisms;
     }
     // === FAUNA POPULATION ===
-    // Complex moving components: orchestrators
-    generateFaunaPopulation(genome, flora, count) {
+    // Complex moving components: LLM-named when definitions provided, topology-derived as fallback
+    generateFaunaPopulation(genome, eco, flora, count, definitions) {
         const organisms = [];
         const baseEntropy = genome.chromosomes.ch12_signature.entropy;
+        // eco_ch4_trophic.cascade: high cascade → fauna orchestrate more flora
+        const trophicCascade = eco.chromosomes.eco_ch4_trophic.cascade;
+        // eco_ch2_energy.flux: high flux → fauna have more active entropy
+        const energyFlux = eco.chromosomes.eco_ch2_energy.flux;
         const patterns = TOPOLOGY_PATTERNS.fauna;
         for (let i = 0; i < count; i++) {
             const mutation = this.generateMutation(genome, i + 200);
-            // CHROMOSOME-DRIVEN: Select pattern
+            const def = definitions?.[i];
             const patternIndex = Math.floor(this.deriveFromHash(mutation, patterns.length));
             const pattern = patterns[patternIndex % patterns.length];
-            // CHROMOSOME-DRIVEN: Generate variants
             const variantCount = Math.floor(this.deriveFromHash(mutation, 5)) + 2;
             const variants = this.generateVariantNames(pattern.patterns, variantCount, mutation);
-            // CHROMOSOME-DRIVEN: Derive name from topology
-            const name = this.deriveOrganismName(pattern.prefix, mutation, i, 'fauna');
-            // CHROMOSOME-DRIVEN: Which flora this fauna contains
-            const preyCount = Math.min(5, Math.floor(this.deriveFromHash(mutation, 5)) + 2);
+            const name = def?.name ?? this.deriveOrganismName(pattern.prefix, mutation, i, 'fauna');
+            // CHROMOSOME-DRIVEN: trophic cascade modulates how many flora this fauna orchestrates
+            const preyCount = Math.min(5, Math.floor(this.deriveFromHash(mutation, 5) * (1 + trophicCascade)) + 2);
             const prey = [];
             for (let p = 0; p < preyCount && p < flora.length; p++) {
                 const floraIndex = Math.floor(this.deriveFromHash(mutation + p, flora.length));
@@ -247,11 +262,12 @@ export class EcosystemGenerator {
             organisms.push({
                 id: `A-${i}`,
                 name,
+                purpose: def?.purpose ?? '',
                 category: 'fauna',
                 spec: this.createComponentSpec(name, variants, 'fauna', genome),
                 adaptation: {
                     mutation,
-                    entropy: baseEntropy * (1.5 + i * 0.1),
+                    entropy: baseEntropy * (1.5 + i * 0.1) * (0.5 + energyFlux),
                     generation: 3
                 },
                 characteristics: {
@@ -501,6 +517,7 @@ export class EcosystemGenerator {
             organisms.push({
                 id: `I-${i}`,
                 name: `Icon${iconography.style.charAt(0).toUpperCase() + iconography.style.slice(1)}-${i}`,
+                purpose: `${iconography.style} icon using ${iconography.library} at ${iconography.strokeWeight} stroke weight`,
                 category: 'microbial',
                 spec: {
                     name: `icon-${i}`,

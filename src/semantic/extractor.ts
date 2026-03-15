@@ -10,7 +10,38 @@ type LLMProvider = "groq" | "openai" | "anthropic" | "gemini" | "openrouter" | "
 const LLM_TIMEOUT_MS = 30_000;   // 30s timeout per attempt (increased for cold starts)
 const LLM_MAX_RETRIES = 3;       // Retry up to 3 times with exponential backoff + jitter
 
+/**
+ * Structural properties of a product — binary/count answers about what it DOES.
+ * Derived from LLM analysis but computed deterministically into complexity score.
+ * Vocabulary-invariant: "a tool doctors use to track patients" and
+ * "clinical patient monitoring dashboard" produce the same structural answers.
+ */
+export interface StructuralProps {
+    /** Does state update while the user is watching? (live data, websocket, polling) */
+    realtimeState: boolean;
+    /** How many distinct data entity types does the product manage? (users, orders, products = 3) */
+    entityCount: number;
+    /** Does it handle sensitive personal data — medical, financial, legal, or authentication? */
+    sensitiveData: boolean;
+    /** Do different users see different interfaces based on role or permission level? */
+    multiRole: boolean;
+    /** Does it process payments, billing, or manage financial accounts? */
+    financialTransactions: boolean;
+    /** Does it guide users through multi-step workflows, wizards, or approval chains? */
+    complexWorkflows: boolean;
+    /** Does navigation have 3 or more levels of hierarchy? */
+    deepNavigation: boolean;
+    /** Does it consume data from external APIs, OAuth providers, or third-party services? */
+    externalIntegrations: boolean;
+    /** Approximate number of distinct screens or views the user can navigate to */
+    screenCount: number;
+    /** Primary surface type — what is the user primarily doing? */
+    primarySurface: 'data' | 'content' | 'media' | 'transaction' | 'balanced';
+}
+
 export interface DesignAnalysis {
+    // Structural complexity — vocabulary-invariant product properties
+    structural: StructuralProps;
     // 8 trait vectors
     traits: {
         informationDensity: number;
@@ -73,6 +104,18 @@ export interface DesignAnalysis {
  * Raw LLM response structure (before normalization)
  */
 interface LLMResponse {
+    structural?: {
+        realtimeState?: boolean;
+        entityCount?: number;
+        sensitiveData?: boolean;
+        multiRole?: boolean;
+        financialTransactions?: boolean;
+        complexWorkflows?: boolean;
+        deepNavigation?: boolean;
+        externalIntegrations?: boolean;
+        screenCount?: number;
+        primarySurface?: string;
+    };
     traits?: {
         informationDensity?: number;
         temporalUrgency?: number;
@@ -232,7 +275,25 @@ export class SemanticTraitExtractor {
                     this.callProvider(prompt),
                     LLM_TIMEOUT_MS
                 );
+                const s = result.structural ?? {};
+                const toBool = (v: unknown) => v === true || v === 'true' || v === 1;
                 return {
+                    structural: {
+                        realtimeState:          toBool(s.realtimeState),
+                        entityCount:            Math.max(1, Math.min(30, Math.round(Number(s.entityCount) || 1))),
+                        sensitiveData:          toBool(s.sensitiveData),
+                        multiRole:              toBool(s.multiRole),
+                        financialTransactions:  toBool(s.financialTransactions),
+                        complexWorkflows:       toBool(s.complexWorkflows),
+                        deepNavigation:         toBool(s.deepNavigation),
+                        externalIntegrations:   toBool(s.externalIntegrations),
+                        screenCount:            Math.max(1, Math.min(50, Math.round(Number(s.screenCount) || 1))),
+                        primarySurface: (
+                            ['data','content','media','transaction','balanced'].includes(s.primarySurface as string)
+                                ? s.primarySurface as StructuralProps['primarySurface']
+                                : 'balanced'
+                        ),
+                    },
                     traits: {
                         informationDensity: this.clamp(result.traits?.informationDensity ?? 0.5),
                         temporalUrgency: this.clamp(result.traits?.temporalUrgency ?? 0.5),
@@ -305,6 +366,243 @@ export class SemanticTraitExtractor {
             `Last error: ${lastError?.message || "Unknown error"}. ` +
             `Set a valid API key (GROQ_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY, or HUGGINGFACE_API_KEY).`
         );
+    }
+
+    /**
+     * Identify the actual UI components (organisms) for this product.
+     * The genome/complexity tier determines HOW MANY organisms exist.
+     * This call determines WHAT they are — product-specific, not abstract topology names.
+     *
+     * Returns organism definitions that the ecosystem generator uses for naming.
+     * Falls back gracefully (returns empty arrays) if LLM unavailable.
+     */
+    async analyzeOrganisms(
+        intent: string,
+        sector: string,
+        counts: { microbial: number; flora: number; fauna: number },
+        biomeContext?: string
+    ): Promise<{
+        microbial: Array<{ name: string; purpose: string }>;
+        flora:     Array<{ name: string; purpose: string }>;
+        fauna:     Array<{ name: string; purpose: string }>;
+    }> {
+        if (this.apiKeyMissing || (counts.microbial + counts.flora + counts.fauna) === 0) {
+            return { microbial: [], flora: [], fauna: [] };
+        }
+
+        const biomeIntro = biomeContext
+            ? `\nEcosystem biome: ${biomeContext}\nLet this biome subtly flavor component naming (e.g., in a 'deep-sea' fintech ecosystem, components might evoke depth/discovery; in a 'volcanic' context, intensity/heat).\n`
+            : '';
+        const prompt = `You are naming UI components for a ${sector} product.
+Product: ${intent}
+${biomeIntro}
+Generate exactly:
+- ${counts.microbial} atomic components (microbial): smallest interactive/display elements — buttons, status indicators, badges, input fields, icons, loaders, price cells
+- ${counts.flora} composite components (flora): groups of atomic elements — forms, cards, nav bars, dropdowns, list items, filter panels
+- ${counts.fauna} complex components (fauna): full orchestrators with state — tables, charts, dialogs, editors, page shells, data grids
+
+Return ONLY this JSON, no explanation:
+{
+  "microbial": [{ "name": "PascalCase", "purpose": "one sentence" }],
+  "flora":     [{ "name": "PascalCase", "purpose": "one sentence" }],
+  "fauna":     [{ "name": "PascalCase", "purpose": "one sentence" }]
+}
+
+Rules:
+- Names must be specific to this product's domain (e.g. PriceCell, PatientCard, OrderForm — not GenericButton, BaseCard)
+- No "Generic", "Base", "Component", "Element", "Widget" suffixes
+- Purpose: one sentence describing what the user sees or does with it
+- Exactly ${counts.microbial} microbial, ${counts.flora} flora, ${counts.fauna} fauna entries`;
+
+        try {
+            const result = await this.withTimeout(
+                this.callOrganismsProvider(prompt),
+                LLM_TIMEOUT_MS
+            );
+            return {
+                microbial: (result.microbial || []).slice(0, counts.microbial),
+                flora:     (result.flora     || []).slice(0, counts.flora),
+                fauna:     (result.fauna     || []).slice(0, counts.fauna),
+            };
+        } catch {
+            // Non-fatal — ecosystem generator falls back to topology-derived names
+            return { microbial: [], flora: [], fauna: [] };
+        }
+    }
+
+    /** Dispatch to providers for organism naming — larger token budget than trait extraction */
+    private async callOrganismsProvider(prompt: string): Promise<{
+        microbial?: Array<{ name: string; purpose: string }>;
+        flora?:     Array<{ name: string; purpose: string }>;
+        fauna?:     Array<{ name: string; purpose: string }>;
+    }> {
+        switch (this.provider) {
+            case "groq": {
+                if (!this.groq) throw new Error("Groq not initialized");
+                const r = await this.groq.chat.completions.create({
+                    model: "llama-3.3-70b-versatile",
+                    messages: [{ role: "user", content: prompt }],
+                    response_format: { type: "json_object" },
+                    temperature: 0.4,
+                });
+                return JSON.parse(r.choices[0].message.content || "{}");
+            }
+            case "openai": {
+                if (!this.openai) throw new Error("OpenAI not initialized");
+                const r = await this.openai.chat.completions.create({
+                    model: "gpt-4.1",
+                    messages: [{ role: "user", content: prompt }],
+                    response_format: { type: "json_object" },
+                    temperature: 0.4,
+                });
+                return JSON.parse(r.choices[0].message.content || "{}");
+            }
+            case "anthropic": {
+                if (!this.anthropic) throw new Error("Anthropic not initialized");
+                const r = await this.anthropic.messages.create({
+                    model: "claude-3-7-sonnet-latest",
+                    max_tokens: 2048,
+                    messages: [{ role: "user", content: prompt }],
+                });
+                const c = r.content[0];
+                if (c.type !== "text") throw new Error("Unexpected Anthropic response type");
+                const m = c.text.match(/\{[\s\S]*\}/);
+                if (!m) throw new Error("No JSON in Anthropic response");
+                return JSON.parse(m[0]);
+            }
+            case "gemini": {
+                if (!this.gemini) throw new Error("Gemini not initialized");
+                const r = await this.gemini.generateContent({
+                    contents: [{ role: "user", parts: [{ text: prompt }] }],
+                    generationConfig: { temperature: 0.4, responseMimeType: "application/json" },
+                });
+                const m = r.response.text().match(/\{[\s\S]*\}/);
+                if (!m) throw new Error("No JSON in Gemini response");
+                return JSON.parse(m[0]);
+            }
+            case "openrouter": {
+                if (!this.openrouter) throw new Error("OpenRouter not initialized");
+                const r = await this.openrouter.chat.completions.create({
+                    model: "meta-llama/llama-3.3-70b-versatile",
+                    messages: [{ role: "user", content: prompt }],
+                    response_format: { type: "json_object" },
+                    temperature: 0.4,
+                });
+                return JSON.parse(r.choices[0].message.content || "{}");
+            }
+            default:
+                // HuggingFace: skip organism naming — JSON reliability too low for structured output
+                return { microbial: [], flora: [], fauna: [] };
+        }
+    }
+
+    /**
+     * Names UI components for a civilization tier — product-specific, archetype-flavored.
+     * Same pattern as analyzeOrganisms but for application-level components at civilization tiers.
+     * Falls back gracefully (returns empty array) if LLM unavailable.
+     */
+    async analyzeCivilizationComponents(
+        intent: string,
+        sector: string,
+        tier: string,
+        archetypeContext: string,
+        count: number
+    ): Promise<Array<{ name: string; purpose: string }>> {
+        if (this.apiKeyMissing || count === 0) return [];
+
+        const prompt = `You are naming UI components for a ${sector} product.
+Product: ${intent}
+Civilization tier: ${tier}
+Archetype: ${archetypeContext}
+
+Generate exactly ${count} component names for this ${tier}-level product.
+Components at this tier span atomic elements, composite containers, complex orchestrators, and full application surfaces.
+
+Return ONLY this JSON, no explanation:
+{
+  "components": [{ "name": "PascalCase", "purpose": "one sentence" }]
+}
+
+Rules:
+- Names must be specific to this product's domain (e.g. TradingTerminal, PatientSummary — not GenericDashboard)
+- The archetype character should flavor the naming register
+- No "Generic", "Base", "Component", "Element", "Widget" suffixes
+- Exactly ${count} entries`;
+
+        try {
+            const result = await this.withTimeout(
+                this.callCivilizationComponentsProvider(prompt),
+                LLM_TIMEOUT_MS
+            );
+            return (result.components || []).slice(0, count);
+        } catch {
+            // Non-fatal — civilization generator falls back to generic tier component names
+            return [];
+        }
+    }
+
+    /** Dispatch to providers for civilization component naming */
+    private async callCivilizationComponentsProvider(prompt: string): Promise<{
+        components?: Array<{ name: string; purpose: string }>;
+    }> {
+        switch (this.provider) {
+            case "groq": {
+                if (!this.groq) throw new Error("Groq not initialized");
+                const r = await this.groq.chat.completions.create({
+                    model: "llama-3.3-70b-versatile",
+                    messages: [{ role: "user", content: prompt }],
+                    response_format: { type: "json_object" },
+                    temperature: 0.4,
+                });
+                return JSON.parse(r.choices[0].message.content || "{}");
+            }
+            case "openai": {
+                if (!this.openai) throw new Error("OpenAI not initialized");
+                const r = await this.openai.chat.completions.create({
+                    model: "gpt-4.1",
+                    messages: [{ role: "user", content: prompt }],
+                    response_format: { type: "json_object" },
+                    temperature: 0.4,
+                });
+                return JSON.parse(r.choices[0].message.content || "{}");
+            }
+            case "anthropic": {
+                if (!this.anthropic) throw new Error("Anthropic not initialized");
+                const r = await this.anthropic.messages.create({
+                    model: "claude-3-7-sonnet-latest",
+                    max_tokens: 2048,
+                    messages: [{ role: "user", content: prompt }],
+                });
+                const c = r.content[0];
+                if (c.type !== "text") throw new Error("Unexpected Anthropic response type");
+                const m = c.text.match(/\{[\s\S]*\}/);
+                if (!m) throw new Error("No JSON in Anthropic response");
+                return JSON.parse(m[0]);
+            }
+            case "gemini": {
+                if (!this.gemini) throw new Error("Gemini not initialized");
+                const r = await this.gemini.generateContent({
+                    contents: [{ role: "user", parts: [{ text: prompt }] }],
+                    generationConfig: { temperature: 0.4, responseMimeType: "application/json" },
+                });
+                const m = r.response.text().match(/\{[\s\S]*\}/);
+                if (!m) throw new Error("No JSON in Gemini response");
+                return JSON.parse(m[0]);
+            }
+            case "openrouter": {
+                if (!this.openrouter) throw new Error("OpenRouter not initialized");
+                const r = await this.openrouter.chat.completions.create({
+                    model: "meta-llama/llama-3.3-70b-versatile",
+                    messages: [{ role: "user", content: prompt }],
+                    response_format: { type: "json_object" },
+                    temperature: 0.4,
+                });
+                return JSON.parse(r.choices[0].message.content || "{}");
+            }
+            default:
+                // HuggingFace: skip — JSON reliability too low for structured output
+                return { components: [] };
+        }
     }
 
     /**
@@ -392,30 +690,6 @@ TRAIT DEFINITIONS (with real-world anchors)
    0.1 = Educational resource, nonprofit awareness (pure information)
    0.5 = Standard business (contact forms, newsletter signup)
   0.9 = E-commerce checkout, sales page (aggressive CTAs, scarcity)
-
-═══════════════════════════════════════════════════════════════
-COMPLEXITY TIER SYSTEM (civilization thresholds)
-═══════════════════════════════════════════════════════════════
-
-Complexity determines the "civilization tier" - how sophisticated the generated system is:
-
-0.00-0.29 (Microbial): Atomic components only (buttons, inputs)
-0.30-0.49 (Flora): Growing components (cards, dropdowns)
-0.50-0.69 (Fauna): Complex organisms (data tables, wizards)
-0.70-0.84 (Sentient): CIVILIZATION BEGINS - Full architecture, state management
-0.85-0.94 (Civilized): Multi-page app, routing, advanced patterns
-0.95-1.00 (Advanced): AI-driven, micro-frontends, generative components
-
-BOOST COMPLEXITY when intent includes these keywords:
-+0.20: dashboard, platform, system, suite, application
-+0.18: 3d, webgl, data visualization, real-time, immersive
-+0.15: spatial, live, collaborative, multiplayer
-+0.12: animation, motion, physics, spring
-+0.10: interactive, dynamic, social
-+0.08: component, library, accessible
-
-TARGET: If the intent suggests a sophisticated application (not just a landing page),
-ensure trait combinations push complexity toward 0.70+ to trigger civilization tier.
 
 ═══════════════════════════════════════════════════════════════
 EPISTASIS RULES (trait interactions - APPLY THESE CONSTRAINTS)
@@ -629,6 +903,58 @@ Generate ACTUAL copy content by extracting key information from the user's inten
 RULE: All copy MUST be derived from intent content. Do NOT use generic placeholders. Names and titles must feel authentic to the sector.
 
 ═══════════════════════════════════════════════════════════════
+STRUCTURAL ANALYSIS (complexity is computed from this — not from vocabulary)
+═══════════════════════════════════════════════════════════════
+
+Answer based on what the product DOES, not the words used to describe it.
+"a tool doctors use to track patients" and "clinical monitoring dashboard" are the same product.
+
+1. realtimeState (boolean): Does the user see data change while looking at the screen?
+   YES: stock ticker, live chat, sensor monitoring, collaborative editing, notifications
+   NO: blog, document editor with manual save, booking form, product catalogue
+
+2. entityCount (integer 1–20): How many distinct types of data objects does this product manage?
+   Count each unique thing that has its own properties and can be listed/viewed separately.
+   "log sets and reps" → workouts, exercises, sets = 3
+   "hospital portal" → patients, appointments, medications, lab results, doctors = 5
+   "landing page" → 1 (no data management, just content)
+
+3. sensitiveData (boolean): Does this product handle sensitive personal data?
+   YES: medical records, financial account data, legal documents, passwords, payment cards, personal health info
+   NO: public blog posts, product catalogues, general appointment scheduling without PII
+
+4. multiRole (boolean): Do different users see different interfaces based on role/permission?
+   YES: admin vs end-user, doctor vs patient, manager vs employee, buyer vs seller
+   NO: single user type, everyone sees the same screens
+
+5. financialTransactions (boolean): Does this product process payments or manage financial accounts?
+   YES: checkout, subscription billing, invoice generation, trading, banking, crypto
+   NO: displaying prices, financial education, expense tracking without payment processing
+
+6. complexWorkflows (boolean): Does this product guide users through multi-step processes?
+   YES: onboarding wizards, approval chains, multi-step forms (3+ steps), diagnostic flows, booking with configuration
+   NO: simple CRUD operations, single-step actions, read-only content
+
+7. deepNavigation (boolean): Does navigation have 3 or more levels of hierarchy?
+   YES: home → category → subcategory → item → detail panel (3+ levels)
+   NO: home → about → contact (flat, 1–2 levels)
+
+8. externalIntegrations (boolean): Does this product consume data from external APIs or services?
+   YES: weather APIs, payment processors, OAuth providers, calendar sync, analytics, map data
+   NO: standalone, self-contained, no external data feeds
+
+9. screenCount (integer 1–30): How many distinct screens or views does this product have?
+   Count each unique view a user navigates to as one screen.
+   Simple landing page = 1 | Blog = 3–5 | E-commerce = 8–12 | SaaS dashboard = 10–20
+
+10. primarySurface (one of: "data" | "content" | "media" | "transaction" | "balanced"):
+    data        = tables, charts, metrics, real-time feeds (primary purpose: managing/displaying data)
+    content     = articles, docs, long-form text (primary purpose: reading)
+    media       = images, video, portfolio (primary purpose: visual media)
+    transaction = checkout, booking, form submission (primary purpose: completing an action)
+    balanced    = roughly equal mix
+
+═══════════════════════════════════════════════════════════════
 OUTPUT INSTRUCTIONS
 ═══════════════════════════════════════════════════════════════
 
@@ -641,6 +967,18 @@ OUTPUT INSTRUCTIONS
 7. Output EXACTLY this JSON (no markdown, no explanation):
 
 {
+  "structural": {
+    "realtimeState": true|false,
+    "entityCount": 1-20,
+    "sensitiveData": true|false,
+    "multiRole": true|false,
+    "financialTransactions": true|false,
+    "complexWorkflows": true|false,
+    "deepNavigation": true|false,
+    "externalIntegrations": true|false,
+    "screenCount": 1-30,
+    "primarySurface": "data|content|media|transaction|balanced"
+  },
   "traits": {
     "informationDensity": 0.0-1.0,
     "temporalUrgency": 0.0-1.0,

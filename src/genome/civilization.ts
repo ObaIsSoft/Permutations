@@ -1,5 +1,29 @@
 import { DesignGenome, ContentTraits, StateTopology, RoutingPattern, TokenInheritance } from "./types.js";
 import { ComplexityAnalyzer, ComplexityAnalysis } from "./complexity-analyzer.js";
+import { EcosystemGenome } from "./ecosystem-types.js";
+import { CivilizationGenome } from "./civilization-types.js";
+import { sequenceCivilizationGenome } from "./civilization-sequencer.js";
+
+// ── Civilization genome → architecture mappings ──────────────────────────────
+
+const GOVERNANCE_TO_STATE: Record<string, StateTopology> = {
+    centralized:  'local',
+    federated:    'distributed',
+    democratic:   'shared_context',
+    theocratic:   'local',
+    oligarchic:   'shared_context',
+    anarchic:     'distributed',
+    militaristic: 'reactive_store',
+    technocratic: 'reactive_store',
+};
+
+const KNOWLEDGE_TO_ROUTING: Record<string, RoutingPattern> = {
+    centralized: 'single_page',
+    distributed: 'federated',
+    oral:        'multi_page',
+    recorded:    'platform',
+    emergent:    'platform',
+};
 
 // [min, max] inclusive range — communicates that actual counts vary with content complexity
 export type TierRange = [number, number];
@@ -57,6 +81,8 @@ export interface InteractionSystem {
 export interface CivilizationTier {
     tier: 'tribal' | 'city_state' | 'nation_state' | 'empire' | 'network' | 'singularity';
     complexity: number;
+    /** Layer 3 genome — present when ecosystemGenome was supplied to generate() */
+    civilizationGenome?: CivilizationGenome;
     architecture: ArchitectureSpec;
     components: {
         count: TierRange | 'generative';
@@ -84,7 +110,8 @@ export class CivilizationGenerator {
         context: string,
         traits: ContentTraits,
         genome?: DesignGenome,
-        minTier?: CivilizationTier['tier']
+        minTier?: CivilizationTier['tier'],
+        ecosystemGenome?: EcosystemGenome
     ): CivilizationTier {
         // minTier must be a civilization tier — reject ecosystem tiers at call site
         const civMinTier = minTier as ComplexityAnalysis['tier'] | undefined;
@@ -103,7 +130,20 @@ export class CivilizationGenerator {
             );
         }
 
-        return this.generateTier(analysis, genome);
+        const result = this.generateTier(analysis, genome);
+
+        // Layer 3: sequence civilization genome from ecosystem genome and apply overrides
+        if (ecosystemGenome) {
+            const civGenome = sequenceCivilizationGenome(ecosystemGenome);
+            result.civilizationGenome = civGenome;
+            // Governance model drives state topology; knowledge model drives routing pattern
+            const stateOverride = GOVERNANCE_TO_STATE[civGenome.chromosomes.civ_ch2_governance.model];
+            const routingOverride = KNOWLEDGE_TO_ROUTING[civGenome.chromosomes.civ_ch7_knowledge.model];
+            if (stateOverride) result.architecture.stateTopology = stateOverride;
+            if (routingOverride) result.architecture.routingPattern = routingOverride;
+        }
+
+        return result;
     }
 
     private generateTier(analysis: ComplexityAnalysis, genome?: DesignGenome): CivilizationTier {

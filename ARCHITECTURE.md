@@ -1,628 +1,572 @@
 # Permutations Architecture
-## Context-Aware, Sector-Mapped, Anti-Slop Design Generation
+## Three-Layer SHA-256 Genome Chain — v1.0.0
 
 ---
 
-## Core Principle: Correlation to Context
+## Core Principle
 
-The design genome must correlate to:
-1. **Sector** (primary + secondary blending)
-2. **Content** (analyzed text/images for sub-sector variation)
-3. **Intent** (user's stated purpose)
-4. **Brand** (identity overrides sector with weighted influence)
+Permutations is a **design constitution generator**. It produces three interlocking genomes — design, ecosystem, civilization — each deterministically derived from the previous via SHA-256 hash. The same seed always produces the same three genomes. Different seeds always produce distinct genomes at all three layers.
+
+**No vocabulary dependency.** Complexity tier is computed from structural product behavior (what the product *does*), not from keywords in the description.
 
 ---
 
-## The Generation Pipeline
+## The Three-Layer Pipeline
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         INPUT LAYER                                  │
-├─────────────────────────────────────────────────────────────────────┤
-│  Sector: "healthcare" (primary) + "fintech" (secondary)             │
-│  Content: PDFs, images, text (analyzed for sub-sector variation)    │
-│  Intent: "Patient billing portal for high-net-worth individuals"    │
-│  Brand Assets: Logo (red), guidelines (luxury positioning)          │
-└─────────────────────────────────────────────────────────────────────┘
-                                    ↓
-┌─────────────────────────────────────────────────────────────────────┐
-│                      CONTENT ANALYSIS LAYER                          │
-├─────────────────────────────────────────────────────────────────────┤
-│  Text Analysis:                                                      │
-│    - "billing", "portal" → high information density                  │
-│    - "high-net-worth" → luxury positioning, trust critical           │
-│    - "patient" → healthcare context (empathy needed)                 │
-│                                                                      │
-│  Image Analysis:                                                     │
-│    - Logo color: #E53935 (red)                                       │
-│    - Brand positioning: luxury, exclusive                            │
-│                                                                      │
-│  Sub-Sector Classification: "healthcare_financial_luxury"            │
-└─────────────────────────────────────────────────────────────────────┘
-                                    ↓
-┌─────────────────────────────────────────────────────────────────────┐
-│                    SECTOR CONSTRAINT LAYER                           │
-├─────────────────────────────────────────────────────────────────────┤
-│  Primary Sector (healthcare, 70% influence):                         │
-│    - Trust signals: REQUIRED (patient data)                          │
-│    - Color bias: blues/greens (80% probability)                      │
-│    - Hero type: trust_focused OR service_showcase                    │
-│    - Typography: humanist or geometric (readable, professional)      │
-│                                                                      │
-│  Secondary Sector (fintech, 30% influence):                          │
-│    - Security signals: HIGH priority                                 │
-│    - Color bias: deep purples/navy (added to palette)                │
-│    - Motion: minimal, functional (transaction-focused)               │
-│                                                                      │
-│  Sub-Sector Override (luxury):                                       │
-│    - Spacing: generous (maximal rhythm)                              │
-│    - Typography: high contrast, dramatic scale                       │
-│    - Materials: metallic, glass (premium feel)                       │
-└─────────────────────────────────────────────────────────────────────┘
-                                    ↓
-┌─────────────────────────────────────────────────────────────────────┐
-│                     BRAND INTEGRATION LAYER                          │
-├─────────────────────────────────────────────────────────────────────┤
-│  Brand Color (#E53935 red) vs Sector Bias (blue/green):              │
-│                                                                      │
-│  Resolution Strategy:                                                │
-│    - Primary: Brand red (70% weight) - "We respect your identity"    │
-│    - Influence: Red triggers "energy/urgency" in healthcare context  │
-│    - Compensation: Increase trust signal prominence (counter urgency)│
-│    - Accent: Sector-appropriate blues as secondary palette           │
-│                                                                      │
-│  Result: Red primary + Blue accents + Enhanced trust signals         │
-└─────────────────────────────────────────────────────────────────────┘
-                                    ↓
-┌─────────────────────────────────────────────────────────────────────┐
-│                    GENOME SEQUENCING LAYER                           │
-├─────────────────────────────────────────────────────────────────────┤
-│  Seed + Sector Profile + Brand Constraints + Content Markers         │
-│                                                                      │
-│  Generates 32 chromosomes with:                                     │
-│    - Constrained randomness (sector-weighted probabilities)          │
-│    - Epistasis rules (chromosome interactions)                       │
-│    - User-eliminable chromosomes (opt-out flexibility)               │
-└─────────────────────────────────────────────────────────────────────┘
-                                    ↓
-┌─────────────────────────────────────────────────────────────────────┐
-│                     OUTPUT GENERATION LAYER                          │
-├─────────────────────────────────────────────────────────────────────┤
-│  CSS: Sector-appropriate variables + brand overrides                │
-│  Hero: Content-aware selection (trust grid, not 3D biomarker)       │
-│  Trust Signals: Chromosome-generated structure + content-filled     │
-│  3D Elements: ELIMINATED (user preference: no decorative 3D)        │
-└─────────────────────────────────────────────────────────────────────┘
+seed (string)
+     │
+     │ sha256(seed)
+     ▼
+┌─────────────────────────────────────────────────────┐
+│  Layer 1 — DesignGenome                             │
+│                                                     │
+│  "What does it LOOK like?"                          │
+│  32 chromosomes: color, typography, motion,         │
+│  grid, edge, hierarchy, hero, trust, texture,       │
+│  atmosphere, iconography, state topology, routing   │
+│                                                     │
+│  hash = sha256(seed)                                │
+└─────────────────────────────────────────────────────┘
+     │
+     │ sha256(designGenome.dnaHash)
+     ▼
+┌─────────────────────────────────────────────────────┐
+│  Layer 2 — EcosystemGenome                          │
+│                                                     │
+│  "What KIND of components ARE these?"               │
+│  11 chromosomes: biome, energy, symbiosis,          │
+│  trophic, succession, adaptation, population,       │
+│  temporal, spatial, capacity, mutation              │
+│                                                     │
+│  hash = sha256(designGenome.dnaHash)                │
+│  parentHash = designGenome.dnaHash                  │
+└─────────────────────────────────────────────────────┘
+     │
+     │ sha256(ecosystemGenome.hash)
+     ▼
+┌─────────────────────────────────────────────────────┐
+│  Layer 3 — CivilizationGenome                       │
+│                                                     │
+│  "How is the APPLICATION structured?"               │
+│  10 chromosomes: archetype, governance, economics,  │
+│  technology, culture, resilience, knowledge,        │
+│  expansion, age, fragility                          │
+│                                                     │
+│  hash = sha256(ecosystemGenome.hash)                │
+│  parentHash = ecosystemGenome.hash                  │
+└─────────────────────────────────────────────────────┘
+```
+
+Each layer's chromosome values **gravity-bias** the next layer's selections. This is not just hash ancestry — the actual chromosome values flow downstream.
+
+---
+
+## What Each Layer Tells the Agent
+
+| Layer | Questions Answered | Agent Action |
+|---|---|---|
+| L1 DesignGenome | Colors, fonts, motion, grid, edge, hero | Write CSS tokens, style rules |
+| L2 EcosystemGenome | Component relationships, nesting depth, coupling, data flow direction | Design component API and hierarchy |
+| L3 CivilizationGenome | State topology, routing pattern, data strategy, resilience model | Structure the codebase |
+
+---
+
+## Full Generation Pipeline
+
+```
+Intent + Seed + Context + Brand Assets
+              │
+              ▼
+┌─────────────────────────────────────────────────────┐
+│  STRUCTURAL ANALYSIS (LLM call — single)            │
+│                                                     │
+│  LLM answers 10 binary/count questions:             │
+│   • realtimeState    — state changes while watching?│
+│   • entityCount      — how many data types managed? │
+│   • sensitiveData    — medical/financial/legal data?│
+│   • multiRole        — different UI per user role?  │
+│   • financialTx      — payment processing?          │
+│   • complexWorkflows — multi-step processes?        │
+│   • deepNavigation   — 3+ levels of hierarchy?      │
+│   • externalAPIs     — third-party integrations?    │
+│   • screenCount      — distinct views?              │
+│   • primarySurface   — data/content/media/tx/mixed  │
+│                                                     │
+│  + 8 design character trait vectors (0.0–1.0)       │
+│  + sector detection + copy intelligence             │
+└─────────────────────────────────────────────────────┘
+              │
+              ▼
+┌─────────────────────────────────────────────────────┐
+│  COMPLEXITY SCORING (deterministic — no LLM)        │
+│                                                     │
+│  computeComplexityFromStructure(structural):        │
+│    baseline:              +0.10                     │
+│    realtimeState:         +0.15                     │
+│    sensitiveData:         +0.18  (largest driver)   │
+│    multiRole:             +0.12                     │
+│    financialTransactions: +0.10                     │
+│    complexWorkflows:      +0.08                     │
+│    deepNavigation:        +0.06                     │
+│    externalIntegrations:  +0.05                     │
+│    entityCount (÷10):     up to +0.12               │
+│    screenCount (÷15):     up to +0.08               │
+│    primarySurface bonus:  up to +0.06               │
+│                                                     │
+│  → finalComplexity (0.0–1.0)                        │
+│  → tier (abiotic → singularity)                     │
+│                                                     │
+│  Vocabulary-invariant: "a tool doctors use to       │
+│  track patients" and "clinical monitoring           │
+│  dashboard" produce the same tier.                  │
+└─────────────────────────────────────────────────────┘
+              │
+              ▼
+┌─────────────────────────────────────────────────────┐
+│  DNA SEQUENCING — Layer 1 (DesignGenome)            │
+│                                                     │
+│  sha256(seed) → 32-byte hash                        │
+│  Each byte pair → one chromosome                   │
+│  Sector profile → gravity biases selections         │
+│  Epistasis rules → cross-chromosome constraints     │
+│                                                     │
+│  Key outputs:                                       │
+│   ch5_color_primary: { hex, darkModeHex }           │
+│   ch7_edge: { style, radius }                       │
+│   ch8_motion: { physics, durationScale }            │
+│   ch30_state_topology / ch31_routing_pattern        │
+│   ch32_token_inheritance                            │
+└─────────────────────────────────────────────────────┘
+              │
+              │ sha256(designGenome.dnaHash)
+              ▼
+┌─────────────────────────────────────────────────────┐
+│  DNA SEQUENCING — Layer 2 (EcosystemGenome)         │
+│                                                     │
+│  sha256(designGenome.dnaHash) → 11 chromosomes      │
+│  Gravity: design chromosome VALUES bias eco picks   │
+│                                                     │
+│  Examples:                                          │
+│   dark + metallic → hydrothermal biome              │
+│   spring physics  → photosynthetic energy           │
+│   maximal density → parasitic symbiosis             │
+│   deep topology   → top-down trophic structure      │
+│                                                     │
+│  Used by: component library sizing, nesting depth,  │
+│  coupling model, organism count limits              │
+└─────────────────────────────────────────────────────┘
+              │
+              │ sha256(ecosystemGenome.hash)
+              ▼
+┌─────────────────────────────────────────────────────┐
+│  DNA SEQUENCING — Layer 3 (CivilizationGenome)      │
+│                                                     │
+│  sha256(ecosystemGenome.hash) → 10 chromosomes      │
+│  Gravity: ecosystem chromosome VALUES bias civ picks│
+│                                                     │
+│  Examples:                                          │
+│   predatory energy   → warrior archetype            │
+│   mutualistic symb   → federated governance         │
+│   photosynthetic     → democratic / commons model   │
+│   web trophic        → distributed knowledge        │
+│                                                     │
+│  Overrides L1 architecture chromosomes:             │
+│   governance → stateTopology                        │
+│   knowledge  → routingPattern                       │
+└─────────────────────────────────────────────────────┘
+              │
+              ▼
+┌─────────────────────────────────────────────────────┐
+│  OUTPUT                                             │
+│                                                     │
+│  CSS custom property stylesheet                     │
+│  genome_report — explainability markdown            │
+│  ecosystem_report — component hierarchy             │
+│  civilization_report — architecture direction       │
+│  suggested_next — dynamic workflow guide            │
+└─────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Chromosomes (32 Total)
+## Gravity Biasing System
 
-### Sector & Context Chromosomes
-
-| Chromosome | Code | Purpose | Range |
-|------------|------|---------|-------|
-| ch0_sector_primary | `sec_p` | Primary sector classification | healthcare, fintech, automotive, education, commerce, entertainment, manufacturing, legal, real_estate, travel, food, sports, technology, nonprofit, government, media, crypto_web3, gaming, hospitality, beauty_fashion, insurance, agency, energy |
-| ch0_sector_secondary | `sec_s` | Secondary sector influence (blended) | same as above + null |
-| ch0_sub_sector | `sub_sec` | Content-derived sub-classification | e.g., "healthcare_surgical", "healthcare_wellness", "fintech_consumer", "fintech_enterprise" |
-| ch0_brand_weight | `brand_w` | Brand vs sector influence ratio | 0.0 (sector dominant) to 1.0 (brand dominant), default 0.7 |
-
-### Hero & Visual Strategy Chromosomes
-
-| Chromosome | Code | Purpose | Range |
-|------------|------|---------|-------|
-| ch19_hero_type | `hero_t` | Hero visual strategy | product_ui, product_video, brand_logo, stats_counter, search_discovery, content_carousel, trust_authority, service_showcase, editorial_feature, configurator_3d, aspirational_imagery |
-| ch19_hero_variant | `hero_v` | Variation within type (hash-derived) | 0.0 - 1.0 (selects layout variant) |
-| ch20_visual_treatment | `vis_t` | Image/photography treatment | product_screenshots, lifestyle_photography, studio_product, documentary, macro_detail, architectural, candid_moment |
-| ch20_video_strategy | `vid_s` | Video usage approach | background_ambient, product_demo, testimonial, tutorial_walkthrough, brand_story, live_feed |
-
-### Trust & Social Impact Chromosomes
-
-| Chromosome | Code | Purpose | Range |
-|------------|------|---------|-------|
-| ch21_trust_signals | `trust` | Trust-building approach | credentials, testimonials, stats_counter, security_badges, social_proof_logos, case_studies, guarantees, transparency_reports |
-| ch21_trust_prominence | `trust_p` | How prominent trust signals are | subtle, integrated, prominent, hero_feature |
-| ch22_social_proof | `social` | Social validation type | customer_logos, user_count, rating_stars, testimonials_grid, community_size, press_mentions |
-| ch22_impact_demonstration | `impact` | How impact is shown | live_counter, cumulative_stats, before_after, roi_calculator, timeline_progress |
-
-### Content Structure Chromosomes
-
-| Chromosome | Code | Purpose | Range |
-|------------|------|---------|-------|
-| ch23_content_depth | `depth` | Number of sections appropriate | minimal (2-3), moderate (4-6), extensive (7-10), comprehensive (10+) |
-| ch23_information_architecture | `ia` | How content is organized | funnel_linear, hub_spoke, modular_sections, narrative_scroll, data_dashboard |
-| ch24_personalization | `personal` | Dynamic content approach | static, location_based, behavior_based, segment_based, fully_dynamic |
-| ch25_copy_engine | `copy_e` | Generated page copy (headlines, CTAs, FAQ, features, footer) | seeded LLM output |
-| ch26_color_system | `col_sys` | Complete palette (secondary, accent, semantic, neutral scale) | derived from ch5/ch6 + sector bias |
-| ch27_motion_choreography | `motion_c` | Entry sequences, stagger timing, scroll triggers, hover micro-interactions | spring/tween/physics derived |
-| ch28_iconography | `icon` | Icon system style, stroke weight, library | lucide / phosphor / heroicons |
-| ch29_copy_intelligence | `copy_i` | Linguistic patterns, emotional register, vocabulary complexity, CTA aggression | sector + trait driven |
-
-### Architecture Chromosomes (ch30–ch32)
-
-Active only at complexity ≥ 0.81 (civilization tier). Values are always generated from the hash; `CivilizationGenerator` reads them at the appropriate tier.
-
-| Chromosome | Code | Purpose | Range |
-|------------|------|---------|-------|
-| ch30_state_topology | `state_t` | State management architecture | local, shared_context, reactive_store, distributed, federated |
-| ch31_routing_pattern | `route_p` | Routing architecture | single_page, multi_page, protected, platform, federated |
-| ch32_token_inheritance | `token_i` | Design token governance model | flat, semantic, component, governed, cross_system |
-
----
-
-## Sector Color Psychology Profiles
-
-### Probability-Based Color Selection
-
-Not rigid rules—weighted probabilities that brand can override.
+Each layer's chromosome selections are biased by predecessor values via `biasedPick`:
 
 ```typescript
-const SECTOR_COLOR_PROFILES = {
-  healthcare: {
-    primary: {
-      blue: 0.40,      // Trust, calm, clinical
-      teal: 0.25,      // Healing, wellness
-      green: 0.20,     // Health, growth
-      white: 0.10,     // Clean, sterile
-      other: 0.05      // Brand colors, etc.
-    },
-    secondary: {
-      warm_gray: 0.30,
-      soft_blue: 0.25,
-      light_green: 0.20,
-      cream: 0.15,
-      other: 0.10
-    },
-    accent: {
-      coral: 0.20,     // Human warmth
-      soft_orange: 0.15,
-      lavender: 0.15,
-      mint: 0.15,
-      other: 0.35
-    },
-    // Accessibility requirement
-    min_contrast: 4.5,
-    // Warmth balance (healthcare should feel human, not cold)
-    warmth_bias: 0.3   // 30% warmer than pure clinical
-  },
-  
-  fintech: {
-    primary: {
-      deep_purple: 0.30,  // Innovation, premium
-      navy_blue: 0.25,    // Trust, stability
-      dark_teal: 0.15,    // Growth, money
-      charcoal: 0.15,     // Professional
-      other: 0.15
-    },
-    secondary: {
-      white: 0.40,
-      light_gray: 0.30,
-      cream: 0.15,
-      pale_blue: 0.15
-    },
-    accent: {
-      bright_green: 0.25,  // Money, growth
-      gold: 0.20,          // Premium, wealth
-      electric_blue: 0.20, // Tech, speed
-      coral: 0.15,         // Human touch
-      other: 0.20
-    },
-    min_contrast: 7.0,  // Higher for data readability
-    warmth_bias: 0.1    // Professional, cooler
-  },
-  
-  automotive: {
-    primary: {
-      brand_specific: 0.50,  // Ford blue, Ferrari red, etc.
-      black: 0.20,           // Premium, luxury
-      silver: 0.15,          // Modern, tech
-      white: 0.10,
-      other: 0.05
-    },
-    // Secondary and accent depend heavily on brand
-    // System suggests based on brand color wheel
-  },
-  
-  education: {
-    primary: {
-      deep_blue: 0.30,    // Knowledge, trust
-      forest_green: 0.25, // Growth, learning
-      burgundy: 0.15,     // Academic tradition
-      warm_gray: 0.15,
-      other: 0.15
-    },
-    accent: {
-      gold: 0.20,         // Achievement
-      bright_blue: 0.20,  // Innovation
-      orange: 0.15,       // Energy, creativity
-      purple: 0.15,       // Wisdom
-      other: 0.30
-    },
-    warmth_bias: 0.4  // Approachable learning environment
-  }
-};
-```
+function biasedPick<T>(options: T[], rawByte: number, gravity: number): T {
+    const len = options.length;
+    const target = ((Math.round(gravity) % len) + len) % len;
 
-### Brand + Sector Color Resolution
-
-```typescript
-function resolvePrimaryColor(
-  brandColor: Color | null,
-  sector: Sector,
-  brandWeight: number = 0.7
-): Color {
-  
-  // If no brand color, use sector probability
-  if (!brandColor) {
-    return selectFromSectorProfile(SECTOR_COLOR_PROFILES[sector].primary);
-  }
-  
-  // Check brand color against sector appropriateness
-  const brandHue = brandColor.hue;
-  const sectorAppropriate = isHueAppropriateForSector(brandHue, sector);
-  
-  if (sectorAppropriate) {
-    // Brand color works for sector—use it
-    return brandColor;
-  }
-  
-  // Brand color conflicts with sector norms
-  if (brandWeight > 0.8) {
-    // Brand insists—use their color but add compensatory signals
-    return {
-      ...brandColor,
-      compensatorySignals: getCompensatorySignals(sector, brandColor)
-    };
-  } else if (brandWeight > 0.5) {
-    // Blend brand color toward sector-appropriate
-    return blendColors(brandColor, getSectorRecommendedColor(sector), brandWeight);
-  } else {
-    // Sector appropriateness wins
-    return getSectorRecommendedColor(sector);
-  }
-}
-```
-
----
-
-## Hero Type Selection with Constrained Randomness
-
-### Hero Type by Sector (Weighted)
-
-```typescript
-const HERO_TYPE_BY_SECTOR = {
-  healthcare: {
-    trust_authority: 0.30,      // Credentials, awards
-    service_showcase: 0.25,     // Facilities, services
-    testimonial_video: 0.20,    // Patient stories
-    editorial_feature: 0.15,    // Health articles, education
-    stats_counter: 0.10,        // Patients served, outcomes
-    product_ui: 0.00            // Rare—only for apps
-  },
-  
-  fintech: {
-    stats_counter: 0.30,        // Live transaction volume
-    trust_authority: 0.25,      // Security badges, compliance
-    product_ui: 0.20,           // Dashboard preview
-    stats_social_proof: 0.15,   // Customer count, ratings
-    brand_logo: 0.10            // Minimal for established brands
-  },
-  
-  automotive: {
-    aspirational_imagery: 0.35, // Lifestyle, adventure
-    configurator_3d: 0.25,      // Build your own (functional 3D)
-    product_showcase: 0.20,     // Hero vehicle shot
-    video_background: 0.15,     // Driving footage
-    brand_logo: 0.05
-  },
-  
-  education: {
-    editorial_feature: 0.30,    // Knowledge content
-    community_showcase: 0.25,   // Students, campus
-    search_discovery: 0.20,     // Course finder
-    stats_counter: 0.15,        // Alumni success stats
-    product_ui: 0.10            // Learning platform preview
-  }
-};
-```
-
-### Hero Variant (Hash-Derived Uniqueness)
-
-```typescript
-// Once hero_type is selected, variant determines layout
-const HERO_VARIANTS = {
-  trust_authority: [
-    { id: "credentials_grid", layout: "3x2_grid", elements: ["awards", "certifications", "partnerships"] },
-    { id: "hero_stat_cards", layout: "overlay_cards", elements: ["patients_served", "success_rate", "years_experience"] },
-    { id: "featured_testimonial", layout: "split_screen", elements: ["video", "quote", "credentials_row"] },
-    { id: "trust_badges_bar", layout: "bottom_bar", elements: ["logos", "certifications", "ratings"] },
-    { id: "doctor_spotlight", layout: "portrait_focus", elements: ["photo", "credentials", "specialty"] }
-  ],
-  
-  product_ui: [
-    { id: "screenshot_hero", layout: "centered_device", elements: ["screenshot", "floating_features"] },
-    { id: "split_demo", layout: "text_left_ui_right", elements: ["headline", "device_mockup"] },
-    { id: "dashboard_preview", layout: "full_width", elements: ["blurred_background", "focused_module"] },
-    { id: "annotation_showcase", layout: "annotated_screenshot", elements: ["image", "callouts", "feature_list"] },
-    { id: "multi_device", layout: "responsive_showcase", elements: ["desktop", "tablet", "mobile"] }
-  ]
-};
-
-// Variant selection from hash
-generateHeroVariant(heroType: string, hash: string): HeroVariant {
-  const variants = HERO_VARIANTS[heroType];
-  const hashByte = parseInt(hash.slice(0, 2), 16);
-  return variants[hashByte % variants.length];
-}
-```
-
----
-
-## Trust Signal Architecture
-
-### Chromosome-Generated Structure + Content-Filled
-
-```typescript
-interface TrustChromosome {
-  // Structural (always generated)
-  approach: "credentials" | "testimonials" | "stats" | "social_proof" | "security" | "transparency";
-  prominence: "subtle" | "integrated" | "prominent" | "hero_feature";
-  layout_variant: string; // Hash-derived
-  
-  // Content (filled by user or placeholder)
-  content_source?: "user_provided" | "placeholder" | "chromosome_generated";
-  stats?: StatItem[];
-  testimonials?: Testimonial[];
-  credentials?: Credential[];
-}
-
-// Example generation
-const trustConfig = {
-  approach: "credentials",  // From sector profile
-  prominence: "prominent",   // From intent analysis (high-net-worth = trust critical)
-  layout_variant: "credentials_grid_with_counter", // Hash-derived
-  
-  // Content provided by user
-  content: {
-    credentials: [
-      { type: "board_certification", text: "American Board of Surgery" },
-      { type: "hospital_affiliation", text: "Johns Hopkins Medicine" },
-      { type: "award", text: "Top Doctor 2024" }
-    ],
-    stats: [
-      { value: "15,000+", label: "Procedures Performed" },
-      { value: "99.2%", label: "Patient Satisfaction" }
-    ]
-  }
-};
-```
-
----
-
-## Content-Aware Sub-Sector Classification
-
-### Text Analysis for Sub-Sector
-
-```typescript
-const SUB_SECTOR_KEYWORDS = {
-  healthcare: {
-    surgical: ["surgery", "surgeon", "operating", "procedure", "OR", "cutting", "incision"],
-    wellness: ["wellness", "preventive", "holistic", "nutrition", "fitness", "mental health"],
-    emergency: ["ER", "emergency", "urgent care", "trauma", "critical"],
-    pediatric: ["pediatric", "children", "kids", "child", "adolescent"],
-    geriatric: ["geriatric", "elderly", "senior", "aging", "memory care"],
-    cosmetic: ["cosmetic", "plastic surgery", "aesthetic", "beauty", "rejuvenation"],
-    dental: ["dental", "dentist", "orthodontics", "oral"],
-    diagnostic: ["imaging", "MRI", "CT scan", "lab", "diagnostic", "testing"],
-    financial: ["billing", "insurance", "payment", "financial", "cost", "price"]
-  },
-  
-  fintech: {
-    consumer: ["personal finance", "budgeting", "savings", "checking", "app"],
-    enterprise: ["B2B", "enterprise", "corporate", "treasury", "institutional"],
-    trading: ["trading", "stocks", "crypto", "investment", "portfolio"],
-    lending: ["loan", "credit", "mortgage", "lending", "borrow"],
-    payments: ["payment", "checkout", "POS", "merchant", "transaction"],
-    wealth: ["wealth management", "HNW", "private banking", "advisor"]
-  }
-};
-
-// Classification
-function classifySubSector(text: string, primarySector: Sector): SubSector {
-  const keywords = SUB_SECTOR_KEYWORDS[primarySector];
-  let bestMatch = null;
-  let maxScore = 0;
-  
-  for (const [subSector, terms] of Object.entries(keywords)) {
-    const score = terms.reduce((acc, term) => 
-      acc + (text.toLowerCase().includes(term) ? 1 : 0), 0
-    );
-    if (score > maxScore) {
-      maxScore = score;
-      bestMatch = subSector;
+    // Build cumulative weights
+    // target = 4× probability, target ± 1 = 2×, all others = 1×
+    const cumulative: number[] = [];
+    let total = 0;
+    for (let i = 0; i < len; i++) {
+        const d = Math.min(Math.abs(i - target), len - Math.abs(i - target));
+        const w = d === 0 ? 4 : d === 1 ? 2 : 1;
+        total += w;
+        cumulative.push(total);
     }
-  }
-  
-  return bestMatch || "general";
+
+    const pos = Math.floor((rawByte / 256) * total);
+    for (let i = 0; i < len; i++) {
+        if (pos < cumulative[i]) return options[i];
+    }
+    return options[len - 1];
 }
 ```
 
-### Sub-Sector Influences Genome
+`gravity` is a **target index** — the preferred option. Weight distribution gives ~30% pull toward the ecologically coherent choice while preserving hash-driven diversity across the remaining options.
+
+This replaces the old rotation+clamp approach, which collapsed distinct gravity values: for an 8-option array, gravity values 4, 5, 6, and 7 all clamped to the same ±2 rotation, making warrior, democratic, industrial, and emergent archetypes indistinguishable.
+
+---
+
+## StructuralProps — Vocabulary-Invariant Complexity
+
+The complexity tier is the most consequential output of the pipeline — it determines how many components are generated, whether civilization architecture activates, and what state/routing patterns apply. It must not depend on vocabulary.
 
 ```typescript
-const SUB_SECTOR_OVERRIDES = {
-  "healthcare_surgical": {
-    emotionalTemperature: { min: 0.3, max: 0.5 },  // Clinical precision
-    trust_signals: "credentials",                   // Board certifications critical
-    color_bias: { blue: 0.50, white: 0.30 },        // Sterile, clean
-    typography: "geometric",                        // Precision, technical
-    motion: "minimal"                               // Serious, focused
-  },
-  
-  "healthcare_wellness": {
-    emotionalTemperature: { min: 0.6, max: 0.8 },  // Warm, approachable
-    trust_signals: "testimonials",                  // Community stories
-    color_bias: { green: 0.40, teal: 0.30 },        // Growth, nature
-    typography: "humanist",                         // Friendly, organic
-    motion: "gentle_spring"                         // Calming, breathing
-  },
-  
-  "healthcare_financial": {
-    // Blended healthcare + fintech
-    trust_signals: ["security", "transparency"],    // Both sectors' concerns
-    color_bias: { blue: 0.35, green: 0.25, purple: 0.20 },
-    hero_type: "stats_counter",                     // Show cost savings
-    motion: "functional_only"                       // Calculators, not decoration
-  }
-};
+export interface StructuralProps {
+    realtimeState: boolean;        // State changes while user watches
+    entityCount: number;           // Distinct data types managed (1–20)
+    sensitiveData: boolean;        // Medical, financial, legal, auth data
+    multiRole: boolean;            // Different UI per user role/permission
+    financialTransactions: boolean;// Payment processing or account management
+    complexWorkflows: boolean;     // Multi-step processes, wizards, approval chains
+    deepNavigation: boolean;       // 3+ levels of navigation hierarchy
+    externalIntegrations: boolean; // Third-party APIs or data sources
+    screenCount: number;           // Distinct screens/views (1–30)
+    primarySurface: 'data' | 'content' | 'media' | 'transaction' | 'balanced';
+}
+```
+
+The LLM answers these as binary/count questions — not floating point scores. The mapping to complexity is deterministic code, not LLM judgment. Same product described differently → same structural answers → same tier.
+
+**Calibration:**
+
+| Product | Key structural facts | Score | Tier |
+|---|---|---|---|
+| Simple landing page | 1 entity, 1 screen, no sensitive data | ~0.12 | prokaryotic |
+| Personal blog | 2 entities, 4 screens, content surface | ~0.16 | prokaryotic |
+| Workout tracker | 3 entities, 4 screens, data surface | ~0.22 | protist |
+| E-commerce store | 4 entities, sensitive data, financial tx, multi-role | ~0.82 | tribal |
+| Healthcare portal | 5 entities, sensitive data, multi-role, complex workflows | ~0.76 | endotherm_fauna |
+| Trading dashboard | real-time, sensitive, financial, multi-role, external APIs | ~1.00 | singularity |
+
+---
+
+## Chromosomes Reference
+
+### Layer 1 — DesignGenome (32 Chromosomes)
+
+#### Identity
+| Chromosome | Purpose |
+|---|---|
+| ch0_sector | Primary + secondary sector, sub-sector, brand weight |
+
+#### Visual Structure
+| Chromosome | Purpose | Key Values |
+|---|---|---|
+| ch1_structure | Layout topology | flat, deep, radial, graph |
+| ch2_rhythm | Spacing density + vertical rhythm | empty, breathing, airtight, maximal |
+| ch9_grid | Grid logic + asymmetry | column, masonry, bento, broken, editorial, radial |
+| ch10_hierarchy | Z-depth strategy | flat, layered, 3d-stack |
+
+#### Color
+| Chromosome | Purpose | Key Values |
+|---|---|---|
+| ch5_color_primary | Primary hue/sat/lightness + darkModeHex | hex, darkModeHex (58–74% L) |
+| ch6_color_temp | Background temperature, isDark, surface stack | warm, cool, neutral |
+| ch26_color_system | Full palette: secondary, accent, semantic, neutral scale | derived from ch5/ch6 |
+
+#### Typography
+| Chromosome | Purpose |
+|---|---|
+| ch3_type_display | Display font family + charge (geometric/humanist/transitional/slab/mono) |
+| ch4_type_body | Body font family |
+| ch16_typography | Full type scale with ratios |
+
+#### Motion + Texture
+| Chromosome | Purpose | Key Values |
+|---|---|---|
+| ch7_edge | Border radius + style | sharp, soft, organic |
+| ch8_motion | Animation physics + duration | none, spring, step, glitch, ease |
+| ch11_texture | Surface material | grain, flat, glass, chrome |
+| ch13_atmosphere | FX layer | none, glassmorphism, crt, fluid, glitch, aurora, holographic |
+| ch14_physics | 3D material properties | flat, glass, metallic, organic |
+| ch27_motion_choreography | Stagger timing, entry sequences, hover micro-interactions | |
+| ch28_iconography | Icon style, stroke weight, set (lucide/phosphor/heroicons) | |
+
+#### Content + Copy
+| Chromosome | Purpose |
+|---|---|
+| ch15_biomarker | SVG geometry type + animation style |
+| ch17_accessibility | WCAG profile + motion preferences |
+| ch18_rendering | Rendering strategy (WebGL/CSS/SVG) |
+| ch19_hero_type | Hero visual strategy (11 types) |
+| ch20_visual_treatment | Photography/imagery approach |
+| ch21_trust_signals | Trust-building approach + prominence |
+| ch22_social_proof | Social validation type |
+| ch23_content_depth | Section count + information architecture |
+| ch24_personalization | Dynamic content approach |
+| ch25_copy_engine | Generated page copy (headline, CTA, FAQ, features, footer) |
+| ch29_copy_intelligence | Linguistic tone, formality, vocabulary complexity |
+
+#### Architecture (active at complexity ≥ 0.81)
+| Chromosome | Purpose | Key Values |
+|---|---|---|
+| ch30_state_topology | State management architecture | local, shared_context, reactive_store, distributed, federated |
+| ch31_routing_pattern | Routing architecture | single_page, multi_page, protected, platform, federated |
+| ch32_token_inheritance | Token governance model | flat, semantic, component, governed, cross_system |
+
+> **Note:** ch30–ch32 are always sequenced from the hash. At civilization tiers (≥0.81), the CivilizationGenome (L3) post-patches these values: `governance → stateTopology`, `knowledge → routingPattern`.
+
+---
+
+### Layer 2 — EcosystemGenome (11 Chromosomes)
+
+Sequenced from `sha256(designGenome.dnaHash)`. Values drive component library character.
+
+| Chromosome | Purpose | Tells the Agent |
+|---|---|---|
+| eco_ch1_biome | Biome class (16 types) + intensity | Environmental character — rainforest=dense/layered, arctic=sparse/high-negative-space |
+| eco_ch2_energy | Energy source + flux | Component generation model — photosynthetic=open/abundant, predatory=extractive/aggressive |
+| eco_ch3_symbiosis | Symbiosis pattern + depth | Coupling model — mutualistic=tightly coupled collaborators, neutral=fully decoupled |
+| eco_ch4_trophic | Trophic structure + cascade | Data flow direction — top-down=orchestrators drive atoms, web=many-to-many |
+| eco_ch5_succession | Succession stage + drift | Maturity model — pioneer=experimental/rough, climax=stable/slow-change |
+| eco_ch6_adaptation | Adaptation axis + strength | Environmental pressure — pressure=high-load, temporal=urgency-driven |
+| eco_ch7_population | Population pattern + variance | Component distribution — clustered=hub-and-spoke, fractal=self-similar at every scale |
+| eco_ch8_temporal | Temporal rhythm + intensity | Activity pattern — nocturnal=dark-mode primary, continuous=real-time/always-active |
+| eco_ch9_spatial | Spatial axis + isolation | Layout depth — pelagic=z-depth layers, benthic=persistent chrome at bottom |
+| eco_ch10_capacity | Capacity class + pressure | Component count ceiling — minimal=0–6, dense=25–38, maximal=39+ |
+| eco_ch11_mutation | Mutation rate + variance | Entropy tolerance — high rate=polymorphic variants OK, low=stable/predictable |
+
+**Gravity examples (L1 → L2):**
+
+| L1 value | L2 gravity target |
+|---|---|
+| `ch6_color_temp.isDark && ch14_physics.material === 'metallic'` | hydrothermal biome |
+| `ch8_motion.physics === 'spring'` | photosynthetic energy |
+| `ch2_rhythm.density === 'maximal'` | parasitic symbiosis |
+| `ch1_structure.topology === 'deep'` | top-down trophic |
+| `ch6_color_temp.isDark` | nocturnal temporal rhythm |
+
+---
+
+### Layer 3 — CivilizationGenome (10 Chromosomes)
+
+Sequenced from `sha256(ecosystemGenome.hash)`. Values drive application architecture.
+
+| Chromosome | Purpose | Maps to |
+|---|---|---|
+| civ_ch1_archetype | Civilizational character (8 types) | Design philosophy |
+| civ_ch2_governance | Authority structure (8 types) | → `stateTopology` |
+| civ_ch3_economics | Value distribution model (6 types) | Data strategy |
+| civ_ch4_technology | Technology generation (6 types) | Implementation style |
+| civ_ch5_culture | Knowledge transmission (6 types) | UI register |
+| civ_ch6_resilience | Disruption survival pattern (5 types) | Error handling strategy |
+| civ_ch7_knowledge | Knowledge storage model (5 types) | → `routingPattern` |
+| civ_ch8_expansion | Growth mode (5 types) | Loading strategy |
+| civ_ch9_age | Civilizational maturity (5 types) | Stability expectations |
+| civ_ch10_fragility | Fragility rate + variance | Risk profile |
+
+**Governance → State topology mapping:**
+
+| Governance | State topology |
+|---|---|
+| centralized | local |
+| federated | distributed |
+| democratic | shared_context |
+| theocratic | local |
+| oligarchic | shared_context |
+| anarchic | distributed |
+| militaristic | reactive_store |
+| technocratic | reactive_store |
+
+**Knowledge → Routing pattern mapping:**
+
+| Knowledge | Routing pattern |
+|---|---|
+| centralized | single_page |
+| distributed | federated |
+| oral | multi_page |
+| recorded | platform |
+| emergent | platform |
+
+**Gravity examples (L2 → L3):**
+
+| L2 value | L3 gravity target |
+|---|---|
+| `eco_ch2_energy.source === 'predatory'` | warrior archetype |
+| `eco_ch2_energy.source === 'photosynthetic'` | democratic archetype |
+| `eco_ch3_symbiosis.pattern === 'mutualistic'` | federated governance |
+| `eco_ch3_symbiosis.pattern === 'parasitic'` | theocratic governance |
+| `eco_ch4_trophic.structure === 'web'` | distributed knowledge |
+| `eco_ch5_succession.stage === 'pioneer'` | organic expansion + nascent age |
+
+---
+
+## Color Architecture
+
+### Forbidden Ranges (replaces hue prisons)
+
+Sectors define what hues are **psychologically wrong**. The SHA-256 hash selects freely from everything else.
+
+| Sector | Forbidden ranges | Rationale |
+|---|---|---|
+| technology | none | Cloudflare=orange, GitHub=dark, Stripe=purple — all correct |
+| healthcare | [0°–20°], [320°–360°] | Blood red + magenta signal danger |
+| fintech | [60°–100°] | Casual yellow-green reads amateur |
+| legal | [0°–50°], [80°–150°] | Warm/playful hues undermine authority |
+| food | [220°–280°] | Cold corporate blue kills appetite |
+| gaming | [160°–200°] | Clinical teal kills energy |
+| government | [0°–60°], [80°–160°] | Warm/casual hues undermine civic authority |
+| nonprofit | [0°–20°], [300°–360°] | Red/magenta feel alarming vs compassionate |
+| hospitality / travel | [220°–280°] | Cold blue undermines warmth/welcome |
+| manufacturing | [300°–360°], [0°–30°] | Garish pinks/reds feel unsafe |
+
+### Dark Mode Safety
+
+Every genome emits two primary color values:
+- `ch5_color_primary.hex` — 22–35% lightness, for light mode surfaces
+- `ch5_color_primary.darkModeHex` — 58–74% lightness, for interactive elements on dark backgrounds
+
+```css
+--color-primary: #1b2054;           /* light mode — not for buttons on dark bg */
+--color-primary-interactive: #8b9fde; /* dark mode buttons/links */
+```
+
+The CSSGenerator automatically emits both. `.btn-primary` uses `--color-primary-interactive` when dark mode is active.
+
+---
+
+## Complexity Tiers (14 levels)
+
+### Ecosystem Tiers (0.00–0.80)
+
+| Tier | Range | Organisms | Description |
+|---|---|---|---|
+| abiotic | 0.00–0.10 | 0 | HTML/CSS scaffold only |
+| prokaryotic | 0.11–0.22 | few microbial | Atomic tokens, sparse elements |
+| protist | 0.23–0.33 | microbial | First interaction states |
+| bryophyte | 0.34–0.44 | microbial + flora | Cards, modals, basic layout |
+| vascular_flora | 0.45–0.56 | flora-heavy | Stateful components, dropdowns |
+| invertebrate_fauna | 0.57–0.65 | flora + fauna | Tables, wizards |
+| ectotherm_fauna | 0.66–0.73 | all three | Complex data flows, editors |
+| endotherm_fauna | 0.74–0.80 | full ecosystem | All 38 organisms, all 32 chromosomes |
+
+### Civilization Tiers (0.81–1.00)
+
+| Tier | Range | State | Routing | Tokens |
+|---|---|---|---|---|
+| tribal | 0.81–0.86 | local (useState) | single/multi-page | flat |
+| city_state | 0.87–0.91 | shared_context | protected | semantic |
+| nation_state | 0.92–0.94 | reactive_store (Zustand) | platform | component |
+| empire | 0.95–0.96 | Zustand + persist | platform + federated | governed |
+| network | 0.97–0.98 | distributed/federated | Module Federation | cross-system |
+| singularity | 0.99–1.00 | federated + event bus | full Module Federation | cross-system graph |
+
+---
+
+## Diversity Guarantees
+
+Three mechanisms ensure distinct outputs across similar inputs:
+
+### 1. Hash-Driven Variance in Motion
+25% of seeds deviate to an adjacent motion physics value regardless of sector default:
+```typescript
+if (b(30) > 0.75) {
+    const adjacent = { spring: 'step', step: 'spring', none: 'step', ease: 'spring', glitch: 'spring' };
+    physics = adjacent[physics] ?? physics;
+}
+```
+
+### 2. Edge Style Range Enforcement
+`effectivePlayfulness = Math.max(0.3, traits.playfulness)` ensures all three styles (sharp/soft/organic) are reachable even at low-playfulness sectors. `sharpCeiling` expands the sharp classification for sharp-preference sectors.
+
+### 3. Full Byte Biome Selection
+Biome uses the full `b[0]` byte (0–255) — not `b[0] >> 4` (0–15). The old nibble approach blocked 5 of 16 biomes from the weighted probability distribution.
+
+---
+
+## Anti-Slop Pattern Detection
+
+The system detects and blocks known slop patterns at generation time:
+
+| Pattern | Why Forbidden |
+|---|---|
+| `font: Inter` + blue gradient | Ultimate SaaS trope — overused in 80%+ of AI outputs |
+| `grid-cols-3` pricing sections | Most overused layout in landing pages |
+| `bg-gradient-to-r from-blue-* to-purple-*` | Signals no design intent |
+| `parallax` | Motion sickness trigger with no functional benefit |
+| `rounded-xl` on every card | Generic component library look |
+
+Epistasis rules also enforce cross-chromosome consistency:
+- High `informationDensity` + high `temporalUrgency` → low `playfulness` (serious data work)
+- Warm `color_primary` → cool background (contrast balance)
+- Geometric font → sharp/soft edges (not organic)
+- Dashboard archetype → suppressed decorative animations
+- `isDark` → `nocturnal` temporal rhythm in EcosystemGenome
+
+---
+
+## File Structure
+
+```
+src/
+├── server.ts                    — MCP server, 8 tools
+├── genome/
+│   ├── sequencer.ts             — L1 DesignGenome sequencer
+│   ├── types.ts                 — DesignGenome types, ContentTraits
+│   ├── sector-profiles.ts       — 23 sector forbidden ranges + weights
+│   ├── complexity-analyzer.ts   — Tier computation (StructuralProps-first)
+│   ├── ecosystem.ts             — EcosystemGenerator (organism naming)
+│   ├── ecosystem-types.ts       — EcosystemGenome + chromosome types
+│   ├── ecosystem-sequencer.ts   — L2 EcosystemGenome sequencer + gravity
+│   ├── civilization.ts          — CivilizationGenerator (architecture)
+│   ├── civilization-types.ts    — CivilizationGenome + chromosome types
+│   ├── civilization-sequencer.ts — L3 CivilizationGenome sequencer + gravity
+│   ├── archetype-biases.ts      — Archetype gravity helpers
+│   └── font-catalog.ts          — Live font catalog service (Fontshare/Google/Bunny)
+├── semantic/
+│   └── extractor.ts             — SemanticTraitExtractor + StructuralProps analysis
+├── css/
+│   └── generator.ts             — CSSGenerator — full page stylesheet from genome
+├── html/
+│   └── generator.ts             — HTMLGenerator — topology-aware HTML
+├── svg/
+│   └── generator.ts             — SVG biomarker generation
+├── webgl/
+│   └── generator.ts             — React Three Fiber component specs
+└── validation/
+    └── pattern-detector.ts      — AST-based slop pattern detection
 ```
 
 ---
 
-## Chromosome Elimination (User Opt-Out)
+## Implementation Status — v1.0.0
 
-### Flexible Architecture
-
-```typescript
-interface GenerationRequest {
-  intent: string;
-  sector: { primary: Sector; secondary?: Sector };
-  content?: ContentAssets;
-  brand?: BrandAssets;
-  
-  // User preferences
-  options: {
-    // Eliminate specific chromosomes
-    disabledChromosomes: string[]; // e.g., ["ch15_biomarker", "ch13_atmosphere"]
-    
-    // Force specific values
-    forcedChromosomes: Partial<Genome>; // e.g., { ch19_hero_type: "product_ui" }
-    
-    // Influence weights
-    brandWeight: number;        // 0.0 - 1.0 (default 0.7)
-    sectorWeight: number;       // 0.0 - 1.0 (default 0.5)
-    contentWeight: number;      // 0.0 - 1.0 (default 0.6)
-    
-    // Exploration vs appropriateness
-    creativityLevel: "conservative" | "balanced" | "experimental"; // How far from sector norms
-  };
-}
-```
-
-### Example: Eliminating Decorative 3D
-
-```typescript
-const request = {
-  intent: "Patient billing portal",
-  sector: { primary: "healthcare", secondary: "fintech" },
-  options: {
-    disabledChromosomes: [
-      "ch15_biomarker",     // No decorative 3D shapes
-      "ch14_physics",       // No glass/metallic materials
-      "ch13_atmosphere"     // No glassmorphism/FX
-    ],
-    forcedChromosomes: {
-      ch19_hero_type: "trust_authority",
-      ch21_trust_prominence: "prominent"
-    },
-    brandWeight: 0.8,
-    creativityLevel: "balanced"
-  }
-};
-```
+| Component | Status | Description |
+|---|---|---|
+| L1 DesignGenome | ✅ | 32 chromosomes, sector profiles, epistasis rules, forbidden ranges |
+| L2 EcosystemGenome | ✅ | 11 chromosomes, full gravity biasing from L1, wired into ecosystem.ts |
+| L3 CivilizationGenome | ✅ | 10 chromosomes, full gravity biasing from L2, overrides ch30/ch31 in civilization.ts |
+| SHA-256 hash chain | ✅ | seed → L1 → L2 → L3, fully deterministic, provenance tracked via parentHash |
+| StructuralProps | ✅ | Vocabulary-invariant complexity — binary/count questions, deterministic tier computation |
+| biasedPick (weighted) | ✅ | Target-index gravity replaces rotation+clamp — distinct gravity values produce distinct distributions |
+| Edge diversity | ✅ | effectivePlayfulness floor, sharpCeiling, proportional organicThreshold |
+| Motion diversity | ✅ | 25% hash-driven variance via b(30) — same sector, different seeds, different physics |
+| Dark mode safety | ✅ | darkModeHex at 58–74% lightness on all color paths |
+| forbiddenRanges | ✅ | All 23 sectors converted from hueRange prison to forbidden zone inversion |
+| Live font catalogs | ✅ | Fontshare (~100), Google Fonts (1000+), Bunny (mirrors Google) — 24h cache |
+| Anti-slop detection | ✅ | 5 pattern classes, runs automatically on every generate_design_genome |
+| 8-tool surface | ✅ | 14→8 tools, workflow-position descriptions, suggested_next dynamic guide |
+| 49 tests | ✅ | Determinism, uniqueness, sector-awareness, epistasis, ecosystem-civilization bridge |
 
 ---
 
-## Anti-Slop Guarantees
-
-### 1. Hash-Derived Variation Within Constraints
-
-Same sector + same intent → Different genome every time (thanks to SHA-256 hash)
-
-```typescript
-// Example: Three "healthcare patient portal" requests
-generate("healthcare-portal-v1") → Blue primary, trust grid hero, geometric fonts
-generate("healthcare-portal-v2") → Teal primary, stat cards hero, humanist fonts  
-generate("healthcare-portal-v3") → Green primary, testimonial split, transitional fonts
-```
-
-All appropriate for healthcare, all functionally equivalent, all visually distinct.
-
-### 2. No Template Selection
-
-Sector profiles are **probability weights**, not templates.
-
-```typescript
-// BAD (template approach)
-if (sector === "healthcare") return HEALTHCARE_TEMPLATE;
-
-// GOOD (probability approach)
-if (sector === "healthcare") {
-  color = weightedRandom({ blue: 0.4, teal: 0.25, green: 0.2 });
-  hero = weightedRandom({ trust: 0.3, service: 0.25, testimonial: 0.2 });
-  // ... infinite combinations
-}
-```
-
-### 3. Epistasis Prevents "Slop Combinations"
-
-```typescript
-// Forbidden: Inter font + Blue gradient (the ultimate SaaS slop)
-if (font === "inter" && hasGradient) {
-  constraint.forbid("inter");
-  rationale.push("Inter + gradient = slop pattern detected");
-}
-
-// Forbidden: Healthcare site with red primary (unless brand insists)
-if (sector === "healthcare" && color.hue < 20 && !brandOverride) {
-  constraint.warn("red_primary_in_healthcare", 
-    "Red can trigger urgency/anxiety in healthcare context");
-}
-```
-
-### 4. Exploration Through Constrained Mutation
-
-```typescript
-// V2: Visual breeding / mutation
-function mutateGenome(parent: Genome, mutationRate: number): Genome {
-  const child = clone(parent);
-  
-  // Mutate within sector-appropriate bounds
-  if (random() < mutationRate) {
-    child.ch5_color_primary.hue = mutateWithinSector(
-      parent.ch5_color_primary.hue,
-      parent.ch0_sector_primary,
-      maxDelta: 30  // Don't drift into inappropriate colors
-    );
-  }
-  
-  // Mutate hero variant
-  if (random() < mutationRate) {
-    child.ch19_hero_variant = (parent.ch19_hero_variant + 0.1) % 1.0;
-  }
-  
-  return child;
-}
-```
-
----
-
-## Implementation Status (v0.0.8)
-
-All phases complete as of v0.0.8.
-
-| Phase | Status | Description |
-|-------|--------|-------------|
-| Core Infrastructure | ✅ | Sector chromosomes, color probability profiles, hero type with variants, sub-sector classification |
-| Trust & Social Signals | ✅ | Trust signal chromosomes, layout variants, social proof patterns |
-| Content Awareness | ✅ | Text analysis for 23-sector keyword classification, visual treatment, content depth, information architecture |
-| Brand Integration | ✅ | Brand color extraction from assets, sector resolution logic, compensatory signals |
-| Chromosome Range Expansion | ✅ | 32 chromosomes (ch0–ch32), 23 primary sectors, new types: bento/editorial topology, brutalist edge, aurora/holographic atmosphere, muted_earth/cinematic/neon_pop grading |
-| 14-Tier Biological Model | ✅ | 8 ecosystem tiers (abiotic→endotherm_fauna, 0.00–0.80) + 6 civilization tiers (tribal→singularity, 0.81–1.00) |
-| Architecture Chromosomes | ✅ | ch30 stateTopology, ch31 routingPattern, ch32 tokenInheritance — all driven by CivilizationGenerator at complexity ≥ 0.81 |
-
----
-
-*Architecture: Context-aware, sector-mapped, anti-slop design generation*
-*v0.0.8 — March 2026*
+*Architecture: Three-layer SHA-256 genome chain — design, ecosystem, civilization*
+*v1.0.0 — March 2026*
