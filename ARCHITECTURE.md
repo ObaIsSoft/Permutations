@@ -162,7 +162,7 @@ Intent + Seed + Context + Brand Assets
 ┌─────────────────────────────────────────────────────┐
 │  DNA SEQUENCING — Layer 3 (CivilizationGenome)      │
 │                                                     │
-│  sha256(ecosystemGenome.hash) → 10 chromosomes      │
+│  sha256(ecosystemGenome.hash) → 16 chromosomes      │
 │  Gravity: ecosystem chromosome VALUES bias civ picks│
 │                                                     │
 │  Examples:                                          │
@@ -552,8 +552,8 @@ src/
 | Component | Status | Description |
 |---|---|---|
 | L1 DesignGenome | ✅ | 32 chromosomes, sector profiles, epistasis rules, forbidden ranges |
-| L2 EcosystemGenome | ✅ | 11 chromosomes, full gravity biasing from L1, wired into ecosystem.ts |
-| L3 CivilizationGenome | ✅ | 10 chromosomes, full gravity biasing from L2, overrides ch30/ch31 in civilization.ts |
+| L2 EcosystemGenome | ✅ | 16 chromosomes, full gravity biasing from L1, wired into ecosystem.ts |
+| L3 CivilizationGenome | ✅ | 16 chromosomes, full gravity biasing from L2, overrides ch30/ch31 in civilization.ts |
 | SHA-256 hash chain | ✅ | seed → L1 → L2 → L3, fully deterministic, provenance tracked via parentHash |
 | StructuralProps | ✅ | Vocabulary-invariant complexity — binary/count questions, deterministic tier computation |
 | biasedPick (weighted) | ✅ | Target-index gravity replaces rotation+clamp — distinct gravity values produce distinct distributions |
