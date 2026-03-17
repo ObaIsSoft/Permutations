@@ -108,8 +108,8 @@ export class HTMLGenerator {
             case 'search_discovery':
                 parts.push(this.generateSearchDiscoveryHero(genome, variant.layout));
                 break;
-            case 'service_showcase':
-                parts.push(this.generateServiceShowcaseHero(genome, variant.layout));
+            case 'demo_simulator':
+                parts.push(this.generateDemoSimulatorHero(genome, variant.layout));
                 break;
             case 'brand_logo':
                 parts.push(this.generateBrandLogoHero(genome, variant.layout));
@@ -131,6 +131,42 @@ export class HTMLGenerator {
                 break;
             case 'product_video':
                 parts.push(this.generateProductVideoHero(genome, variant.layout));
+                break;
+            case 'product_comparison':
+                parts.push(this.generateProductComparisonHero(genome, variant.layout));
+                break;
+            case 'social_proof_wall':
+                parts.push(this.generateSocialProofWallHero(genome, variant.layout));
+                break;
+            case 'calculator_tool':
+                parts.push(this.generateCalculatorToolHero(genome, variant.layout));
+                break;
+            case 'quiz_assessment':
+                parts.push(this.generateQuizAssessmentHero(genome, variant.layout));
+                break;
+            case 'documentary_story':
+                parts.push(this.generateDocumentaryStoryHero(genome, variant.layout));
+                break;
+            case 'knowledge_base':
+                parts.push(this.generateKnowledgeBaseHero(genome, variant.layout));
+                break;
+            case 'manifesto_statement':
+                parts.push(this.generateManifestoStatementHero(genome, variant.layout));
+                break;
+            case 'cultural_moment':
+                parts.push(this.generateCulturalMomentHero(genome, variant.layout));
+                break;
+            case 'portal_view':
+                parts.push(this.generatePortalViewHero(genome, variant.layout));
+                break;
+            case 'constellation_nav':
+                parts.push(this.generateConstellationNavHero(genome, variant.layout));
+                break;
+            case 'immersive_void':
+                parts.push(this.generateImmersiveVoidHero(genome, variant.layout));
+                break;
+            case 'ambient_presence':
+                parts.push(this.generateAmbientPresenceHero(genome, variant.layout));
                 break;
             default:
                 parts.push(this.generateDefaultHero(genome));
@@ -219,7 +255,7 @@ export class HTMLGenerator {
     </div>` : ''}
   </div>`;
     }
-    generateServiceShowcaseHero(genome, _layout) {
+    generateDemoSimulatorHero(genome, _layout) {
         const copy = genome.chromosomes.ch25_copy_engine;
         const services = copy.features.slice(0, 3);
         return `  <div class="hero-content">
@@ -357,6 +393,268 @@ export class HTMLGenerator {
     </div>
     <div class="hero-ctas">
       <a href="#trial" class="btn btn-primary">${copy.cta}</a>
+    </div>
+  </div>`;
+    }
+    generateProductComparisonHero(genome, layout) {
+        const copy = genome.chromosomes.ch25_copy_engine;
+        const isSplit = layout === 'split_right' || layout === 'split_left';
+        return `  <div class="hero-comparison ${isSplit ? 'split-layout' : 'stacked-layout'}">
+    <div class="comparison-header">
+      <h1 class="text-h1">${copy.headline}</h1>
+      <p class="hero-subtitle">${copy.subheadline}</p>
+    </div>
+    <div class="comparison-frames">
+      <div class="frame before-frame">
+        <span class="frame-label">Before</span>
+        <div class="frame-content placeholder-before"></div>
+      </div>
+      <div class="frame vs-divider">VS</div>
+      <div class="frame after-frame">
+        <span class="frame-label">After</span>
+        <div class="frame-content placeholder-after"></div>
+      </div>
+    </div>
+    <div class="hero-ctas">
+      <a href="#compare" class="btn btn-primary">${copy.cta}</a>
+      <a href="#details" class="btn btn-secondary">See Details</a>
+    </div>
+  </div>`;
+    }
+    generateSocialProofWallHero(genome, layout) {
+        const copy = genome.chromosomes.ch25_copy_engine;
+        const social = genome.chromosomes.ch22_social_proof;
+        const isMosaic = layout === 'full_bleed' || layout === 'centered';
+        return `  <div class="hero-social-wall ${isMosaic ? 'mosaic-layout' : 'linear-layout'}">
+    <div class="wall-header">
+      <h1 class="text-h1">${copy.headline}</h1>
+      <p class="hero-subtitle">${copy.subheadline}</p>
+    </div>
+    <div class="social-mosaic">
+      ${Array(12).fill(0).map((_, i) => `
+      <div class="social-tile tile-${i}">
+        <div class="tile-content">
+          <span class="tile-icon">${['★', '♥', '▲', '●', '■', '✦', '✹', '✻', '✽', '❋', '❖', '◆'][i]}</span>
+          <span class="tile-stat">${100 + i * 50}+</span>
+        </div>
+      </div>`).join('')}
+    </div>
+    <div class="wall-cta">
+      <a href="#join" class="btn btn-primary">${copy.cta}</a>
+    </div>
+  </div>`;
+    }
+    generateCalculatorToolHero(genome, layout) {
+        const copy = genome.chromosomes.ch25_copy_engine;
+        const isFloating = layout === 'floating_cards';
+        return `  <div class="hero-calculator ${isFloating ? 'floating-layout' : 'inline-layout'}">
+    <div class="calculator-header">
+      <h1 class="text-h1">${copy.headline}</h1>
+      <p class="hero-subtitle">${copy.subheadline}</p>
+    </div>
+    <div class="calculator-interface">
+      <div class="calc-inputs">
+        <div class="input-group">
+          <label>Value A</label>
+          <input type="number" placeholder="0" class="calc-input" />
+        </div>
+        <div class="input-group">
+          <label>Value B</label>
+          <input type="number" placeholder="0" class="calc-input" />
+        </div>
+      </div>
+      <div class="calc-result">
+        <span class="result-label">Result</span>
+        <span class="result-value">—</span>
+      </div>
+    </div>
+    <div class="hero-ctas">
+      <a href="#calculate" class="btn btn-primary">${copy.cta}</a>
+    </div>
+  </div>`;
+    }
+    generateQuizAssessmentHero(genome, layout) {
+        const copy = genome.chromosomes.ch25_copy_engine;
+        const isCard = layout === 'floating_cards' || layout === 'centered';
+        return `  <div class="hero-quiz ${isCard ? 'card-layout' : 'full-layout'}">
+    <div class="quiz-header">
+      <span class="quiz-badge">Assessment</span>
+      <h1 class="text-h1">${copy.headline}</h1>
+      <p class="hero-subtitle">${copy.subheadline}</p>
+    </div>
+    <div class="quiz-progress">
+      <div class="progress-bar"><div class="progress-fill" style="width: 0%"></div></div>
+      <span class="progress-text">Question 1 of 5</span>
+    </div>
+    <div class="quiz-options">
+      ${['Option A', 'Option B', 'Option C', 'Option D'].map(opt => `
+      <button class="quiz-option">${opt}</button>`).join('')}
+    </div>
+  </div>`;
+    }
+    generateDocumentaryStoryHero(genome, layout) {
+        const copy = genome.chromosomes.ch25_copy_engine;
+        const isCinematic = layout === 'full_bleed';
+        return `  <div class="hero-documentary ${isCinematic ? 'cinematic' : 'narrative'}">
+    <div class="story-timeline">
+      <div class="timeline-marker active"></div>
+      <div class="timeline-line"></div>
+      <div class="timeline-marker"></div>
+      <div class="timeline-line"></div>
+      <div class="timeline-marker"></div>
+    </div>
+    <div class="story-content">
+      <span class="chapter-label">Chapter 1</span>
+      <h1 class="text-h1">${copy.headline}</h1>
+      <p class="hero-subtitle story-hook">${copy.subheadline}</p>
+      <div class="story-pullquote">
+        <blockquote>"${copy.tagline}"</blockquote>
+      </div>
+    </div>
+    <div class="story-nav">
+      <button class="story-btn prev" disabled>← Previous</button>
+      <button class="story-btn next">Continue →</button>
+    </div>
+  </div>`;
+    }
+    generateKnowledgeBaseHero(genome, layout) {
+        const copy = genome.chromosomes.ch25_copy_engine;
+        return `  <div class="hero-knowledge-base">
+    <div class="kb-header">
+      <h1 class="text-h1">${copy.headline}</h1>
+      <p class="hero-subtitle">${copy.subheadline}</p>
+    </div>
+    <div class="kb-search-large">
+      <input type="search" placeholder="Search documentation..." class="kb-search-input" />
+      <button class="kb-search-btn">Search</button>
+    </div>
+    <div class="kb-quick-links">
+      <span class="quick-label">Popular:</span>
+      ${['Getting Started', 'API Reference', 'Tutorials', 'FAQ'].map(link => `
+      <a href="#${link.toLowerCase().replace(' ', '-')}" class="quick-link">${link}</a>`).join('')}
+    </div>
+    <div class="kb-categories">
+      ${['Basics', 'Advanced', 'Integrations', 'Troubleshooting'].map(cat => `
+      <div class="kb-category-card">
+        <h3>${cat}</h3>
+        <span class="doc-count">${Math.floor(Math.random() * 20 + 5)} docs</span>
+      </div>`).join('')}
+    </div>
+  </div>`;
+    }
+    generateManifestoStatementHero(genome, layout) {
+        const copy = genome.chromosomes.ch25_copy_engine;
+        const isFull = layout === 'full_bleed';
+        return `  <div class="hero-manifesto ${isFull ? 'fullscreen' : 'contained'}">
+    <div class="manifesto-content">
+      <span class="manifesto-preamble">We believe</span>
+      <h1 class="manifesto-headline text-h1">${copy.headline}</h1>
+      <p class="manifesto-body">${copy.subheadline}</p>
+      <div class="manifesto-tenets">
+        ${['Truth', 'Justice', 'Innovation', 'People'].map(tenet => `
+        <div class="tenet">${tenet}</div>`).join('')}
+      </div>
+    </div>
+    <div class="manifesto-signature">
+      <span class="signatory">— The Manifesto</span>
+    </div>
+  </div>`;
+    }
+    generateCulturalMomentHero(genome, layout) {
+        const copy = genome.chromosomes.ch25_copy_engine;
+        return `  <div class="hero-cultural-moment">
+    <div class="moment-badge">
+      <span class="trending-indicator">↗ Trending</span>
+      <span class="moment-category">Culture</span>
+    </div>
+    <h1 class="text-h1">${copy.headline}</h1>
+    <p class="hero-subtitle">${copy.subheadline}</p>
+    <div class="moment-social-proof">
+      <div class="engagement-stats">
+        <span class="stat">${Math.floor(Math.random() * 50 + 10)}K shares</span>
+        <span class="stat">${Math.floor(Math.random() * 100 + 20)}K reactions</span>
+      </div>
+    </div>
+    <div class="hero-ctas">
+      <a href="#join" class="btn btn-primary">${copy.cta}</a>
+      <button class="btn btn-ghost">Share ↗</button>
+    </div>
+  </div>`;
+    }
+    generatePortalViewHero(genome, layout) {
+        const copy = genome.chromosomes.ch25_copy_engine;
+        return `  <div class="hero-portal-view">
+    <div class="portal-frame">
+      <div class="portal-depth portal-back"></div>
+      <div class="portal-depth portal-mid"></div>
+      <div class="portal-content">
+        <h1 class="text-h1">${copy.headline}</h1>
+        <p class="hero-subtitle">${copy.subheadline}</p>
+        <a href="#enter" class="btn btn-primary portal-cta">${copy.cta}</a>
+      </div>
+      <div class="portal-depth portal-front"></div>
+    </div>
+    <div class="portal-hint">
+      <span class="hint-text">Scroll to explore depth</span>
+    </div>
+  </div>`;
+    }
+    generateConstellationNavHero(genome, layout) {
+        const copy = genome.chromosomes.ch25_copy_engine;
+        const nodes = ['Explore', 'Create', 'Connect', 'Learn', 'Build'];
+        return `  <div class="hero-constellation">
+    <div class="constellation-center">
+      <h1 class="text-h1">${copy.headline}</h1>
+      <p class="hero-subtitle">${copy.subheadline}</p>
+    </div>
+    <nav class="constellation-nav">
+      ${nodes.map((node, i) => `
+      <a href="#${node.toLowerCase()}" class="constellation-node node-${i}" style="--angle: ${i * 72}deg">
+        <span class="node-label">${node}</span>
+      </a>`).join('')}
+    </nav>
+    <svg class="constellation-lines" viewBox="0 0 400 400">
+      ${nodes.map((_, i) => {
+            const angle = (i * 72 - 90) * Math.PI / 180;
+            const x = 200 + 120 * Math.cos(angle);
+            const y = 200 + 120 * Math.sin(angle);
+            return `<circle cx="${x}" cy="${y}" r="4" class="star" />`;
+        }).join('')}
+    </svg>
+  </div>`;
+    }
+    generateImmersiveVoidHero(genome, layout) {
+        const copy = genome.chromosomes.ch25_copy_engine;
+        return `  <div class="hero-immersive-void">
+    <div class="void-depth void-layer-1"></div>
+    <div class="void-depth void-layer-2"></div>
+    <div class="void-content">
+      <h1 class="text-h1 floating">${copy.headline}</h1>
+      <p class="hero-subtitle floating-delayed">${copy.subheadline}</p>
+      <div class="void-cta floating-slow">
+        <a href="#enter" class="btn btn-primary glow">${copy.cta}</a>
+      </div>
+    </div>
+    <div class="void-particles">
+      ${Array(20).fill(0).map((_, i) => `
+      <div class="particle particle-${i}" style="--delay: ${i * 0.1}s; --x: ${Math.random() * 100}%; --y: ${Math.random() * 100}%"></div>`).join('')}
+    </div>
+  </div>`;
+    }
+    generateAmbientPresenceHero(genome, layout) {
+        const copy = genome.chromosomes.ch25_copy_engine;
+        return `  <div class="hero-ambient-presence">
+    <div class="ambient-atmosphere">
+      <div class="atmosphere-layer layer-1"></div>
+      <div class="atmosphere-layer layer-2"></div>
+      <div class="atmosphere-layer layer-3"></div>
+    </div>
+    <div class="ambient-content minimal">
+      <h1 class="text-h1 whisper">${copy.headline}</h1>
+      <p class="hero-subtitle fade-in">${copy.subheadline}</p>
+    </div>
+    <div class="ambient-indicator">
+      <span class="breathe-animation"></span>
     </div>
   </div>`;
     }

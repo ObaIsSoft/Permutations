@@ -117,18 +117,36 @@ export type SubSector =
 // ============================================================================
 
 export type HeroType =
-    | "product_ui"           // Live product screenshots (Linear, Figma)
-    | "product_video"        // Product demonstration video (Shopify, Notion)
-    | "brand_logo"           // Iconic brand mark only (Vercel)
-    | "stats_counter"        // Live statistics display (Stripe GDP counter)
-    | "search_discovery"     // Search-first interface (Zillow, Booking.com)
-    | "content_carousel"     // Rotating showcase (Figma use cases)
-    | "trust_authority"      // Credentials, awards, certifications
-    | "service_showcase"     // Services, facilities, capabilities
-    | "editorial_feature"    // Content-first, articles, stories
+    // === PRODUCT-FOCUSED (4) ===
+    | "product_ui"           // Live product screenshots
+    | "product_video"        // Product demonstration video
     | "configurator_3d"      // Interactive 3D product configurator
-    | "aspirational_imagery" // Lifestyle, emotional imagery (fashion, travel)
-    | "testimonial_focus";   // Customer stories, reviews
+    | "product_comparison"   // Side-by-side before/after, vs mode
+    // === DATA/PROOF-FOCUSED (4) ===
+    | "stats_counter"        // Live statistics display
+    | "trust_authority"      // Credentials, awards, certifications
+    | "testimonial_focus"    // Customer stories, reviews
+    | "social_proof_wall"    // Logos, mentions, press grid
+    // === UTILITY-FOCUSED (4) ===
+    | "search_discovery"     // Search-first interface
+    | "calculator_tool"      // Interactive calculator, estimator
+    | "quiz_assessment"      // Questionnaire, personality test
+    | "demo_simulator"       // Try-before-buy simulation
+    // === CONTENT-FOCUSED (4) ===
+    | "content_carousel"     // Rotating showcase
+    | "editorial_feature"    // Content-first, articles
+    | "documentary_story"    // Long-form narrative, case study
+    | "knowledge_base"       // Documentation, wiki-style
+    // === BRAND/EMOTION-FOCUSED (4) ===
+    | "brand_logo"           // Iconic brand mark only
+    | "aspirational_imagery" // Lifestyle, emotional imagery
+    | "manifesto_statement"  // Bold declaration, manifesto
+    | "cultural_moment"      // Zeitgeist, trend-driven
+    // === EXPERIMENTAL/SPATIAL (4) ===
+    | "portal_view"          // 3D portal/window into product
+    | "constellation_nav"    // Scattered entry points, no center
+    | "immersive_void"       // Content floating in darkness
+    | "ambient_presence";    // Atmosphere only, minimal content
 
 export type HeroLayoutVariant =
     | "centered"
@@ -138,7 +156,18 @@ export type HeroLayoutVariant =
     | "overlay"
     | "floating_cards"
     | "asymmetric"
-    | "minimal";
+    | "minimal"
+    | "immersive"          // Full viewport with depth
+    | "diagonal"           // Angled split composition
+    | "orbital"            // Content orbits central visual
+    | "cinematic"          // 21:9 aspect with letterboxing
+    | "magazine"           // Editorial multi-column
+    | "mosaic"             // Grid of tiles
+    | "parallax"           // Multi-layer depth
+    | "reveal"             // Scroll-triggered unveil
+    | "floating"           // Hovering elements
+    | "broken_grid"        // Overlapping asymmetric
+    | "fullscreen_video";  // Background video focus
 
 // ============================================================================
 // VISUAL TREATMENT DEFINITIONS
@@ -316,11 +345,38 @@ export interface AccessibilityProfile {
     screenReaderOptimized: boolean;
 }
 
+export type RenderingPrimary = 
+    | "webgl"           // Full WebGL with shaders
+    | "webgl2"          // WebGL 2.0 compute shaders
+    | "css"             // CSS transforms and animations
+    | "css_houdini"     // CSS Paint/Layout API
+    | "static"          // No animation, paint once
+    | "svg"             // SVG with SMIL/CSS
+    | "svg_js"          // SVG manipulated via JS
+    | "canvas2d"        // 2D canvas immediate mode
+    | "canvas_bitmap"   // OffscreenCanvas + ImageBitmap
+    | "video"           // Video textures
+    | "dom"             // Pure DOM manipulation
+    | "hybrid_gpu"      // WebGL + CSS composite
+    | "hybrid_canvas"   // Canvas + DOM overlay
+    | "progressive"     // Start static, upgrade to WebGL
+    | "regressive";     // Start WebGL, fallback gracefully
+
+export type RenderingComplexity = 
+    | "minimal"         // Single pass, no shaders
+    | "balanced"        // Standard materials, basic lighting
+    | "rich"            // PBR materials, shadows, post-processing
+    | "extreme"         // Ray-marching, GI, volumetrics
+    | "adaptive";       // Quality scales with device capability
+
 export interface RenderingStrategy {
-    primary: "webgl" | "css" | "static" | "svg";
-    fallback: "css" | "static" | "none";
+    primary: RenderingPrimary;
+    fallback: "css" | "static" | "none" | "canvas2d" | "svg";
     animate: boolean;
-    complexity: "minimal" | "balanced" | "rich";
+    complexity: RenderingComplexity;
+    antialias: "none" | "msaa" | "fxaa" | "taa";
+    hdr: boolean;
+    shadowQuality: "none" | "hard" | "pcf" | "pcss" | "vsm";
 }
 
 // ============================================================================
@@ -397,11 +453,63 @@ export interface GenerationOptions {
 // CHROMOSOME VALUE RANGES
 // ============================================================================
 
-export type Topology = "flat" | "deep" | "graph" | "radial" | "bento" | "editorial";
-export type ScrollBehavior = "paginated" | "continuous" | "snap";
+export type Topology = 
+    | "flat"           // Single level, no nesting
+    | "deep"           // Hierarchical nesting
+    | "graph"          // Network relationships
+    | "radial"         // Center-out organization
+    | "bento"          // Grid-based modular
+    | "editorial"      // Asymmetric magazine-style
+    | "masonry"        // Pinterest-style cascading
+    | "split"          // 50/50 or 30/70 divides
+    | "layered"        // Z-axis depth stacking
+    | "orbital"        // Rotating focal points
+    | "fractal"        // Self-similar at all scales
+    | "liquid"         // Flowing, container-query driven
+    | "panoramic"      // Horizontal scroll sections
+    | "immersive"      // Full-viewport takeovers
+    | "modular"        // Component-based assembly
+    | "sequential";    // Step-by-step progression
+export type ScrollBehavior = 
+    | "paginated"      // Discrete page stops
+    | "continuous"     // Smooth free scroll
+    | "snap"           // Snap to section boundaries
+    | "momentum"       // Physics-based inertia
+    | "parallax"       // Multi-layer depth scrolling
+    | "horizontal"     // Left-to-right primary
+    | "omni"           // 360° free navigation
+    | "pin"            // Scroll-triggered pin sections
+    | "reveal"         // Content reveals on scroll
+    | "smooth"         // Lenis-style smooth dampening
+    | "virtual"        // Windowed list virtualization
+    | "infinite";      // Endless scroll loading
 export type BreakpointStrategy = "mobile_first" | "desktop_first" | "fluid";
-export type ContentFlow = "reading_order" | "z_pattern" | "f_pattern";
-export type RhythmDensity = "airtight" | "breathing" | "maximal" | "empty";
+export type ContentFlow = 
+    | "reading_order"  // Top-to-bottom, left-to-right
+    | "z_pattern"      // Eye tracking in Z shape
+    | "f_pattern"      // Eye tracking in F shape
+    | "layered"        // Background → midground → foreground
+    | "spiral"         // Golden ratio spiral focus
+    | "triangle"       // A-frame composition
+    | "diagonal"       // Dynamic diagonal tension
+    | "center_out"     // Radial from focal point
+    | "chaos"          // Intentional disorder
+    | "grid"           // Strict matrix alignment
+    | "golden"         // Golden section proportions
+    | "rule_thirds";   // Photographic composition
+export type RhythmDensity = 
+    | "empty"          // 90%+ negative space
+    | "sparse"         // 70% negative space
+    | "breathing"      // 50% negative space
+    | "balanced"       // 40% negative space
+    | "dense"          // 25% negative space
+    | "airtight"       // 15% negative space
+    | "maximal"        // 5% negative space
+    | "compressed"     // Overlapping elements
+    | "expanded"       // Extra generous spacing
+    | "rhythmic"       // Musical measure-based
+    | "stochastic"     // Randomized spacing
+    | "fibonacci";     // Fibonacci sequence spacing
 export type TypeCharge = "geometric" | "humanist" | "monospace" | "transitional" | "grotesque" | "slab_serif" | "expressive";
 export type FontProvider = "bunny" | "google" | "fontshare" | "none";
 export type TypeTracking = "tight" | "normal" | "wide" | "ultra";
@@ -415,7 +523,15 @@ export type EdgeStyle =
     | "brutalist"    // raw, heavy, unrefined
     | "serrated"     // jagged / notched edges
     | "hand_drawn"   // irregular, imperfect, sketch-like
-    | "chiseled";    // faceted, angular cuts — jewellery/luxury
+    | "chiseled"     // faceted, angular cuts — jewellery/luxury
+    | "scalloped"    // wave-like curved edges
+    | "beveled"      // 45° angle cuts
+    | "pill"         // Full rounded (capsule)
+    | "blob"         // Amorphous organic shapes
+    | "geometric"    // Polygonal clip-path edges
+    | "notched"      // CSS clip-path notches
+    | "cutout"       // Corner cutouts
+    | "deconstructed"; // Asymmetric broken edges
 
 export type MotionPhysics =
     | "none"         // static — no animation
@@ -425,17 +541,45 @@ export type MotionPhysics =
     | "magnetic"     // attraction/repulsion — elements pull toward cursor
     | "inertia"      // momentum-based — elements coast after release
     | "elastic"      // overshoot and snap back — rubber-band feel
-    | "particle";    // stochastic — probabilistic swarm behaviour
+    | "particle"     // stochastic — probabilistic swarm behaviour
+    | "fluid"        // liquid-like continuous flow
+    | "momentum"     // heavy physics, weighty feel
+    | "bounce"       // exaggerated elastic collisions
+    | "snap"         // magnetic snap-to points
+    | "decay"        // exponential slow-down
+    | "harmonic"     // sine-wave oscillation
+    | "chaos"        // unpredictable, sensitive to initial conditions
+    | "orbital"      // circular/elliptical paths
+    | "pendulum"     // gravitational swing physics
+    | "wave"         // Propagation through medium
+    | "ripple"       // Concentric outward propagation
+    | "vortex";      // Spiral inward/outward motion
 
 export type EnterDirection =
     | "up" | "down" | "left" | "right"
+    | "up_left" | "up_right" | "down_left" | "down_right"
     | "scale"        // grow from zero
+    | "scale_x"      // horizontal stretch
+    | "scale_y"      // vertical stretch
     | "fade"         // opacity only
-    | "radial_in"    // expand from center point
-    | "flip_x"       // rotate on X axis (card flip)
-    | "flip_y"       // rotate on Y axis
-    | "spiral"       // arc + scale combined
-    | "bounce";      // enter with elastic overshoot
+    | "blur"         // blur-in
+    | "spin_cw"      // clockwise rotation
+    | "spin_ccw"     // counter-clockwise rotation
+    | "flip_x"       // 3D flip horizontal
+    | "flip_y"       // 3D flip vertical
+    | "slide"        // slide with fade
+    | "reveal"       // clipped reveal
+    | "mask"         // masked wipe
+    | "typewriter"   // character by character
+    | "scramble"     // text decode effect
+    | "morph"        // shape morph
+    | "draw"         // SVG stroke draw
+    | "pop"          // bounce-scale entrance
+    | "elastic"      // wobble-scale entrance
+    | "glitch"       // digital glitch reveal
+    | "pixelate"     // pixel dissolve
+    | "ripple"       // ripple from center
+    | "vortex";      // spiral in
 
 export type ExitBehavior =
     | "fade"
@@ -493,7 +637,19 @@ export type AtmosphereFX =
     | "banding"               // posterised colour steps — lo-fi
     | "none";
 
-export type AtmosphereCoverage = "full" | "section" | "element";
+export type AtmosphereCoverage = 
+    | "full"           // Every surface has atmospheric effects
+    | "section"        // One full-bleed atmospheric zone per section
+    | "element"        // Only specific elements have atmosphere
+    | "gradient_mesh"  // Multi-point gradient overlays
+    | "noise_field"    // Procedural noise texture overlays
+    | "particles"      // Floating particle systems
+    | "fog"            // Depth-based fog layers
+    | "glow"           // Bloom/glow post-processing
+    | "caustics"       // Light refraction patterns
+    | "volumetric"     // 3D volumetric light shafts
+    | "aurora"         // Flowing color shifts
+    | "holographic";   // Iridescent interference patterns
 export type PerformanceBudget = "high" | "medium" | "low";
 export type PhysicsMaterial = "neumorphism" | "metallic" | "glass" | "matte";
 export type BiomarkerGeometry = "monolithic" | "organic" | "fractal";

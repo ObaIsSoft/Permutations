@@ -7,13 +7,23 @@
 import * as crypto from "crypto";
 import { FXGenerator } from "./generators/fx-generator.js";
 export class CSSGenerator {
+    // Cache for hash during generation to avoid recomputing SHA-256 repeatedly
+    hashCache = null;
+    seedCache = null;
     getHashByte(seed, index) {
-        const hash = crypto.createHash("sha256").update(seed).digest("hex");
+        // Use cached hash if same seed (performance optimization)
+        if (this.seedCache !== seed || !this.hashCache) {
+            this.hashCache = crypto.createHash("sha256").update(seed).digest("hex");
+            this.seedCache = seed;
+        }
         // Wrap around hash for indices > 31 (SHA-256 produces 32 bytes = 64 hex chars)
         const wrappedIndex = index % 32;
-        return parseInt(hash.slice(wrappedIndex * 2, wrappedIndex * 2 + 2), 16) / 255;
+        return parseInt(this.hashCache.slice(wrappedIndex * 2, wrappedIndex * 2 + 2), 16) / 255;
     }
     generate(genome, options = {}) {
+        // Pre-cache hash for this generation cycle (optimization)
+        this.hashCache = crypto.createHash("sha256").update(genome.dnaHash).digest("hex");
+        this.seedCache = genome.dnaHash;
         const { includeReset = true, includeVariables = true, format = "expanded" } = options;
         const indent = format === "expanded" ? "  " : "";
         const newline = format === "expanded" ? "\n" : "";

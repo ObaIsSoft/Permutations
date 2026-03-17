@@ -16,14 +16,25 @@ export interface CSSGenerationOptions {
 }
 
 export class CSSGenerator {
+    // Cache for hash during generation to avoid recomputing SHA-256 repeatedly
+    private hashCache: string | null = null;
+    private seedCache: string | null = null;
+
     private getHashByte(seed: string, index: number): number {
-        const hash = crypto.createHash("sha256").update(seed).digest("hex");
+        // Use cached hash if same seed (performance optimization)
+        if (this.seedCache !== seed || !this.hashCache) {
+            this.hashCache = crypto.createHash("sha256").update(seed).digest("hex");
+            this.seedCache = seed;
+        }
         // Wrap around hash for indices > 31 (SHA-256 produces 32 bytes = 64 hex chars)
         const wrappedIndex = index % 32;
-        return parseInt(hash.slice(wrappedIndex * 2, wrappedIndex * 2 + 2), 16) / 255;
+        return parseInt(this.hashCache.slice(wrappedIndex * 2, wrappedIndex * 2 + 2), 16) / 255;
     }
 
     generate(genome: DesignGenome, options: CSSGenerationOptions = {}): string {
+        // Pre-cache hash for this generation cycle (optimization)
+        this.hashCache = crypto.createHash("sha256").update(genome.dnaHash).digest("hex");
+        this.seedCache = genome.dnaHash;
         const { includeReset = true, includeVariables = true, format = "expanded" } = options;
         const indent = format === "expanded" ? "  " : "";
         const newline = format === "expanded" ? "\n" : "";

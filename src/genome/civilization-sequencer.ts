@@ -20,6 +20,7 @@ import {
     TechnologyClass, CultureEmphasis, ResiliencePattern,
     KnowledgeModel, ExpansionMode, CivilizationAge,
     TopologyShape, CosmologyBelief,
+    MemoryModel, InterfaceMode, EvolutionStrategy, CommunicationProtocol,
     ARCHETYPE_UNLOCKS, TECHNOLOGY_PARADIGMS, CULTURE_MEDIUMS,
 } from "./civilization-types.js";
 
@@ -49,14 +50,20 @@ const TECHNOLOGY_CLASSES: TechnologyClass[] = [
     'biological', 'mechanical', 'digital', 'quantum',
     'neural', 'hybrid', 'crystalline', 'volcanic',
     'tidal', 'acoustic', 'optical', 'alchemical',
-    'atmospheric', 'spectral',
+    'atmospheric', 'spectral', 'entanglement',
+    'gravitational', 'thermodynamic', 'fractal',
+    'chaotic', 'stochastic', 'genetic', 'memetic',
+    'symbiotic', 'autopoietic',
 ];
 
 const CULTURE_EMPHASES: CultureEmphasis[] = [
     'oral', 'written', 'visual', 'numeric',
     'ritual', 'algorithmic', 'tactile', 'spatial',
     'gestural', 'sonic', 'archival', 'mythological',
-    'performative', 'material',
+    'performative', 'material', 'code', 'data',
+    'symbol', 'network', 'simulation', 'game',
+    'meme', 'artifact', 'experience', 'energy',
+    'smell', 'taste', 'touch', 'intuition',
 ];
 
 const RESILIENCE_PATTERNS: ResiliencePattern[] = [
@@ -93,6 +100,34 @@ const COSMOLOGY_BELIEFS: CosmologyBelief[] = [
     'deterministic', 'probabilistic', 'cyclical', 'entropic',
     'generative', 'teleological', 'dialectical', 'phenomenological',
     'emergent', 'mythological', 'mechanistic', 'vitalist',
+    'multiversal', 'simulationist', 'hyperstitional', 'accelerationist',
+];
+
+const MEMORY_MODELS: MemoryModel[] = [
+    'ephemeral', 'session', 'persistent', 'synced',
+    'blockchain', 'distributed', 'muscle', 'collective',
+    'ancestral', 'external', 'compressed', 'holographic',
+];
+
+const INTERFACE_MODES: InterfaceMode[] = [
+    'direct', 'indirect', 'gestural', 'vocal',
+    'neural', 'haptic', 'ambient', 'tangible',
+    'augmented', 'virtual', 'multimodal', 'predictive',
+    'adaptive', 'proactive', 'reactive', 'autonomous',
+];
+
+const EVOLUTION_STRATEGIES: EvolutionStrategy[] = [
+    'gradual', 'punctuated', 'revolutionary', 'convergent',
+    'divergent', 'parallel', 'speciated', 'hybridized',
+    'engineered', 'emergent', 'market_driven', 'planned',
+    'responsive', 'resistant', 'destructive', 'modular',
+];
+
+const COMMUNICATION_PROTOCOLS: CommunicationProtocol[] = [
+    'synchronous', 'asynchronous', 'streaming', 'batch',
+    'event_driven', 'polling', 'push', 'pull',
+    'pub_sub', 'peer_to_peer', 'gossip', 'broadcast',
+    'multicast', 'unicast', 'mesh', 'quantum',
 ];
 
 // ── Gravity functions — ecosystem chromosome values bias civilization ────────
@@ -309,24 +344,31 @@ function expansionGravity(eco: EcosystemGenome): number {
 
 function ageGravity(eco: EcosystemGenome): number {
     const c = eco.chromosomes;
-    // Pioneer → nascent (0)
-    if (c.eco_ch5_succession.stage === 'pioneer') return 0;
-    // Early → developing (1)
-    if (c.eco_ch5_succession.stage === 'early') return 1;
-    // Mid → developing/mature (1)
-    if (c.eco_ch5_succession.stage === 'mid') return 1;
-    // Climax → mature (2)
-    if (c.eco_ch5_succession.stage === 'climax') return 2;
-    // Post-climax → declining (3)
-    if (c.eco_ch5_succession.stage === 'post-climax') return 3;
-    // Disturbed → resurgent (4)
-    if (c.eco_ch5_succession.stage === 'disturbed') return 4;
-    // Very low mutation + climax → petrified (10, frozen)
-    if (c.eco_ch11_mutation.rate < 0.15 &&
-        c.eco_ch5_succession.stage === 'climax') return 10;
-    // High mutation + pioneer → revolutionary (7, in upheaval)
-    if (c.eco_ch11_mutation.rate > 0.8 &&
-        c.eco_ch5_succession.stage === 'pioneer') return 7;
+    const stage = c.eco_ch5_succession.stage;
+    const mutationRate = c.eco_ch11_mutation.rate;
+    
+    // Mutation-driven exceptions first (can override base stage)
+    // Very low mutation + climax/post-climax → petrified (10, frozen)
+    if (mutationRate < 0.15 && (stage === 'climax' || stage === 'post-climax')) return 10;
+    // High mutation + pioneer/early → revolutionary (7, in upheaval)
+    if (mutationRate > 0.8 && (stage === 'pioneer' || stage === 'early')) return 7;
+    
+    // Base stage mapping
+    switch (stage) {
+        case 'pioneer':     return 0; // nascent
+        case 'early':       return 1; // developing
+        case 'mid':         return 1; // developing/mature
+        case 'climax':      return 2; // mature
+        case 'post-climax': return 3; // declining
+        case 'disturbed':   return 4; // resurgent
+        case 'degraded':    return 5; // dark age
+        case 'renascent':   return 6; // revolutionary
+        case 'stable':      return 2; // mature (stable equilibrium)
+        case 'cyclic':      return 1; // developing (cyclical renewal)
+        case 'chaotic':     return 7; // upheaval
+        case 'frozen':      return 10; // petrified
+        default:            return 2; // mature default
+    }
     // eco_ch8_temporal: rhythm signals civilizational time-sense
     // continuous → mature (2, no downtime = established, always-on)
     if (c.eco_ch8_temporal.rhythm === 'continuous') return 2;
@@ -536,6 +578,26 @@ export function sequenceCivilizationGenome(
         civ_ch12_cosmology: {
             belief:     biasedPick(COSMOLOGY_BELIEFS, b[22], cosmologyGravity(eco)),
             conviction: norm(b[23]),
+        },
+        // bytes[24,25] — memory
+        civ_ch13_memory: {
+            model:       biasedPick(MEMORY_MODELS, b[24], 0),
+            persistence: norm(b[25]),
+        },
+        // bytes[26,27] — interface
+        civ_ch14_interface: {
+            mode:          biasedPick(INTERFACE_MODES, b[26], 0),
+            responsiveness: norm(b[27]),
+        },
+        // bytes[28,29] — evolution
+        civ_ch15_evolution: {
+            strategy: biasedPick(EVOLUTION_STRATEGIES, b[28], 0),
+            rate:     norm(b[29]),
+        },
+        // bytes[30,31] — communication
+        civ_ch16_communication: {
+            protocol:  biasedPick(COMMUNICATION_PROTOCOLS, b[30], 0),
+            bandwidth: norm(b[31]),
         },
     };
 

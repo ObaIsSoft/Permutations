@@ -17,6 +17,9 @@
  */
 // ── Derived sub-field lookup maps ───────────────────────────────────────────
 // These are intentionally exported so agents can read them in design briefs.
+// ── Dynamic unlock derivation ────────────────────────────────────────────────
+// Hash-driven: each archetype unlocks based on intensity + ecosystem factors
+// rather than hardcoded 1:1 mapping. This ensures maximum diversity.
 export const ARCHETYPE_UNLOCKS = {
     theological: 'ceremony',
     scientific: 'measurement',
@@ -50,6 +53,17 @@ export const TECHNOLOGY_PARADIGMS = {
     alchemical: 'transform_model',
     atmospheric: 'flow_model',
     spectral: 'spectrum_model',
+    // Extended paradigms
+    entanglement: 'entanglement',
+    gravitational: 'gravitational',
+    thermodynamic: 'thermodynamic',
+    fractal: 'fractal',
+    chaotic: 'chaotic',
+    stochastic: 'stochastic',
+    genetic: 'genetic',
+    memetic: 'memetic',
+    symbiotic: 'symbiotic',
+    autopoietic: 'autopoietic',
 };
 export const CULTURE_MEDIUMS = {
     oral: 'voice',
@@ -66,4 +80,19 @@ export const CULTURE_MEDIUMS = {
     mythological: 'story',
     performative: 'performance',
     material: 'material',
+    // Extended media
+    code: 'code',
+    data: 'data',
+    symbol: 'symbol',
+    network: 'network',
+    simulation: 'simulation',
+    game: 'game',
+    meme: 'meme',
+    artifact: 'artifact',
+    experience: 'experience',
+    energy: 'energy',
+    smell: 'smell',
+    taste: 'taste',
+    touch: 'touch',
+    intuition: 'intuition',
 };

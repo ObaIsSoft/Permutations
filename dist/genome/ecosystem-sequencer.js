@@ -19,35 +19,57 @@ const BIOME_CLASSES = [
     'volcanic', 'abyssal', 'arctic', 'rainforest', 'desert',
     'tidal', 'alpine', 'cave', 'hydrothermal', 'steppe',
     'wetland', 'reef', 'boreal', 'savanna', 'mangrove', 'urban',
+    'jungle', 'tundra', 'prairie', 'marsh', 'coral',
+    'kelp_forest', 'polar', 'temperate', 'monsoon', 'dune',
+    'oasis', 'crater', 'fjord', 'atoll', 'trench', 'astrobleme',
 ];
 const ENERGY_SOURCES = [
     'photosynthetic', 'chemosynthetic', 'predatory',
     'decomposer', 'parasitic', 'mixotrophic',
+    'thermal', 'kinetic', 'electric', 'magnetic',
+    'gravitational', 'nuclear', 'quantum', 'sonic',
+    'crystalline', 'void',
 ];
 const SYMBIOSIS_PATTERNS = [
     'mutualistic', 'commensal', 'parasitic',
     'competitive', 'neutral', 'allelopathic',
+    'amensalism', 'antagonistic', 'cooperative',
+    'colonial', 'dominant', 'facultative',
+    'obligate', 'protective', 'scavenging', 'epiphytic',
 ];
 const TROPHIC_STRUCTURES = [
     'bottom-up', 'top-down', 'cascade', 'web', 'linear', 'detrital',
+    'hub_spoke', 'mesh', 'star', 'ring', 'tree', 'dag',
+    'fully_connected', 'small_world', 'scale_free', 'random',
 ];
 const SUCCESSION_STAGES = [
     'pioneer', 'early', 'mid', 'climax', 'post-climax', 'disturbed',
+    'degraded', 'renascent', 'stable', 'cyclic', 'chaotic', 'frozen',
 ];
 const ADAPTATION_AXES = [
     'thermal', 'pressure', 'chemical', 'radiation', 'temporal', 'gravitational',
+    'electric', 'magnetic', 'sonic', 'optic', 'tactile', 'kinetic',
+    'social', 'cognitive', 'competitive', 'symbiotic',
 ];
 const POPULATION_PATTERNS = [
     'sparse', 'clustered', 'gradient', 'fractal', 'uniform', 'stratified',
+    'random', 'regular', 'aggregated', 'dispersed', 'colonial',
+    'linear', 'radial', 'checkerboard', 'network', 'percolated',
 ];
 const TEMPORAL_RHYTHMS = [
     'diurnal', 'nocturnal', 'tidal', 'seasonal', 'continuous',
+    'crepuscular', 'cathemeral', 'circadian', 'ultradian', 'infradian',
+    'arhythmic', 'pulsed', 'aperiodic', 'entrained', 'free_running', 'biphasic',
 ];
 const SPATIAL_AXES = [
     'surface', 'subsurface', 'pelagic', 'benthic', 'terrestrial',
+    'arboreal', 'aerial', 'subterranean', 'littoral', 'riparian',
+    'montane', 'lacustrine', 'estuarine', 'hadal', 'intertidal', 'supralittoral',
 ];
 const CAPACITY_CLASSES = [
-    'minimal', 'sparse', 'optimal', 'dense', 'maximal',
+    'void', 'single', 'minimal', 'sparse', 'sub_optimal', 'optimal',
+    'super_optimal', 'dense', 'high_density', 'maximal', 'saturated',
+    'supersaturated', 'extreme', 'critical', 'collapse_risk', 'infinite',
 ];
 // ── Gravity functions — predecessor DesignGenome biases successor ───────────
 // Each returns an integer offset (bounded to ±25% of option array length).

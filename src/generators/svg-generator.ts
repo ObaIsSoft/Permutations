@@ -60,14 +60,22 @@ export class SVGGenerator {
         }[bm.shapeFamily] ?? "abstract";
 
         const edgeChar = {
-            sharp:      "all corners sharp, no rounding — angular precision",
-            soft:       "soft corners, gentle curves throughout",
-            organic:    "freely curved, no geometric rigidity",
-            techno:     "crisp, layered, digital-mechanical — modular precision",
-            brutalist:  "raw, heavy, unrefined — brutalist character",
-            serrated:   "jagged, notched edges — aggressive, mechanical",
-            hand_drawn: "irregular, imperfect — sketch-like warmth",
-            chiseled:   "faceted angular cuts — jewellery precision",
+            sharp:        "all corners sharp, no rounding — angular precision",
+            soft:         "soft corners, gentle curves throughout",
+            organic:      "freely curved, no geometric rigidity",
+            techno:       "crisp, layered, digital-mechanical — modular precision",
+            brutalist:    "raw, heavy, unrefined — brutalist character",
+            serrated:     "jagged, notched edges — aggressive, mechanical",
+            hand_drawn:   "irregular, imperfect — sketch-like warmth",
+            chiseled:     "faceted angular cuts — jewellery precision",
+            scalloped:    "wave-like curved edges — playful, decorative",
+            beveled:      "45° angle cuts — gem-like, faceted",
+            pill:         "fully rounded capsule shapes — soft, friendly",
+            blob:         "amorphous organic shapes — fluid, natural",
+            geometric:    "polygonal clip-path edges — modern, sharp",
+            notched:      "corner cutouts — industrial, engineered",
+            cutout:       "recessed corners — negative space emphasis",
+            deconstructed: "asymmetric broken edges — avant-garde, edgy",
         }[edge.style] ?? "neutral";
 
         const densityChar = rhythm.density === "empty" ? "sparse elements, generous negative space"

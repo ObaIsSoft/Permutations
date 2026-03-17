@@ -29,7 +29,13 @@ const TOPOLOGY_PATTERNS = {
         { prefix: 'token', patterns: ['chip', 'tag', 'pill'] },
         { prefix: 'identity', patterns: ['avatar', 'icon', 'glyph'] },
         { prefix: 'loader', patterns: ['spinner', 'skeleton', 'progress'] },
-        { prefix: 'separator', patterns: ['divider', 'spacer', 'rule'] }
+        { prefix: 'separator', patterns: ['divider', 'spacer', 'rule'] },
+        // NEW: Network connectors (fungi-like)
+        { prefix: 'bridge', patterns: ['connector', 'sync', 'relay'] },
+        { prefix: 'mycelium', patterns: ['bus', 'channel', 'stream'] },
+        // NEW: Ephemeral (virus-like)
+        { prefix: 'spore', patterns: ['toast', 'notification', 'alert'] },
+        { prefix: 'phage', patterns: ['tooltip', 'hint', 'help'] }
     ],
     flora: [
         { prefix: 'input', patterns: ['field', 'control', 'selector'] },
@@ -37,7 +43,10 @@ const TOPOLOGY_PATTERNS = {
         { prefix: 'navigation', patterns: ['menu', 'tabs', 'breadcrumb'] },
         { prefix: 'reveal', patterns: ['dropdown', 'tooltip', 'popover'] },
         { prefix: 'organization', patterns: ['list', 'accordion', 'tree'] },
-        { prefix: 'selection', patterns: ['toggle', 'switch', 'radio'] }
+        { prefix: 'selection', patterns: ['toggle', 'switch', 'radio'] },
+        // NEW: Network structures
+        { prefix: 'rhizome', patterns: ['network', 'mesh', 'graph'] },
+        { prefix: 'hyphae', patterns: ['thread', 'connection', 'link'] }
     ],
     fauna: [
         { prefix: 'overlay', patterns: ['modal', 'dialog', 'drawer'] },
@@ -45,8 +54,17 @@ const TOPOLOGY_PATTERNS = {
         { prefix: 'media', patterns: ['carousel', 'gallery', 'player'] },
         { prefix: 'search', patterns: ['finder', 'explorer', 'filter'] },
         { prefix: 'structure', patterns: ['layout', 'shell', 'frame'] },
-        { prefix: 'input', patterns: ['form', 'wizard', 'editor'] }
+        { prefix: 'input', patterns: ['form', 'wizard', 'editor'] },
+        // NEW: Spatial/Experiential
+        { prefix: 'viewport', patterns: ['stage', 'canvas', 'portal'] },
+        { prefix: 'lens', patterns: ['magnifier', 'inspector', 'detail'] }
     ]
+};
+// Organism IDs for hash-driven selection
+const ORGANISM_REGISTRY = {
+    microbial: ['action', 'indicator', 'token', 'identity', 'loader', 'separator', 'bridge', 'mycelium', 'spore', 'phage'],
+    flora: ['input', 'container', 'navigation', 'reveal', 'organization', 'selection', 'rhizome', 'hyphae'],
+    fauna: ['overlay', 'data', 'media', 'search', 'structure', 'input', 'viewport', 'lens']
 };
 /**
  * Generates a complete ecosystem of design components
@@ -129,25 +147,60 @@ export class EcosystemGenerator {
             civilizationThreshold: 0.81
         };
     }
+    /**
+     * HASH-DRIVEN: Select which organism types exist in this ecosystem.
+     * Not all sites have the same anatomy - navigation might not exist,
+     * or might be replaced by constellation_nav, etc.
+     */
+    selectOrganismTypes(genome, category, maxCount) {
+        const registry = ORGANISM_REGISTRY[category];
+        const selected = [];
+        // Use genome hash to determine which organisms exist
+        // Each organism has a presence probability based on hash bytes
+        const hash = genome.dnaHash;
+        for (let i = 0; i < registry.length && selected.length < maxCount; i++) {
+            // Use different parts of hash for each organism decision
+            const byteIndex = (i * 2) % 32;
+            const byteValue = parseInt(hash.slice(byteIndex * 2, byteIndex * 2 + 2), 16);
+            // Threshold varies by organism category and ecosystem needs
+            // Some organisms are more likely than others based on genome traits
+            const threshold = category === 'flora' && registry[i] === 'navigation'
+                ? 128 // 50% chance of navigation in flora
+                : category === 'fauna' && registry[i] === 'structure'
+                    ? 100 // 40% chance of structure shell
+                    : 180; // ~70% chance for others
+            if (byteValue > threshold) {
+                selected.push(registry[i]);
+            }
+        }
+        // Ensure at least some organisms exist
+        if (selected.length === 0 && maxCount > 0) {
+            const fallbackIndex = parseInt(hash.slice(0, 2), 16) % registry.length;
+            selected.push(registry[fallbackIndex]);
+        }
+        return selected;
+    }
     // === MICROBIAL COLONY ===
     // Atomic components: LLM-named when definitions provided, topology-derived as fallback
+    // HASH-DRIVEN: Which microbes exist depends on genome, not template
     generateMicrobialColony(genome, eco, count, definitions) {
         const organisms = [];
         const baseEntropy = genome.chromosomes.ch12_signature.entropy;
-        // eco_ch11_mutation.rate modulates how much each organism drifts from base entropy
         const mutationRate = eco.chromosomes.eco_ch11_mutation.rate;
+        // HASH-DRIVEN: Select which organism types exist
+        const organismTypes = this.selectOrganismTypes(genome, 'microbial', count);
         const patterns = TOPOLOGY_PATTERNS.microbial;
-        for (let i = 0; i < count; i++) {
+        for (let i = 0; i < organismTypes.length; i++) {
             const mutation = this.generateMutation(genome, i);
             const def = definitions?.[i];
-            // LLM-supplied identity takes precedence; topology-derived naming as fallback
-            const patternIndex = Math.floor(this.deriveFromHash(mutation, patterns.length));
-            const pattern = patterns[patternIndex % patterns.length];
+            // Find pattern for this organism type
+            const organismId = organismTypes[i];
+            const pattern = patterns.find(p => p.prefix === organismId) || patterns[i % patterns.length];
             const variantCount = Math.floor(this.deriveFromHash(mutation, 4)) + 2;
             const variants = this.generateVariantNames(pattern.patterns, variantCount, mutation);
             const name = def?.name ?? this.deriveOrganismName(pattern.prefix, mutation, i, 'microbial');
             organisms.push({
-                id: `M-${i}`,
+                id: `M-${i}-${organismId}`,
                 name,
                 purpose: def?.purpose ?? '',
                 category: 'microbial',
@@ -181,20 +234,22 @@ export class EcosystemGenerator {
     }
     // === FLORA ECOSYSTEM ===
     // Growing components: LLM-named when definitions provided, topology-derived as fallback
+    // HASH-DRIVEN: Which flora types exist depends on genome
     generateFloraEcosystem(genome, eco, microbial, count, definitions) {
         const organisms = [];
         const baseEntropy = genome.chromosomes.ch12_signature.entropy;
-        // eco_ch3_symbiosis.depth: how tightly flora contain microbes (0=shallow, 1=deep nesting)
         const symbiosisDepth = eco.chromosomes.eco_ch3_symbiosis.depth;
-        // eco_ch4_trophic.cascade: high cascade → more prey connections per flora
         const trophicCascade = eco.chromosomes.eco_ch4_trophic.cascade;
         const mutationRate = eco.chromosomes.eco_ch11_mutation.rate;
+        // HASH-DRIVEN: Select which organism types exist
+        const organismTypes = this.selectOrganismTypes(genome, 'flora', count);
         const patterns = TOPOLOGY_PATTERNS.flora;
-        for (let i = 0; i < count; i++) {
+        for (let i = 0; i < organismTypes.length; i++) {
             const mutation = this.generateMutation(genome, i + 100);
             const def = definitions?.[i];
-            const patternIndex = Math.floor(this.deriveFromHash(mutation, patterns.length));
-            const pattern = patterns[patternIndex % patterns.length];
+            // Find pattern for this organism type
+            const organismId = organismTypes[i];
+            const pattern = patterns.find(p => p.prefix === organismId) || patterns[i % patterns.length];
             const variantCount = Math.floor(this.deriveFromHash(mutation, 5)) + 2;
             const variants = this.generateVariantNames(pattern.patterns, variantCount, mutation);
             const name = def?.name ?? this.deriveOrganismName(pattern.prefix, mutation, i, 'flora');
@@ -206,7 +261,7 @@ export class EcosystemGenerator {
                 prey.push(microbial[microIndex]?.id || `M-${p}`);
             }
             organisms.push({
-                id: `F-${i}`,
+                id: `F-${i}-${organismId}`,
                 name,
                 purpose: def?.purpose ?? '',
                 category: 'flora',
@@ -239,19 +294,21 @@ export class EcosystemGenerator {
     }
     // === FAUNA POPULATION ===
     // Complex moving components: LLM-named when definitions provided, topology-derived as fallback
+    // HASH-DRIVEN: Which fauna types exist depends on genome
     generateFaunaPopulation(genome, eco, flora, count, definitions) {
         const organisms = [];
         const baseEntropy = genome.chromosomes.ch12_signature.entropy;
-        // eco_ch4_trophic.cascade: high cascade → fauna orchestrate more flora
         const trophicCascade = eco.chromosomes.eco_ch4_trophic.cascade;
-        // eco_ch2_energy.flux: high flux → fauna have more active entropy
         const energyFlux = eco.chromosomes.eco_ch2_energy.flux;
+        // HASH-DRIVEN: Select which organism types exist
+        const organismTypes = this.selectOrganismTypes(genome, 'fauna', count);
         const patterns = TOPOLOGY_PATTERNS.fauna;
-        for (let i = 0; i < count; i++) {
+        for (let i = 0; i < organismTypes.length; i++) {
             const mutation = this.generateMutation(genome, i + 200);
             const def = definitions?.[i];
-            const patternIndex = Math.floor(this.deriveFromHash(mutation, patterns.length));
-            const pattern = patterns[patternIndex % patterns.length];
+            // Find pattern for this organism type
+            const organismId = organismTypes[i];
+            const pattern = patterns.find(p => p.prefix === organismId) || patterns[i % patterns.length];
             const variantCount = Math.floor(this.deriveFromHash(mutation, 5)) + 2;
             const variants = this.generateVariantNames(pattern.patterns, variantCount, mutation);
             const name = def?.name ?? this.deriveOrganismName(pattern.prefix, mutation, i, 'fauna');
@@ -263,7 +320,7 @@ export class EcosystemGenerator {
                 prey.push(flora[floraIndex]?.id || `F-${p}`);
             }
             organisms.push({
-                id: `A-${i}`,
+                id: `A-${i}-${organismId}`,
                 name,
                 purpose: def?.purpose ?? '',
                 category: 'fauna',

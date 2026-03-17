@@ -46,40 +46,64 @@ export type CivilizationUnlock =
  * Derived from TechnologyClass class.
  */
 export type TechnologyParadigm =
-    | 'growth_model'    // biological: adaptive, organism-like self-correction
-    | 'precision_model' // mechanical: step-driven, deterministic, audit trails
-    | 'event_model'     // digital: async, reactive, event streams first
-    | 'superposition'   // quantum: parallel states, branch-resolve, probabilistic UI
-    | 'inference_model' // neural: pattern-recognition, learned behaviour, adaptive UI
-    | 'composite_model' // hybrid: multi-paradigm, pragmatic combination
-    | 'lattice_model'   // crystalline: rigid structure, predictable geometry
-    | 'pressure_model'  // volcanic: sudden release, burst patterns, high-energy events
-    | 'rhythm_model'    // tidal: periodic cycles, in/out flows, predictable oscillation
-    | 'resonance_model' // acoustic: signal propagation, feedback, harmonic patterns
-    | 'wave_model'      // optical: light-speed transmission, line-of-sight dependencies
-    | 'transform_model' // alchemical: irreversible state change, transmutation flows
-    | 'flow_model'      // atmospheric: pressure differentials, ambient distribution
-    | 'spectrum_model'; // spectral: frequency-band thinking, filtered layers
+    | 'growth_model'      // biological: adaptive, organism-like self-correction
+    | 'precision_model'   // mechanical: step-driven, deterministic, audit trails
+    | 'event_model'       // digital: async, reactive, event streams first
+    | 'superposition'     // quantum: parallel states, branch-resolve, probabilistic UI
+    | 'inference_model'   // neural: pattern-recognition, learned behaviour, adaptive UI
+    | 'composite_model'   // hybrid: multi-paradigm, pragmatic combination
+    | 'lattice_model'     // crystalline: rigid structure, predictable geometry
+    | 'pressure_model'    // volcanic: sudden release, burst patterns, high-energy events
+    | 'rhythm_model'      // tidal: periodic cycles, in/out flows, predictable oscillation
+    | 'resonance_model'   // acoustic: signal propagation, feedback, harmonic patterns
+    | 'wave_model'        // optical: light-speed transmission, line-of-sight dependencies
+    | 'transform_model'   // alchemical: irreversible state change, transmutation flows
+    | 'flow_model'        // atmospheric: pressure differentials, ambient distribution
+    | 'spectrum_model'    // spectral: frequency-band thinking, filtered layers
+    | 'entanglement'      // quantum-entangled: instant correlation across distance
+    | 'gravitational'     // mass-attraction: heavy objects pull lighter ones
+    | 'thermodynamic'     // entropy-driven: heat death, energy dissipation
+    | 'fractal'           // self-similar: patterns repeat at every scale
+    | 'chaotic'           // butterfly effect: sensitive to initial conditions
+    | 'stochastic'        // probabilistic: random walks, Monte Carlo methods
+    | 'genetic'           // evolutionary: selection, mutation, inheritance
+    | 'memetic'           // idea-transmission: viral concepts, cultural evolution
+    | 'symbiotic'         // mutual enhancement: cross-platform optimization
+    | 'autopoietic';      // self-creating: regenerating its own components
 
 /**
  * The primary medium through which the civilization records and transmits.
  * Derived from CultureEmphasis class.
  */
 export type CultureMedium =
-    | 'voice'           // oral: narrative, conversational UI, progressive disclosure
-    | 'document'        // written: long-form, annotation-heavy, searchable archives
-    | 'image'           // visual: show-don't-tell, spatial layout as meaning
-    | 'dashboard'       // numeric: data-first, KPI surfaces, measurement UI
-    | 'sequence'        // ritual: step-by-step, wizard flows, ceremony
-    | 'computation'     // algorithmic: generated surfaces, no fixed content
-    | 'surface'         // tactile: physical metaphor, haptic-aware, touch-native
-    | 'space'           // spatial: 3D thinking, depth, placement-as-meaning
-    | 'gesture'         // gestural: motion-as-input, trajectory, direction
-    | 'sound'           // sonic: audio-first, non-visual transmission
-    | 'record'          // archival: preservation, provenance, time-stamped truth
-    | 'story'           // mythological: archetypal narrative, hero flows
-    | 'performance'     // performative: live, ephemeral, time-bound
-    | 'material';       // material: weight, texture, physicality as metaphor
+    | 'voice'             // oral: narrative, conversational UI, progressive disclosure
+    | 'document'          // written: long-form, annotation-heavy, searchable archives
+    | 'image'             // visual: show-don't-tell, spatial layout as meaning
+    | 'dashboard'         // numeric: data-first, KPI surfaces, measurement UI
+    | 'sequence'          // ritual: step-by-step, wizard flows, ceremony
+    | 'computation'       // algorithmic: generated surfaces, no fixed content
+    | 'surface'           // tactile: physical metaphor, haptic-aware, touch-native
+    | 'space'             // spatial: 3D thinking, depth, placement-as-meaning
+    | 'gesture'           // gestural: motion-as-input, trajectory, direction
+    | 'sound'             // sonic: audio-first, non-visual transmission
+    | 'record'            // archival: preservation, provenance, time-stamped truth
+    | 'story'             // mythological: archetypal narrative, hero flows
+    | 'performance'       // performative: live, ephemeral, time-bound
+    | 'material'          // material: weight, texture, physicality as metaphor
+    | 'code'              // executable: programs as cultural expression
+    | 'data'              // quantitative: numbers tell the story
+    | 'symbol'            // semiotic: signs, sigils, abstract representation
+    | 'network'           // relational: connections as meaning
+    | 'simulation'        // modeled: virtual worlds, synthetic experiences
+    | 'game'              // ludic: play, rules, winning conditions
+    | 'meme'              // viral: rapidly spreading cultural units
+    | 'artifact'          // object-oriented: physical/digital objects carry meaning
+    | 'experience'        // phenomenological: subjective felt sense
+    | 'energy'            // vibrational: frequencies, auras, fields
+    | 'smell'             // olfactory: scent-based communication
+    | 'taste'             // gustatory: flavor as information
+    | 'touch'             // haptic: texture, pressure, temperature
+    | 'intuition';        // non-verbal: gut feeling, embodied knowing
 
 // ── Chromosome value types ─────────────────────────────────────────────────
 
@@ -149,7 +173,17 @@ export type TechnologyClass =
     | 'optical'       // light-speed, line-of-sight, projection-based
     | 'alchemical'    // irreversible transformation, transmutation
     | 'atmospheric'   // ambient distribution, pressure differentials
-    | 'spectral';     // frequency-filtered, layered band thinking
+    | 'spectral'      // frequency-filtered, layered band thinking
+    | 'entanglement'  // instant correlation across distance
+    | 'gravitational' // mass-attraction, weight-driven
+    | 'thermodynamic' // entropy, energy dissipation
+    | 'fractal'       // self-similar patterns
+    | 'chaotic'       // sensitive to initial conditions
+    | 'stochastic'    // probabilistic, random walks
+    | 'genetic'       // evolutionary, inheritance
+    | 'memetic'       // idea transmission
+    | 'symbiotic'     // mutual enhancement
+    | 'autopoietic';  // self-creating
 
 /** Primary cultural emphasis — how the civilization records and transmits */
 export type CultureEmphasis =
@@ -166,7 +200,21 @@ export type CultureEmphasis =
     | 'archival'      // preservation, provenance, time-stamped truth
     | 'mythological'  // archetypal narrative, hero journey, story arcs
     | 'performative'  // live, ephemeral, time-bound experience
-    | 'material';     // weight, texture, physicality as UI metaphor
+    | 'material'      // weight, texture, physicality as UI metaphor
+    | 'code'          // executable, programs as culture
+    | 'data'          // quantitative, numbers tell story
+    | 'symbol'        // semiotic, signs and sigils
+    | 'network'       // relational, connections as meaning
+    | 'simulation'    // modeled, virtual worlds
+    | 'game'          // ludic, play and rules
+    | 'meme'          // viral, rapidly spreading
+    | 'artifact'      // object-oriented
+    | 'experience'    // phenomenological, felt sense
+    | 'energy'        // vibrational, frequencies
+    | 'smell'         // olfactory, scent
+    | 'taste'         // gustatory, flavor
+    | 'touch'         // haptic, texture
+    | 'intuition';    // non-verbal, gut feeling
 
 /** How the civilization survives disruption */
 export type ResiliencePattern =
@@ -197,18 +245,28 @@ export type KnowledgeModel =
     | 'archipelagic'  // island clusters — local-first, periodic sync
     | 'holographic';  // whole in every part — replicated, fractal consistency
 
-/** How the civilization grows and expands */
+/** How the civilization grows and expands — 20 modes */
 export type ExpansionMode =
-    | 'organic'       // grows where needed — lazy loading, on-demand
-    | 'aggressive'    // captures territory — eager loading, prefetch
-    | 'sustainable'   // controlled growth — code-split, budget-aware
-    | 'contracting'   // shrinking — remove, simplify, reduce
-    | 'stable'        // no growth — fixed scope, no new features
-    | 'viral'         // exponential spread — sharing mechanics, referral loops
-    | 'rhizomatic'    // lateral expansion — horizontal growth, no root
-    | 'colonial'      // occupation — consumes existing surfaces
-    | 'missionary'    // conversion-first — onboarding as primary product
-    | 'symbiotic'     // grows with host — embedded, parasitic-positive
+    | 'organic'          // grows where needed — lazy loading, on-demand
+    | 'aggressive'       // captures territory — eager loading, prefetch
+    | 'sustainable'      // controlled growth — code-split, budget-aware
+    | 'contracting'      // shrinking — remove, simplify, reduce
+    | 'stable'           // no growth — fixed scope, no new features
+    | 'viral'            // exponential spread — sharing mechanics, referral loops
+    | 'rhizomatic'       // lateral expansion — horizontal growth, no root
+    | 'colonial'         // occupation — consumes existing surfaces
+    | 'missionary'       // conversion-first — onboarding as primary product
+    | 'symbiotic'        // grows with host — embedded, parasitic-positive
+    | 'explosive'        // rapid burst, then plateau
+    | 'cyclic'           // periodic expansion/contraction
+    | 'fractal'          // self-similar growth at all scales
+    | 'meristematic'     // growing from tips, apical dominance
+    | 'diffuse'          // slow, uniform spread
+    | 'saltatory'        // jumps, punctuated equilibrium
+    | 'centripetal'      // inward growth, consolidation
+    | 'centrifugal'      // outward push, boundary expansion
+    | 'accretionary'     // layer-by-layer accumulation
+    | 'involutional'     // complex internal folding
     | 'tectonic'      // sudden displacement — big-bang releases, batch migrations
     | 'crystalline';  // structured growth — schema-first, geometry-constrained
 
@@ -261,7 +319,83 @@ export type CosmologyBelief =
     | 'emergent'          // bottom-up causation — complex from simple rules
     | 'mythological'      // narrative causation — story explains everything
     | 'mechanistic'       // cause-effect chains — Newtonian, no mystery
-    | 'vitalist';         // life-force driven — organic will, not just mechanics
+    | 'vitalist'          // life-force driven — organic will, not just mechanics
+    | 'multiversal'       // many-worlds — parallel states, branch exploration
+    | 'simulationist'     // simulated reality — nested realities, glitches
+    | 'hyperstitional'    // fiction makes itself real — belief becomes fact
+    | 'accelerationist';  // speed as virtue — faster is always better
+
+/** Memory persistence model — civ_ch13 */
+export type MemoryModel =
+    | 'ephemeral'     // momentary — RAM only, disappear on refresh
+    | 'session'       // tab-lifetime — sessionStorage
+    | 'persistent'    // permanent — localStorage, survives forever
+    | 'synced'        // cloud-backed — multi-device continuity
+    | 'blockchain'    // immutable ledger — append-only, verified
+    | 'distributed'   // shared memory — collective knowledge base
+    | 'muscle'        // procedural — learned habits, not facts
+    | 'collective'    // group memory — shared cultural archive
+    | 'ancestral'     // inherited — pre-loaded wisdom, genetic
+    | 'external'      // offloaded — books, devices, not in brain
+    | 'compressed'    // lossy — summaries, not full fidelity
+    | 'holographic';  // whole in every part — distributed encoding
+
+/** Interface interaction mode — civ_ch14 */
+export type InterfaceMode =
+    | 'direct'        // immediate manipulation — touch, click
+    | 'indirect'      // mediated — mouse, pointer, indirect
+    | 'gestural'      // body movement — kinect, camera, motion
+    | 'vocal'         // voice-first — speech, conversation
+    | 'neural'        // brain-computer — BCI, thought control
+    | 'haptic'        // touch-feedback — force feedback, vibration
+    | 'ambient'       // always-on — environmental awareness
+    | 'tangible'      // physical objects — graspable interfaces
+    | 'augmented'     // AR overlay — digital on physical
+    | 'virtual'       // VR immersion — fully digital space
+    | 'multimodal'    // combined inputs — voice + gesture + touch
+    | 'predictive'    // anticipatory — system acts before asked
+    | 'adaptive'      // personalized — changes to fit user
+    | 'proactive'     // initiative-taking — suggests before request
+    | 'reactive'      // responsive — waits for user action
+    | 'autonomous';   // self-directed — minimal human input
+
+/** Evolution/change strategy — civ_ch15 */
+export type EvolutionStrategy =
+    | 'gradual'       // slow, continuous — Kaizen, iterative
+    | 'punctuated'    // long stability, sudden jumps
+    | 'revolutionary' // abrupt, total overhaul
+    | 'convergent'    // toward optimal solution
+    | 'divergent'     // exploring many paths
+    | 'parallel'      // multiple simultaneous experiments
+    | 'speciated'     // branching into distinct forms
+    | 'hybridized'    // combining different lineages
+    | 'engineered'    // designed, top-down change
+    | 'emergent'      // bottom-up, self-organized
+    | 'market_driven' // competition selects winners
+    | 'planned'       // roadmap, scheduled releases
+    | 'responsive'    // adapting to environment changes
+    | 'resistant'     // avoiding change, stability-first
+    | 'destructive'   // creative destruction, burn and rebuild
+    | 'modular';      // component-wise independent evolution
+
+/** Communication protocol style — civ_ch16 */
+export type CommunicationProtocol =
+    | 'synchronous'   // real-time — immediate response
+    | 'asynchronous'  // delayed — queue-based, at convenience
+    | 'streaming'     // continuous flow — never-ending data
+    | 'batch'         // periodic bursts — aggregated delivery
+    | 'event_driven'  // reactive — triggered by occurrences
+    | 'polling'       // periodic check — request-response cycle
+    | 'push'          // server-initiated — client receives
+    | 'pull'          // client-initiated — on demand
+    | 'pub_sub'       // broadcast — many listeners, one source
+    | 'peer_to_peer'  // decentralized — direct node connection
+    | 'gossip'        // viral spread — neighbor to neighbor
+    | 'broadcast'     // one-to-all — universal message
+    | 'multicast'     // one-to-many — selected group
+    | 'unicast'       // one-to-one — private channel
+    | 'mesh'          // many-to-many — network flooding
+    | 'quantum';      // entangled — instant correlation
 
 // ── Chromosome structure ────────────────────────────────────────────────────
 
@@ -332,10 +466,34 @@ export interface CivilizationChromosomes {
         belief:     CosmologyBelief;
         conviction: number;
     };
+    /** bytes[24,25] — memory model + persistence (0–1) */
+    civ_ch13_memory: {
+        model:       MemoryModel;
+        persistence: number;
+    };
+    /** bytes[26,27] — interface mode + responsiveness (0–1) */
+    civ_ch14_interface: {
+        mode:          InterfaceMode;
+        responsiveness: number;
+    };
+    /** bytes[28,29] — evolution strategy + rate (0–1) */
+    civ_ch15_evolution: {
+        strategy: EvolutionStrategy;
+        rate:     number;
+    };
+    /** bytes[30,31] — communication protocol + bandwidth (0–1) */
+    civ_ch16_communication: {
+        protocol:  CommunicationProtocol;
+        bandwidth: number;
+    };
 }
 
 // ── Derived sub-field lookup maps ───────────────────────────────────────────
 // These are intentionally exported so agents can read them in design briefs.
+
+// ── Dynamic unlock derivation ────────────────────────────────────────────────
+// Hash-driven: each archetype unlocks based on intensity + ecosystem factors
+// rather than hardcoded 1:1 mapping. This ensures maximum diversity.
 
 export const ARCHETYPE_UNLOCKS: Record<CivilizationArchetype, CivilizationUnlock> = {
     theological:   'ceremony',
@@ -371,6 +529,17 @@ export const TECHNOLOGY_PARADIGMS: Record<TechnologyClass, TechnologyParadigm> =
     alchemical:  'transform_model',
     atmospheric: 'flow_model',
     spectral:    'spectrum_model',
+    // Extended paradigms
+    entanglement:'entanglement',
+    gravitational:'gravitational',
+    thermodynamic:'thermodynamic',
+    fractal:     'fractal',
+    chaotic:     'chaotic',
+    stochastic:  'stochastic',
+    genetic:     'genetic',
+    memetic:     'memetic',
+    symbiotic:   'symbiotic',
+    autopoietic: 'autopoietic',
 };
 
 export const CULTURE_MEDIUMS: Record<CultureEmphasis, CultureMedium> = {
@@ -388,6 +557,21 @@ export const CULTURE_MEDIUMS: Record<CultureEmphasis, CultureMedium> = {
     mythological:  'story',
     performative:  'performance',
     material:      'material',
+    // Extended media
+    code:          'code',
+    data:          'data',
+    symbol:        'symbol',
+    network:       'network',
+    simulation:    'simulation',
+    game:          'game',
+    meme:          'meme',
+    artifact:      'artifact',
+    experience:    'experience',
+    energy:        'energy',
+    smell:         'smell',
+    taste:         'taste',
+    touch:         'touch',
+    intuition:     'intuition',
 };
 
 // ── Genome ──────────────────────────────────────────────────────────────────

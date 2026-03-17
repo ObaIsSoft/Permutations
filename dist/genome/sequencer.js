@@ -142,7 +142,10 @@ export class GenomeSequencer {
             elements: this.getHeroElements(heroType),
             alignment: this.selectFromHash(b(103), ["left", "center", "right"]),
             textPosition: this.selectFromHash(b(104), ["overlay", "adjacent", "below"]),
-            height: traits.spatialDependency > 0.6 ? "full" : traits.informationDensity > 0.7 ? "compact" : "large",
+            height: traits.spatialDependency > 0.6 ? "full"
+                : traits.informationDensity > 0.7 ? "compact"
+                    : traits.informationDensity > 0.4 ? "medium"
+                        : "large",
             backgroundTreatment: heroType === "product_video" || heroType === "aspirational_imagery"
                 ? (b(118) > 0.5 ? "video" : "image")
                 : traits.spatialDependency > 0.6 ? "mesh" : "solid",
@@ -1644,56 +1647,102 @@ export class GenomeSequencer {
      * Generate rendering strategy
      */
     generateRendering(traits, b) {
-        let primary = "css";
+        const primaries = [
+            "webgl", "webgl2", "css", "css_houdini", "static", "svg",
+            "svg_js", "canvas2d", "canvas_bitmap", "video", "dom",
+            "hybrid_gpu", "hybrid_canvas", "progressive", "regressive"
+        ];
+        // Select primary rendering based on traits and hash
+        let primaryIndex = Math.floor(b(200) * primaries.length) % primaries.length;
         if (traits.spatialDependency > 0.6 && traits.playfulness > 0.4)
-            primary = "webgl";
-        else if (traits.spatialDependency > 0.4 && traits.playfulness > 0.3)
-            primary = "css";
-        else if (traits.informationDensity > 0.8 && traits.playfulness < 0.3)
-            primary = "svg";
+            primaryIndex = 0; // webgl
         else if (traits.informationDensity > 0.9)
-            primary = "static";
+            primaryIndex = 4; // static
+        const primary = primaries[primaryIndex];
+        const complexities = ["minimal", "balanced", "rich", "extreme", "adaptive"];
+        const antialiasOptions = ["none", "msaa", "fxaa", "taa"];
+        const shadowOptions = ["none", "hard", "pcf", "pcss", "vsm"];
         return {
             primary,
-            fallback: primary === "webgl" ? "css" : (traits.playfulness < 0.2 ? "static" : "css"),
+            fallback: primary.includes("webgl") ? "css" : (traits.playfulness < 0.2 ? "static" : "css"),
             animate: !(traits.temporalUrgency > 0.9 || (traits.playfulness < 0.3 && traits.informationDensity > 0.7)),
             complexity: traits.informationDensity > 0.8 ? "minimal" :
-                (traits.spatialDependency > 0.6 && traits.playfulness > 0.5) ? "rich" : "balanced"
+                (traits.spatialDependency > 0.6 && traits.playfulness > 0.5) ? "extreme" :
+                    complexities[Math.floor(b(201) * complexities.length)],
+            antialias: antialiasOptions[Math.floor(b(202) * antialiasOptions.length)],
+            hdr: b(203) > 0.7,
+            shadowQuality: shadowOptions[Math.floor(b(204) * shadowOptions.length)]
         };
     }
     // ==================== HERO TYPE SELECTION ====================
     selectHeroVariant(heroType, byte) {
         const variantsByType = {
+            // Product-focused (4)
             product_ui: ["centered", "split_right", "full_bleed", "floating_cards"],
             product_video: ["full_bleed", "centered", "overlay"],
-            brand_logo: ["centered", "minimal", "asymmetric"],
+            configurator_3d: ["centered", "split_left", "split_right"],
+            product_comparison: ["split_left", "split_right", "centered"],
+            // Data/proof (4)
             stats_counter: ["centered", "split_left", "floating_cards"],
-            search_discovery: ["centered", "full_bleed"],
-            content_carousel: ["full_bleed", "centered"],
             trust_authority: ["centered", "split_left", "split_right"],
-            service_showcase: ["centered", "split_left", "asymmetric"],
+            testimonial_focus: ["centered", "split_left", "split_right"],
+            social_proof_wall: ["full_bleed", "centered", "floating_cards"],
+            // Utility (4)
+            search_discovery: ["centered", "full_bleed"],
+            calculator_tool: ["centered", "split_left", "floating_cards"],
+            quiz_assessment: ["centered", "full_bleed", "overlay"],
+            demo_simulator: ["full_bleed", "centered", "split_left"],
+            // Content (4)
+            content_carousel: ["full_bleed", "centered"],
             editorial_feature: ["full_bleed", "asymmetric", "minimal"],
-            configurator_3d: ["centered", "split_left"],
+            documentary_story: ["full_bleed", "asymmetric", "overlay"],
+            knowledge_base: ["centered", "split_left", "minimal"],
+            // Brand/emotion (4)
+            brand_logo: ["centered", "minimal", "asymmetric"],
             aspirational_imagery: ["full_bleed", "overlay", "minimal"],
-            testimonial_focus: ["centered", "split_left", "split_right"]
+            manifesto_statement: ["centered", "full_bleed", "minimal"],
+            cultural_moment: ["full_bleed", "overlay", "asymmetric"],
+            // Experimental/spatial (4)
+            portal_view: ["centered", "split_left", "full_bleed"],
+            constellation_nav: ["asymmetric", "minimal", "floating_cards"],
+            immersive_void: ["minimal", "overlay", "full_bleed"],
+            ambient_presence: ["minimal", "asymmetric", "overlay"]
         };
         const variants = variantsByType[heroType] || ["centered"];
         return variants[Math.floor(byte * variants.length) % variants.length];
     }
     getHeroElements(heroType) {
         const elementsByType = {
+            // Product-focused (4)
             product_ui: ["screenshot", "headline", "subheadline", "cta_primary", "cta_secondary"],
             product_video: ["video", "headline", "subheadline", "cta_primary"],
-            brand_logo: ["logo", "tagline", "cta_primary"],
+            configurator_3d: ["3d_viewer", "options", "price", "cta_primary", "headline"],
+            product_comparison: ["comparison_view", "headline", "feature_list", "cta_primary"],
+            // Data/proof (4)
             stats_counter: ["counter", "context", "headline", "cta_primary"],
-            search_discovery: ["search_bar", "filters", "headline"],
-            content_carousel: ["carousel", "headline", "navigation"],
             trust_authority: ["credentials", "headline", "subheadline", "cta_primary"],
-            service_showcase: ["services", "headline", "cta_primary"],
+            testimonial_focus: ["testimonial", "headline", "cta_primary"],
+            social_proof_wall: ["logo_grid", "metrics", "headline", "cta_primary"],
+            // Utility (4)
+            search_discovery: ["search_bar", "filters", "headline"],
+            calculator_tool: ["calculator", "headline", "result_display", "cta_primary"],
+            quiz_assessment: ["question", "options", "progress", "headline"],
+            demo_simulator: ["simulation", "controls", "headline", "cta_primary"],
+            // Content (4)
+            content_carousel: ["carousel", "headline", "navigation"],
             editorial_feature: ["featured_image", "headline", "excerpt", "cta_primary"],
-            configurator_3d: ["3d_viewer", "options", "price", "cta_primary"],
+            documentary_story: ["video", "chapter_nav", "headline", "subheadline"],
+            knowledge_base: ["search", "categories", "featured_article", "headline"],
+            // Brand/emotion (4)
+            brand_logo: ["logo", "tagline", "cta_primary"],
             aspirational_imagery: ["image", "headline", "subheadline", "cta_primary"],
-            testimonial_focus: ["testimonial", "headline", "cta_primary"]
+            manifesto_statement: ["statement", "signature", "cta_primary"],
+            cultural_moment: ["imagery", "context", "headline", "cta_primary"],
+            // Experimental/spatial (4)
+            portal_view: ["portal", "headline", "subheadline", "cta_primary"],
+            constellation_nav: ["nodes", "connections", "headline"],
+            immersive_void: ["ambient_content", "minimal_text", "cta_primary"],
+            ambient_presence: ["atmosphere", "subtle_brand", "minimal_cta"]
         };
         return elementsByType[heroType] || ["headline", "cta_primary"];
     }

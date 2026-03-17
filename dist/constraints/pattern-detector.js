@@ -294,7 +294,18 @@ export const FORBIDDEN_PATTERNS = [
     }
 ];
 export class PatternDetector {
+    // Configurable max input size to prevent ReDoS (default 1MB, env overrideable)
+    static MAX_INPUT_SIZE = parseInt(process.env.PERMUTATIONS_MAX_PATTERN_INPUT_BYTES || "1048576", 10);
     detect(css, html) {
+        // Guard against huge inputs (ReDoS protection) - truncates with warning
+        if (css.length > PatternDetector.MAX_INPUT_SIZE) {
+            console.warn(`[PatternDetector] CSS input too large (${css.length} bytes), truncating to ${PatternDetector.MAX_INPUT_SIZE} bytes`);
+            css = css.slice(0, PatternDetector.MAX_INPUT_SIZE);
+        }
+        if (html && html.length > PatternDetector.MAX_INPUT_SIZE) {
+            console.warn(`[PatternDetector] HTML input too large (${html.length} bytes), truncating to ${PatternDetector.MAX_INPUT_SIZE} bytes`);
+            html = html.slice(0, PatternDetector.MAX_INPUT_SIZE);
+        }
         const violations = [];
         const source = html ? `${css}\n${html}` : css;
         for (const pattern of FORBIDDEN_PATTERNS) {

@@ -230,326 +230,224 @@ const SECTOR_COLOR_BIAS = {
  */
 const HERO_TYPE_WEIGHTS = {
     healthcare: {
-        product_ui: 0.05,
-        product_video: 0.10,
-        brand_logo: 0.05,
-        stats_counter: 0.10,
-        search_discovery: 0.10,
-        content_carousel: 0.10,
-        trust_authority: 0.30,
-        service_showcase: 0.25,
-        editorial_feature: 0.15,
-        configurator_3d: 0.00,
-        aspirational_imagery: 0.10,
-        testimonial_focus: 0.20
+        // Product-focused
+        product_ui: 0.05, product_video: 0.10, configurator_3d: 0.00, product_comparison: 0.05,
+        // Data/proof
+        stats_counter: 0.10, trust_authority: 0.30, testimonial_focus: 0.20, social_proof_wall: 0.10,
+        // Utility
+        search_discovery: 0.10, calculator_tool: 0.15, quiz_assessment: 0.10, demo_simulator: 0.05,
+        // Content
+        content_carousel: 0.10, editorial_feature: 0.15, documentary_story: 0.10, knowledge_base: 0.05,
+        // Brand/emotion
+        brand_logo: 0.05, aspirational_imagery: 0.10, manifesto_statement: 0.05, cultural_moment: 0.00,
+        // Experimental
+        portal_view: 0.00, constellation_nav: 0.00, immersive_void: 0.05, ambient_presence: 0.00
     },
     fintech: {
-        product_ui: 0.20,
-        product_video: 0.10,
-        brand_logo: 0.05,
-        stats_counter: 0.30,
-        search_discovery: 0.05,
-        content_carousel: 0.10,
-        trust_authority: 0.25,
-        service_showcase: 0.10,
-        editorial_feature: 0.05,
-        configurator_3d: 0.00,
-        aspirational_imagery: 0.05,
-        testimonial_focus: 0.10
+        // Product-focused
+        product_ui: 0.20, product_video: 0.10, configurator_3d: 0.00, product_comparison: 0.10,
+        // Data/proof
+        stats_counter: 0.30, trust_authority: 0.25, testimonial_focus: 0.10, social_proof_wall: 0.15,
+        // Utility
+        search_discovery: 0.05, calculator_tool: 0.20, quiz_assessment: 0.05, demo_simulator: 0.10,
+        // Content
+        content_carousel: 0.10, editorial_feature: 0.05, documentary_story: 0.05, knowledge_base: 0.10,
+        // Brand/emotion
+        brand_logo: 0.05, aspirational_imagery: 0.05, manifesto_statement: 0.10, cultural_moment: 0.00,
+        // Experimental
+        portal_view: 0.00, constellation_nav: 0.00, immersive_void: 0.00, ambient_presence: 0.00
     },
     automotive: {
-        product_ui: 0.05,
-        product_video: 0.15,
-        brand_logo: 0.10,
-        stats_counter: 0.05,
-        search_discovery: 0.10,
-        content_carousel: 0.15,
-        trust_authority: 0.05,
-        service_showcase: 0.10,
-        editorial_feature: 0.05,
-        configurator_3d: 0.25,
-        aspirational_imagery: 0.35,
-        testimonial_focus: 0.05
+        // Product-focused
+        product_ui: 0.05, product_video: 0.20, configurator_3d: 0.25, product_comparison: 0.10,
+        // Data/proof
+        stats_counter: 0.05, trust_authority: 0.05, testimonial_focus: 0.05, social_proof_wall: 0.10,
+        // Utility
+        search_discovery: 0.10, calculator_tool: 0.05, quiz_assessment: 0.05, demo_simulator: 0.10,
+        // Content
+        content_carousel: 0.15, editorial_feature: 0.05, documentary_story: 0.10, knowledge_base: 0.05,
+        // Brand/emotion
+        brand_logo: 0.10, aspirational_imagery: 0.35, manifesto_statement: 0.15, cultural_moment: 0.05,
+        // Experimental
+        portal_view: 0.10, constellation_nav: 0.05, immersive_void: 0.10, ambient_presence: 0.00
     },
     education: {
-        product_ui: 0.15,
-        product_video: 0.15,
-        brand_logo: 0.05,
-        stats_counter: 0.15,
-        search_discovery: 0.20,
-        content_carousel: 0.15,
-        trust_authority: 0.15,
-        service_showcase: 0.10,
-        editorial_feature: 0.25,
-        configurator_3d: 0.00,
-        aspirational_imagery: 0.10,
-        testimonial_focus: 0.15
+        // Product-focused
+        product_ui: 0.15, product_video: 0.15, configurator_3d: 0.00, product_comparison: 0.05,
+        // Data/proof
+        stats_counter: 0.15, trust_authority: 0.15, testimonial_focus: 0.15, social_proof_wall: 0.10,
+        // Utility
+        search_discovery: 0.20, calculator_tool: 0.10, quiz_assessment: 0.15, demo_simulator: 0.05,
+        // Content
+        content_carousel: 0.15, editorial_feature: 0.25, documentary_story: 0.15, knowledge_base: 0.20,
+        // Brand/emotion
+        brand_logo: 0.05, aspirational_imagery: 0.10, manifesto_statement: 0.10, cultural_moment: 0.05,
+        // Experimental
+        portal_view: 0.00, constellation_nav: 0.00, immersive_void: 0.00, ambient_presence: 0.00
     },
     commerce: {
-        product_ui: 0.10,
-        product_video: 0.15,
-        brand_logo: 0.10,
-        stats_counter: 0.05,
-        search_discovery: 0.20,
-        content_carousel: 0.25,
-        trust_authority: 0.10,
-        service_showcase: 0.10,
-        editorial_feature: 0.10,
-        configurator_3d: 0.05,
-        aspirational_imagery: 0.20,
-        testimonial_focus: 0.10
+        // Product-focused
+        product_ui: 0.10, product_video: 0.20, configurator_3d: 0.10, product_comparison: 0.15,
+        // Data/proof
+        stats_counter: 0.05, trust_authority: 0.10, testimonial_focus: 0.10, social_proof_wall: 0.10,
+        // Utility
+        search_discovery: 0.25, calculator_tool: 0.15, quiz_assessment: 0.10, demo_simulator: 0.10,
+        // Content
+        content_carousel: 0.25, editorial_feature: 0.10, documentary_story: 0.05, knowledge_base: 0.05,
+        // Brand/emotion
+        brand_logo: 0.10, aspirational_imagery: 0.20, manifesto_statement: 0.05, cultural_moment: 0.10,
+        // Experimental
+        portal_view: 0.05, constellation_nav: 0.00, immersive_void: 0.05, ambient_presence: 0.00
     },
     entertainment: {
-        product_ui: 0.10,
-        product_video: 0.35,
-        brand_logo: 0.10,
-        stats_counter: 0.05,
-        search_discovery: 0.25,
-        content_carousel: 0.30,
-        trust_authority: 0.00,
-        service_showcase: 0.05,
-        editorial_feature: 0.10,
-        configurator_3d: 0.00,
-        aspirational_imagery: 0.15,
-        testimonial_focus: 0.05
+        // Product-focused
+        product_ui: 0.10, product_video: 0.35, configurator_3d: 0.00, product_comparison: 0.05,
+        // Data/proof
+        stats_counter: 0.05, trust_authority: 0.00, testimonial_focus: 0.05, social_proof_wall: 0.05,
+        // Utility
+        search_discovery: 0.25, calculator_tool: 0.05, quiz_assessment: 0.15, demo_simulator: 0.10,
+        // Content
+        content_carousel: 0.30, editorial_feature: 0.10, documentary_story: 0.15, knowledge_base: 0.05,
+        // Brand/emotion
+        brand_logo: 0.10, aspirational_imagery: 0.15, manifesto_statement: 0.10, cultural_moment: 0.20,
+        // Experimental
+        portal_view: 0.10, constellation_nav: 0.10, immersive_void: 0.15, ambient_presence: 0.05
     },
     manufacturing: {
-        product_ui: 0.10,
-        product_video: 0.15,
-        brand_logo: 0.10,
-        stats_counter: 0.20,
-        search_discovery: 0.10,
-        content_carousel: 0.15,
-        trust_authority: 0.20,
-        service_showcase: 0.25,
-        editorial_feature: 0.10,
-        configurator_3d: 0.05,
-        aspirational_imagery: 0.05,
-        testimonial_focus: 0.10
+        product_ui: 0.10, product_video: 0.15, configurator_3d: 0.05, product_comparison: 0.10,
+        stats_counter: 0.20, trust_authority: 0.20, testimonial_focus: 0.10, social_proof_wall: 0.15,
+        search_discovery: 0.10, calculator_tool: 0.10, quiz_assessment: 0.05, demo_simulator: 0.10,
+        content_carousel: 0.15, editorial_feature: 0.10, documentary_story: 0.10, knowledge_base: 0.15,
+        brand_logo: 0.10, aspirational_imagery: 0.05, manifesto_statement: 0.10, cultural_moment: 0.00,
+        portal_view: 0.05, constellation_nav: 0.00, immersive_void: 0.00, ambient_presence: 0.00
     },
     legal: {
-        product_ui: 0.05,
-        product_video: 0.05,
-        brand_logo: 0.05,
-        stats_counter: 0.15,
-        search_discovery: 0.15,
-        content_carousel: 0.05,
-        trust_authority: 0.40,
-        service_showcase: 0.20,
-        editorial_feature: 0.15,
-        configurator_3d: 0.00,
-        aspirational_imagery: 0.00,
-        testimonial_focus: 0.15
+        product_ui: 0.05, product_video: 0.05, configurator_3d: 0.00, product_comparison: 0.00,
+        stats_counter: 0.15, trust_authority: 0.40, testimonial_focus: 0.15, social_proof_wall: 0.20,
+        search_discovery: 0.15, calculator_tool: 0.10, quiz_assessment: 0.05, demo_simulator: 0.00,
+        content_carousel: 0.05, editorial_feature: 0.15, documentary_story: 0.10, knowledge_base: 0.20,
+        brand_logo: 0.05, aspirational_imagery: 0.00, manifesto_statement: 0.15, cultural_moment: 0.00,
+        portal_view: 0.00, constellation_nav: 0.00, immersive_void: 0.00, ambient_presence: 0.00
     },
     real_estate: {
-        product_ui: 0.05,
-        product_video: 0.10,
-        brand_logo: 0.05,
-        stats_counter: 0.10,
-        search_discovery: 0.40,
-        content_carousel: 0.15,
-        trust_authority: 0.10,
-        service_showcase: 0.15,
-        editorial_feature: 0.10,
-        configurator_3d: 0.00,
-        aspirational_imagery: 0.30,
-        testimonial_focus: 0.10
+        product_ui: 0.05, product_video: 0.15, configurator_3d: 0.05, product_comparison: 0.10,
+        stats_counter: 0.10, trust_authority: 0.10, testimonial_focus: 0.10, social_proof_wall: 0.10,
+        search_discovery: 0.40, calculator_tool: 0.20, quiz_assessment: 0.10, demo_simulator: 0.05,
+        content_carousel: 0.15, editorial_feature: 0.10, documentary_story: 0.15, knowledge_base: 0.10,
+        brand_logo: 0.05, aspirational_imagery: 0.30, manifesto_statement: 0.10, cultural_moment: 0.05,
+        portal_view: 0.10, constellation_nav: 0.00, immersive_void: 0.05, ambient_presence: 0.00
     },
     travel: {
-        product_ui: 0.05,
-        product_video: 0.20,
-        brand_logo: 0.10,
-        stats_counter: 0.05,
-        search_discovery: 0.35,
-        content_carousel: 0.20,
-        trust_authority: 0.05,
-        service_showcase: 0.10,
-        editorial_feature: 0.15,
-        configurator_3d: 0.00,
-        aspirational_imagery: 0.40,
-        testimonial_focus: 0.10
+        product_ui: 0.05, product_video: 0.25, configurator_3d: 0.05, product_comparison: 0.10,
+        stats_counter: 0.05, trust_authority: 0.05, testimonial_focus: 0.10, social_proof_wall: 0.05,
+        search_discovery: 0.35, calculator_tool: 0.10, quiz_assessment: 0.15, demo_simulator: 0.05,
+        content_carousel: 0.20, editorial_feature: 0.15, documentary_story: 0.20, knowledge_base: 0.10,
+        brand_logo: 0.10, aspirational_imagery: 0.40, manifesto_statement: 0.15, cultural_moment: 0.10,
+        portal_view: 0.15, constellation_nav: 0.05, immersive_void: 0.10, ambient_presence: 0.05
     },
     food: {
-        product_ui: 0.10,
-        product_video: 0.20,
-        brand_logo: 0.10,
-        stats_counter: 0.05,
-        search_discovery: 0.20,
-        content_carousel: 0.25,
-        trust_authority: 0.10,
-        service_showcase: 0.20,
-        editorial_feature: 0.10,
-        configurator_3d: 0.00,
-        aspirational_imagery: 0.35,
-        testimonial_focus: 0.15
+        product_ui: 0.10, product_video: 0.25, configurator_3d: 0.05, product_comparison: 0.10,
+        stats_counter: 0.05, trust_authority: 0.10, testimonial_focus: 0.15, social_proof_wall: 0.10,
+        search_discovery: 0.20, calculator_tool: 0.05, quiz_assessment: 0.10, demo_simulator: 0.05,
+        content_carousel: 0.25, editorial_feature: 0.10, documentary_story: 0.15, knowledge_base: 0.05,
+        brand_logo: 0.10, aspirational_imagery: 0.35, manifesto_statement: 0.10, cultural_moment: 0.15,
+        portal_view: 0.10, constellation_nav: 0.00, immersive_void: 0.10, ambient_presence: 0.05
     },
     sports: {
-        product_ui: 0.10,
-        product_video: 0.25,
-        brand_logo: 0.15,
-        stats_counter: 0.20,
-        search_discovery: 0.15,
-        content_carousel: 0.20,
-        trust_authority: 0.05,
-        service_showcase: 0.10,
-        editorial_feature: 0.15,
-        configurator_3d: 0.00,
-        aspirational_imagery: 0.30,
-        testimonial_focus: 0.10
+        product_ui: 0.10, product_video: 0.30, configurator_3d: 0.00, product_comparison: 0.10,
+        stats_counter: 0.20, trust_authority: 0.05, testimonial_focus: 0.10, social_proof_wall: 0.15,
+        search_discovery: 0.15, calculator_tool: 0.05, quiz_assessment: 0.15, demo_simulator: 0.05,
+        content_carousel: 0.20, editorial_feature: 0.15, documentary_story: 0.20, knowledge_base: 0.05,
+        brand_logo: 0.15, aspirational_imagery: 0.30, manifesto_statement: 0.15, cultural_moment: 0.20,
+        portal_view: 0.05, constellation_nav: 0.05, immersive_void: 0.05, ambient_presence: 0.00
     },
     technology: {
-        product_ui: 0.30,
-        product_video: 0.15,
-        brand_logo: 0.10,
-        stats_counter: 0.15,
-        search_discovery: 0.05,
-        content_carousel: 0.10,
-        trust_authority: 0.10,
-        service_showcase: 0.15,
-        editorial_feature: 0.10,
-        configurator_3d: 0.00,
-        aspirational_imagery: 0.05,
-        testimonial_focus: 0.10
+        product_ui: 0.30, product_video: 0.15, configurator_3d: 0.05, product_comparison: 0.10,
+        stats_counter: 0.15, trust_authority: 0.10, testimonial_focus: 0.10, social_proof_wall: 0.10,
+        search_discovery: 0.05, calculator_tool: 0.05, quiz_assessment: 0.05, demo_simulator: 0.15,
+        content_carousel: 0.10, editorial_feature: 0.10, documentary_story: 0.10, knowledge_base: 0.15,
+        brand_logo: 0.10, aspirational_imagery: 0.05, manifesto_statement: 0.10, cultural_moment: 0.05,
+        portal_view: 0.10, constellation_nav: 0.10, immersive_void: 0.10, ambient_presence: 0.05
     },
     nonprofit: {
-        product_ui: 0.05,
-        product_video: 0.20,
-        brand_logo: 0.05,
-        stats_counter: 0.25,
-        search_discovery: 0.05,
-        content_carousel: 0.10,
-        trust_authority: 0.15,
-        service_showcase: 0.10,
-        editorial_feature: 0.20,
-        configurator_3d: 0.00,
-        aspirational_imagery: 0.25,
-        testimonial_focus: 0.20
+        product_ui: 0.05, product_video: 0.20, configurator_3d: 0.00, product_comparison: 0.05,
+        stats_counter: 0.25, trust_authority: 0.15, testimonial_focus: 0.20, social_proof_wall: 0.15,
+        search_discovery: 0.05, calculator_tool: 0.05, quiz_assessment: 0.05, demo_simulator: 0.00,
+        content_carousel: 0.10, editorial_feature: 0.20, documentary_story: 0.25, knowledge_base: 0.10,
+        brand_logo: 0.05, aspirational_imagery: 0.25, manifesto_statement: 0.20, cultural_moment: 0.10,
+        portal_view: 0.00, constellation_nav: 0.00, immersive_void: 0.00, ambient_presence: 0.00
     },
     government: {
-        product_ui: 0.10,
-        product_video: 0.05,
-        brand_logo: 0.05,
-        stats_counter: 0.15,
-        search_discovery: 0.25,
-        content_carousel: 0.05,
-        trust_authority: 0.30,
-        service_showcase: 0.30,
-        editorial_feature: 0.15,
-        configurator_3d: 0.00,
-        aspirational_imagery: 0.00,
-        testimonial_focus: 0.05
+        product_ui: 0.10, product_video: 0.05, configurator_3d: 0.00, product_comparison: 0.00,
+        stats_counter: 0.15, trust_authority: 0.30, testimonial_focus: 0.05, social_proof_wall: 0.10,
+        search_discovery: 0.25, calculator_tool: 0.20, quiz_assessment: 0.10, demo_simulator: 0.00,
+        content_carousel: 0.05, editorial_feature: 0.15, documentary_story: 0.10, knowledge_base: 0.25,
+        brand_logo: 0.05, aspirational_imagery: 0.00, manifesto_statement: 0.15, cultural_moment: 0.00,
+        portal_view: 0.00, constellation_nav: 0.00, immersive_void: 0.00, ambient_presence: 0.00
     },
     media: {
-        product_ui: 0.10,
-        product_video: 0.20,
-        brand_logo: 0.10,
-        stats_counter: 0.05,
-        search_discovery: 0.15,
-        content_carousel: 0.25,
-        trust_authority: 0.05,
-        service_showcase: 0.05,
-        editorial_feature: 0.40,
-        configurator_3d: 0.00,
-        aspirational_imagery: 0.10,
-        testimonial_focus: 0.05
+        product_ui: 0.10, product_video: 0.30, configurator_3d: 0.00, product_comparison: 0.05,
+        stats_counter: 0.05, trust_authority: 0.05, testimonial_focus: 0.05, social_proof_wall: 0.05,
+        search_discovery: 0.15, calculator_tool: 0.00, quiz_assessment: 0.05, demo_simulator: 0.00,
+        content_carousel: 0.25, editorial_feature: 0.40, documentary_story: 0.30, knowledge_base: 0.15,
+        brand_logo: 0.10, aspirational_imagery: 0.10, manifesto_statement: 0.15, cultural_moment: 0.15,
+        portal_view: 0.05, constellation_nav: 0.05, immersive_void: 0.05, ambient_presence: 0.05
     },
     crypto_web3: {
-        product_ui: 0.30,
-        product_video: 0.10,
-        brand_logo: 0.15,
-        stats_counter: 0.30,
-        search_discovery: 0.05,
-        content_carousel: 0.10,
-        trust_authority: 0.10,
-        service_showcase: 0.10,
-        editorial_feature: 0.05,
-        configurator_3d: 0.05,
-        aspirational_imagery: 0.05,
-        testimonial_focus: 0.05
+        product_ui: 0.30, product_video: 0.10, configurator_3d: 0.05, product_comparison: 0.10,
+        stats_counter: 0.30, trust_authority: 0.10, testimonial_focus: 0.05, social_proof_wall: 0.15,
+        search_discovery: 0.05, calculator_tool: 0.10, quiz_assessment: 0.05, demo_simulator: 0.10,
+        content_carousel: 0.10, editorial_feature: 0.05, documentary_story: 0.05, knowledge_base: 0.10,
+        brand_logo: 0.15, aspirational_imagery: 0.05, manifesto_statement: 0.10, cultural_moment: 0.10,
+        portal_view: 0.15, constellation_nav: 0.10, immersive_void: 0.10, ambient_presence: 0.05
     },
     gaming: {
-        product_ui: 0.15,
-        product_video: 0.40,
-        brand_logo: 0.10,
-        stats_counter: 0.10,
-        search_discovery: 0.05,
-        content_carousel: 0.25,
-        trust_authority: 0.00,
-        service_showcase: 0.05,
-        editorial_feature: 0.10,
-        configurator_3d: 0.10,
-        aspirational_imagery: 0.30,
-        testimonial_focus: 0.05
+        product_ui: 0.15, product_video: 0.40, configurator_3d: 0.10, product_comparison: 0.10,
+        stats_counter: 0.10, trust_authority: 0.00, testimonial_focus: 0.05, social_proof_wall: 0.10,
+        search_discovery: 0.05, calculator_tool: 0.05, quiz_assessment: 0.15, demo_simulator: 0.15,
+        content_carousel: 0.25, editorial_feature: 0.10, documentary_story: 0.15, knowledge_base: 0.05,
+        brand_logo: 0.10, aspirational_imagery: 0.30, manifesto_statement: 0.15, cultural_moment: 0.20,
+        portal_view: 0.20, constellation_nav: 0.15, immersive_void: 0.15, ambient_presence: 0.10
     },
     hospitality: {
-        product_ui: 0.05,
-        product_video: 0.20,
-        brand_logo: 0.10,
-        stats_counter: 0.05,
-        search_discovery: 0.20,
-        content_carousel: 0.25,
-        trust_authority: 0.10,
-        service_showcase: 0.25,
-        editorial_feature: 0.10,
-        configurator_3d: 0.00,
-        aspirational_imagery: 0.40,
-        testimonial_focus: 0.20
+        product_ui: 0.05, product_video: 0.25, configurator_3d: 0.05, product_comparison: 0.10,
+        stats_counter: 0.05, trust_authority: 0.10, testimonial_focus: 0.20, social_proof_wall: 0.10,
+        search_discovery: 0.20, calculator_tool: 0.15, quiz_assessment: 0.10, demo_simulator: 0.05,
+        content_carousel: 0.25, editorial_feature: 0.10, documentary_story: 0.20, knowledge_base: 0.10,
+        brand_logo: 0.10, aspirational_imagery: 0.40, manifesto_statement: 0.15, cultural_moment: 0.15,
+        portal_view: 0.15, constellation_nav: 0.05, immersive_void: 0.10, ambient_presence: 0.10
     },
     beauty_fashion: {
-        product_ui: 0.05,
-        product_video: 0.25,
-        brand_logo: 0.10,
-        stats_counter: 0.05,
-        search_discovery: 0.10,
-        content_carousel: 0.25,
-        trust_authority: 0.05,
-        service_showcase: 0.10,
-        editorial_feature: 0.25,
-        configurator_3d: 0.05,
-        aspirational_imagery: 0.45,
-        testimonial_focus: 0.15
+        product_ui: 0.05, product_video: 0.30, configurator_3d: 0.10, product_comparison: 0.10,
+        stats_counter: 0.05, trust_authority: 0.05, testimonial_focus: 0.15, social_proof_wall: 0.10,
+        search_discovery: 0.10, calculator_tool: 0.05, quiz_assessment: 0.10, demo_simulator: 0.05,
+        content_carousel: 0.25, editorial_feature: 0.25, documentary_story: 0.25, knowledge_base: 0.05,
+        brand_logo: 0.10, aspirational_imagery: 0.45, manifesto_statement: 0.20, cultural_moment: 0.20,
+        portal_view: 0.15, constellation_nav: 0.10, immersive_void: 0.15, ambient_presence: 0.10
     },
     insurance: {
-        product_ui: 0.10,
-        product_video: 0.05,
-        brand_logo: 0.05,
-        stats_counter: 0.20,
-        search_discovery: 0.15,
-        content_carousel: 0.05,
-        trust_authority: 0.35,
-        service_showcase: 0.20,
-        editorial_feature: 0.10,
-        configurator_3d: 0.00,
-        aspirational_imagery: 0.05,
-        testimonial_focus: 0.15
+        product_ui: 0.10, product_video: 0.05, configurator_3d: 0.00, product_comparison: 0.10,
+        stats_counter: 0.20, trust_authority: 0.35, testimonial_focus: 0.15, social_proof_wall: 0.15,
+        search_discovery: 0.15, calculator_tool: 0.25, quiz_assessment: 0.10, demo_simulator: 0.05,
+        content_carousel: 0.05, editorial_feature: 0.10, documentary_story: 0.10, knowledge_base: 0.15,
+        brand_logo: 0.05, aspirational_imagery: 0.05, manifesto_statement: 0.10, cultural_moment: 0.00,
+        portal_view: 0.00, constellation_nav: 0.00, immersive_void: 0.00, ambient_presence: 0.00
     },
     agency: {
-        product_ui: 0.15,
-        product_video: 0.15,
-        brand_logo: 0.10,
-        stats_counter: 0.10,
-        search_discovery: 0.05,
-        content_carousel: 0.20,
-        trust_authority: 0.10,
-        service_showcase: 0.15,
-        editorial_feature: 0.20,
-        configurator_3d: 0.05,
-        aspirational_imagery: 0.10,
-        testimonial_focus: 0.10
+        product_ui: 0.15, product_video: 0.20, configurator_3d: 0.05, product_comparison: 0.10,
+        stats_counter: 0.10, trust_authority: 0.10, testimonial_focus: 0.10, social_proof_wall: 0.10,
+        search_discovery: 0.05, calculator_tool: 0.05, quiz_assessment: 0.10, demo_simulator: 0.10,
+        content_carousel: 0.20, editorial_feature: 0.20, documentary_story: 0.20, knowledge_base: 0.10,
+        brand_logo: 0.10, aspirational_imagery: 0.10, manifesto_statement: 0.20, cultural_moment: 0.15,
+        portal_view: 0.10, constellation_nav: 0.10, immersive_void: 0.10, ambient_presence: 0.05
     },
     energy: {
-        product_ui: 0.05,
-        product_video: 0.15,
-        brand_logo: 0.10,
-        stats_counter: 0.30,
-        search_discovery: 0.10,
-        content_carousel: 0.10,
-        trust_authority: 0.15,
-        service_showcase: 0.25,
-        editorial_feature: 0.15,
-        configurator_3d: 0.00,
-        aspirational_imagery: 0.10,
-        testimonial_focus: 0.05
+        product_ui: 0.10, product_video: 0.20, configurator_3d: 0.05, product_comparison: 0.15,
+        stats_counter: 0.30, trust_authority: 0.15, testimonial_focus: 0.05, social_proof_wall: 0.15,
+        search_discovery: 0.10, calculator_tool: 0.20, quiz_assessment: 0.05, demo_simulator: 0.10,
+        content_carousel: 0.10, editorial_feature: 0.15, documentary_story: 0.15, knowledge_base: 0.15,
+        brand_logo: 0.10, aspirational_imagery: 0.10, manifesto_statement: 0.15, cultural_moment: 0.05,
+        portal_view: 0.10, constellation_nav: 0.05, immersive_void: 0.10, ambient_presence: 0.05
     }
 };
 // ============================================================================

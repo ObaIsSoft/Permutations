@@ -2,6 +2,11 @@ import * as fs from "fs/promises";
 import * as fsSync from "fs";
 import * as path from "path";
 import * as crypto from "crypto";
+import { createRequire } from "module";
+
+// Load package.json for version (avoids hardcoded version drift)
+const require = createRequire(import.meta.url);
+const PACKAGE_VERSION = require("../package.json").version;
 
 // Load .env if present (no dotenv dep — pure Node.js)
 // Does NOT override vars already set in the environment, so shell vars win.
@@ -50,6 +55,16 @@ import { selectStylingLibrary } from "./styling-catalog.js";
 import { selectOrganismLibrary } from "./organism-catalog.js";
 import { selectInteractionLibraries } from "./interaction-catalog.js";
 import { selectChartLibrary } from "./chart-catalog.js";
+
+// ── Security Configuration (environment-overrideable) ───────────────────────
+const SECURITY_CONFIG = {
+    // Maximum file size for brand assets (default: 50MB, env overrideable)
+    maxAssetSizeBytes: parseInt(process.env.PERMUTATIONS_MAX_ASSET_SIZE_MB || "50", 10) * 1024 * 1024,
+    // Maximum number of assets to process (default: 10)
+    maxAssetCount: parseInt(process.env.PERMUTATIONS_MAX_ASSET_COUNT || "10", 10),
+    // Allowed file extensions for assets
+    allowedAssetExtensions: (process.env.PERMUTATIONS_ALLOWED_ASSET_EXTENSIONS || ".png,.jpg,.jpeg,.svg,.pdf").split(",").map(s => s.trim().toLowerCase()),
+};
 
 // ── Ecosystem biomes: hash-selectable structural character per tier ─────────
 // Different seeds at same tier get different biome characters.
@@ -187,10 +202,107 @@ class DesignGenomeServer {
     private civilizationGen: CivilizationGenerator;
     private complexityAnalyzer: ComplexityAnalyzer;
 
+    /**
+     * Validates and sanitizes asset file paths for security.
+     * Returns null for invalid paths (rejected, not errors).
+     * Configurable via environment variables - no hardcoded limits.
+     */
+    private validateAssetPath(inputPath: string): string | null {
+        // Reject paths with directory traversal attempts
+        const normalized = path.normalize(inputPath);
+        if (normalized.includes('..')) {
+            console.warn(`[Security] Rejected path with traversal: ${inputPath}`);
+            return null;
+        }
+        
+        // Validate extension
+        const ext = path.extname(normalized).toLowerCase();
+        if (!SECURITY_CONFIG.allowedAssetExtensions.includes(ext)) {
+            console.warn(`[Security] Rejected file with invalid extension: ${inputPath}`);
+            return null;
+        }
+        
+        // Validate file exists and check size (configurable limit)
+        try {
+            const stats = fsSync.statSync(normalized);
+            if (!stats.isFile()) {
+                console.warn(`[Security] Rejected non-file path: ${inputPath}`);
+                return null;
+            }
+            if (stats.size > SECURITY_CONFIG.maxAssetSizeBytes) {
+                console.warn(`[Security] Rejected file too large: ${inputPath} (${stats.size} bytes > ${SECURITY_CONFIG.maxAssetSizeBytes})`);
+                return null;
+            }
+        } catch {
+            return null;
+        }
+        
+        return normalized;
+    }
+
+    /**
+     * Validates genome structure integrity.
+     * Checks for required chromosomes and consistency.
+     * Non-breaking: returns validation result without throwing.
+     */
+    private validateGenomeStructure(genome: any): { 
+        valid: boolean; 
+        errors: string[];
+        warnings: string[];
+    } {
+        const errors: string[] = [];
+        const warnings: string[] = [];
+        
+        if (!genome || typeof genome !== 'object') {
+            return { valid: false, errors: ['Genome is null or not an object'], warnings: [] };
+        }
+        
+        // Check dnaHash
+        if (!genome.dnaHash || typeof genome.dnaHash !== 'string') {
+            errors.push('Missing or invalid dnaHash');
+        }
+        
+        if (!genome.chromosomes || typeof genome.chromosomes !== 'object') {
+            errors.push('Missing chromosomes object');
+            return { valid: false, errors, warnings };
+        }
+        
+        // Essential chromosome groups (not all 32, just critical ones for operation)
+        const essentialChromosomes = [
+            'ch1_structure', 'ch5_primary_color', 'ch6_color_temp',
+            'ch7_edge', 'ch8_motion', 'ch9_grid', 'ch19_hero_type'
+        ];
+        
+        for (const ch of essentialChromosomes) {
+            if (!(ch in genome.chromosomes)) {
+                warnings.push(`Missing chromosome: ${ch}`);
+            }
+        }
+        
+        // Validate hero type consistency if both chromosomes present
+        const heroType = genome.chromosomes?.ch19_hero_type;
+        const heroVariant = genome.chromosomes?.ch19_hero_variant_detail;
+        if (heroType?.type && heroVariant?.layout) {
+            const validLayouts: Record<string, string[]> = {
+                product_ui: ['centered', 'split_right', 'full_bleed', 'floating_cards'],
+                product_video: ['full_bleed', 'centered', 'overlay'],
+                brand_logo: ['centered', 'minimal', 'asymmetric'],
+                stats_counter: ['centered', 'split_left', 'floating_cards'],
+                search_discovery: ['centered', 'full_bleed'],
+                trust_authority: ['centered', 'split_left', 'split_right']
+            };
+            const valid = validLayouts[heroType.type];
+            if (valid && !valid.includes(heroVariant.layout)) {
+                warnings.push(`Unusual hero layout "${heroVariant.layout}" for type "${heroType.type}"`);
+            }
+        }
+        
+        return { valid: errors.length === 0, errors, warnings };
+    }
 
     constructor() {
         this.server = new Server(
-            { name: "permutations", version: "0.0.7" },
+            { name: "permutations", version: PACKAGE_VERSION },
             { capabilities: { tools: {} } }
         );
 
@@ -443,9 +555,15 @@ class DesignGenomeServer {
                         // 1. Epigenetic Parsing (if assets provided)
                         let epigeneticData = undefined;
                         if (args.brand_asset_paths && Array.isArray(args.brand_asset_paths) && args.brand_asset_paths.length > 0) {
-                            epigeneticData = await this.epigeneticParser.parseAssets(
-                                args.brand_asset_paths.slice(0, 10) // cap at 10 files
-                            );
+                            // Validate and filter paths (security + configurability)
+                            const validatedPaths = args.brand_asset_paths
+                                .slice(0, SECURITY_CONFIG.maxAssetCount)
+                                .map((p: string) => this.validateAssetPath(p))
+                                .filter((p: string | null): p is string => p !== null);
+                            
+                            if (validatedPaths.length > 0) {
+                                epigeneticData = await this.epigeneticParser.parseAssets(validatedPaths);
+                            }
                         }
 
                         // 2. Semantic Extraction (single LLM call: traits + sector + archetype + copy intelligence)
@@ -619,7 +737,10 @@ class DesignGenomeServer {
                                             civTier, archetypedGenome2, archetypedCss2, undefined, allOrganisms
                                         )
                                     };
-                                } catch { /* ecosystem output still valid without civilization */ }
+                                } catch (err) {
+                                    // Log error for debugging but continue - ecosystem output is still valid
+                                    console.error('[Civilization] Generation failed:', err instanceof Error ? err.message : String(err));
+                                }
                             }
                         }
 
@@ -815,20 +936,29 @@ class DesignGenomeServer {
                             throw new McpError(ErrorCode.InvalidParams, "Missing genome or css");
                         }
 
+                        // Pattern/slop detection
                         const violations = this.patternDetector.detectInGenome(
                             args.genome,
                             args.css,
                             args.html
                         );
 
+                        // Genome structure validation (new - doesn't break existing)
+                        const structureValidation = this.validateGenomeStructure(args.genome);
+
                         const report = this.patternDetector.generateReport(violations);
-                        const valid = violations.filter(v => v.severity === "error").length === 0;
+                        const patternValid = violations.filter(v => v.severity === "error").length === 0;
+                        const overallValid = patternValid && structureValidation.valid;
 
                         return {
                             content: [{
                                 type: "text",
                                 text: JSON.stringify({
-                                    valid,
+                                    valid: overallValid,
+                                    pattern_valid: patternValid,
+                                    structure_valid: structureValidation.valid,
+                                    structure_warnings: structureValidation.warnings,
+                                    structure_errors: structureValidation.errors,
                                     violations,
                                     report,
                                     slop_score: violations.length
