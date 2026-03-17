@@ -88,6 +88,68 @@ npm run build
 
 ---
 
+## How AI Knows When to Use These Tools
+
+**The AI doesn't automatically know when to call MCP tools.** It decides based on three signals:
+
+### 1. Tool Descriptions
+Each tool has a `description` field that the AI reads. Descriptions include keywords like "design genome", "ecosystem", "validate" — these help the AI match your intent to the right tool.
+
+### 2. Your Explicit Request
+**Be explicit in your prompts.** The AI matches your words against tool descriptions:
+
+| If you say... | AI will likely call... |
+|---------------|------------------------|
+| "Generate a **design genome** for..." | `generate_design_genome` |
+| "Create **design DNA** from..." | `generate_design_genome` |
+| "**Update** the colors to..." | `update_design_genome` |
+| "**Extract design** from this URL..." | `extract_genome_from_url` |
+| "Create a **design brief**..." | `generate_design_brief` |
+| "Generate the **ecosystem**..." | `generate_ecosystem` |
+| "**Validate** this design..." | `validate_design` |
+| "Export to **CSS/Tailwind**..." | `generate_formats` |
+
+### 3. Context Matching
+Keywords in conversation trigger tool selection:
+- "design tokens", "genome", "chromosomes", "DNA" → Design tools
+- "components", "organisms", "ecosystem" → Ecosystem tools
+- "slop", "validation", "check constraints" → Validate tool
+
+### Bad vs Good Prompts
+
+❌ **Too vague** — "Make my app look good"
+→ AI may not trigger any MCP tool; might generate generic CSS
+
+✅ **Explicit** — "Generate a design genome for a fintech dashboard with dark mode"
+→ AI sees "design genome" → calls `generate_design_genome`
+
+✅ **With context** — "Use permutations to extract the design from https://example.com"
+→ AI sees "permutations" + "extract" → calls `extract_genome_from_url`
+
+### The `suggested_next` Field
+Every `generate_design_genome` response includes `suggested_next` — an array telling you (and the AI) which tools to call next:
+
+```json
+{
+  "suggested_next": [
+    {
+      "tool": "generate_design_brief",
+      "reason": "Complexity tier 0.74 requires philosophy documentation",
+      "when": "Before writing any CSS"
+    },
+    {
+      "tool": "generate_ecosystem",
+      "reason": "Component library needed for tier ≥ 0.68",
+      "when": "After brief, before implementation"
+    }
+  ]
+}
+```
+
+The AI reads these suggestions and may automatically invoke the next tool if your follow-up prompt implies continuation (e.g., "What's next?", "Generate the ecosystem too").
+
+---
+
 ## Usage Examples
 
 ### Simple Landing Page
