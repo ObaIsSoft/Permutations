@@ -162,7 +162,7 @@ Intent + Seed + Context + Brand Assets
 ┌─────────────────────────────────────────────────────┐
 │  DNA SEQUENCING — Layer 3 (CivilizationGenome)      │
 │                                                     │
-│  sha256(ecosystemGenome.hash) → 16 chromosomes      │
+│  sha256(ecosystemGenome.hash) → 16 chromosomes (L3) │
 │  Gravity: ecosystem chromosome VALUES bias civ picks│
 │                                                     │
 │  Examples:                                          │
@@ -535,8 +535,6 @@ src/
 │   └── extractor.ts             — SemanticTraitExtractor + StructuralProps analysis
 ├── css/
 │   └── generator.ts             — CSSGenerator — full page stylesheet from genome
-├── html/
-│   └── generator.ts             — HTMLGenerator — topology-aware HTML
 ├── svg/
 │   └── generator.ts             — SVG biomarker generation
 ├── webgl/
@@ -552,7 +550,7 @@ src/
 | Component | Status | Description |
 |---|---|---|
 | L1 DesignGenome | ✅ | 32 chromosomes, sector profiles, epistasis rules, forbidden ranges |
-| L2 EcosystemGenome | ✅ | 16 chromosomes, full gravity biasing from L1, wired into ecosystem.ts |
+| L2 EcosystemGenome | ✅ | 12 chromosomes, full gravity biasing from L1, wired into ecosystem.ts |
 | L3 CivilizationGenome | ✅ | 16 chromosomes, full gravity biasing from L2, overrides ch30/ch31 in civilization.ts |
 | SHA-256 hash chain | ✅ | seed → L1 → L2 → L3, fully deterministic, provenance tracked via parentHash |
 | StructuralProps | ✅ | Vocabulary-invariant complexity — binary/count questions, deterministic tier computation |

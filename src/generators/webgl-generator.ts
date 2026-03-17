@@ -70,8 +70,17 @@ export function Procedural3D() {
 }`;
   }
 
-  private buildGeometry(geometry: "organic" | "fractal" | "monolithic", complexity: number, entropy: number = 0.5): string {
-    if (geometry === "organic") {
+  private buildGeometry(geometry: string, complexity: number, entropy: number = 0.5): string {
+    // Map expanded geometry types to base categories
+    const geometryMap: Record<string, "organic" | "fractal" | "monolithic"> = {
+      organic: "organic", cellular: "organic", fibrous: "organic", shell: "organic", spiral: "organic",
+      fractal: "fractal", crystalline: "fractal", lattice: "fractal", voronoi: "fractal", diffusion: "fractal",
+      monolithic: "monolithic", granular: "monolithic", radial: "monolithic", linear: "monolithic",
+      erosion: "monolithic", growth: "monolithic"
+    };
+    const baseGeometry = geometryMap[geometry] || "organic";
+    
+    if (baseGeometry === "organic") {
       // Select shape based on entropy × complexity so same keyword → different geometry per DNA
       // 6 distinct organic shapes — torusKnot is just one of them
       const shapeSelector = (entropy * 0.6 + complexity * 0.4);
@@ -109,12 +118,12 @@ export function Procedural3D() {
         return `<dodecahedronGeometry args={[1.1, ${Math.round(entropy * 2)}]} />`;
       }
 
-    } else if (geometry === "fractal") {
+    } else if (baseGeometry === "fractal") {
       // Icosahedron — geodesic, self-similar. Detail level from complexity.
       const detail = Math.min(4, Math.floor(complexity * 5));
       return `<icosahedronGeometry args={[1.2, ${detail}]} />`;
     } else {
-      // Monolithic — octahedron for medium complexity, box for low
+      // Monolithic / default — octahedron for medium complexity, box for low
       if (complexity > 0.5) {
         return `<octahedronGeometry args={[1.2, ${Math.floor(complexity * 3)}]} />`;
       }
@@ -123,13 +132,22 @@ export function Procedural3D() {
   }
 
   private buildMaterial(
-    material: "glass" | "metallic" | "neumorphism" | "matte",
+    material: string,
     roughness: number,
     transmission: number,
     intensity: number,
     color: string
   ): string {
-    if (material === "glass") {
+    // Map expanded material types to base categories
+    const materialMap: Record<string, "glass" | "metallic" | "neumorphism" | "matte"> = {
+      glass: "glass", holographic: "glass", iridescent: "glass",
+      metallic: "metallic", chrome: "metallic", brushed: "metallic", pearlescent: "metallic",
+      neumorphism: "neumorphism", satin: "neumorphism", gloss: "neumorphism", rubber: "neumorphism",
+      matte: "matte", velvet: "matte", ceramic: "matte", wood: "matte", stone: "matte"
+    };
+    const baseMaterial = materialMap[material] || "matte";
+    
+    if (baseMaterial === "glass") {
       return `<MeshTransmissionMaterial
           roughness={${roughness.toFixed(3)}}
           transmission={${Math.max(0.7, transmission).toFixed(3)}}
@@ -139,14 +157,14 @@ export function Procedural3D() {
           emissive="${color}"
           emissiveIntensity={${(intensity * 0.3).toFixed(2)}}
         />`;
-    } else if (material === "metallic") {
+    } else if (baseMaterial === "metallic") {
       return `<meshStandardMaterial
           metalness={1}
           roughness={${roughness.toFixed(3)}}
           color="${color}"
           envMapIntensity={${(0.5 + intensity * 1.5).toFixed(2)}}
         />`;
-    } else if (material === "neumorphism") {
+    } else if (baseMaterial === "neumorphism") {
       // Soft, light-extruded — phong with specular glow
       return `<meshPhongMaterial
           color="${color}"
@@ -156,7 +174,7 @@ export function Procedural3D() {
           emissiveIntensity={${(intensity * 0.15).toFixed(2)}}
         />`;
     } else {
-      // Matte — no reflections, flat lambert
+      // Matte / default — no reflections, flat lambert
       return `<meshLambertMaterial
           color="${color}"
           emissive="${color}"
@@ -165,12 +183,14 @@ export function Procedural3D() {
     }
   }
 
-  private selectEnvironment(material: "glass" | "metallic" | "neumorphism" | "matte"): string {
-    switch (material) {
-      case "glass": return "city";
-      case "metallic": return "studio";
-      case "neumorphism": return "sunset";
-      case "matte": return "apartment";
-    }
+  private selectEnvironment(material: string): string {
+    const envMap: Record<string, string> = {
+      glass: "city", holographic: "city", iridescent: "studio",
+      metallic: "studio", chrome: "studio", brushed: "warehouse",
+      neumorphism: "sunset", satin: "sunset", gloss: "sunset",
+      matte: "apartment", velvet: "apartment", ceramic: "apartment",
+      wood: "forest", stone: "dawn"
+    };
+    return envMap[material] || "apartment";
   }
 }

@@ -15,6 +15,5 @@ export { GenomeConstraintSolver } from './constraint-solver.js';
 export { ARCHETYPES, detectArchetype } from './archetypes.js';
 // Generators
 export { CSSGenerator } from '../css-generator.js';
-export { HTMLGenerator } from '../html-generator.js';
 // Format Generators
 export { FormatGenerator } from '../generators/format-generators.js';

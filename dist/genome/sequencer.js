@@ -127,12 +127,15 @@ export class GenomeSequencer {
         const ch18_rendering = isForced('ch18_rendering') || this.generateRendering(traits, b);
         // Hero & Visual Chromosomes (19-20)
         const forcedHero = isForced('ch19_hero_type');
+        // SHA-256 derived: does this design have a hero? (~10% chance of no hero)
+        const hasHero = forcedHero?.hasHero ?? (b(100) > 0.10);
         const heroType = forcedHero?.type ||
             selectHeroType(primaryProfile.sector, Math.floor(b(101) * 255));
         const heroVariant = forcedHero?.variant ||
             this.selectHeroVariant(heroType, b(102));
         const ch19_hero_type = forcedHero || {
-            type: heroType,
+            hasHero, // ← SHA-256 derived existence
+            type: hasHero ? heroType : "product_ui", // ← Default type if no hero (AI ignores)
             variant: heroVariant,
             variantIndex: Math.floor(b(30) * 10) % 10, // Use byte 30, wrap to 0-9
             contentSource: undefined
@@ -169,14 +172,17 @@ export class GenomeSequencer {
         };
         // Trust & Social Chromosomes (21-22)
         const forcedTrust = isForced('ch21_trust_signals');
+        // SHA-256 derived: does this design have trust signals? (~25% chance of none)
+        const hasTrustSignals = forcedTrust?.hasTrustSignals ?? (b(107) > 0.25);
         const trustApproach = forcedTrust?.approach ||
             selectTrustApproach(primaryProfile.sector, Math.floor(b(108) * 255));
         const ch21_trust_signals = forcedTrust || {
-            approach: trustApproach,
+            hasTrustSignals, // ← SHA-256 derived existence
+            approach: hasTrustSignals ? trustApproach : "credentials", // ← Default if none
             prominence: this.selectTrustProminence(traits, primaryProfile),
             layoutVariant: `trust_${trustApproach}_${Math.floor(b(109) * 5)}`,
             contentProvided: false,
-            suggestedStats: ["{{STAT_1}}", "{{STAT_2}}", "{{STAT_3}}"],
+            suggestedStats: hasTrustSignals ? ["{{STAT_1}}", "{{STAT_2}}", "{{STAT_3}}"] : [],
             animationType: traits.informationDensity > 0.7
                 ? "count_up"
                 : traits.temporalUrgency > 0.6
@@ -200,11 +206,16 @@ export class GenomeSequencer {
                 ? ["{{BADGE_ISO}}", "{{BADGE_SOC2}}"]
                 : []
         };
+        // SHA-256 derived: does this design have social proof? (~30% chance of none)
+        const hasSocialProof = b(110) > 0.30;
         const ch22_social_proof = isForced('ch22_social_proof') || {
-            type: this.selectSocialProofType(b(110), primaryProfile),
+            hasSocialProof, // ← SHA-256 derived existence
+            type: hasSocialProof ? this.selectSocialProofType(b(111), primaryProfile) : "none",
             prominence: this.selectTrustProminence(traits, primaryProfile),
-            layout: this.selectFromHash(b(111), ["grid", "marquee", "carousel", "static"]),
-            logoCount: (traits.conversionFocus > 0.6 ? 8 : traits.informationDensity > 0.5 ? 5 : 3),
+            layout: this.selectFromHash(b(112), ["grid", "marquee", "carousel", "static"]),
+            logoCount: hasSocialProof
+                ? (traits.conversionFocus > 0.6 ? 8 : traits.informationDensity > 0.5 ? 5 : 3)
+                : 0,
             updateFrequency: traits.temporalUrgency > 0.7 ? "realtime" : traits.temporalUrgency > 0.4 ? "daily" : "static",
             displayStyle: traits.trustRequirement > 0.6
                 ? "full_testimonial"
@@ -235,10 +246,15 @@ export class GenomeSequencer {
             hasFAQ: traits.informationDensity > 0.6,
             hasTestimonials: traits.trustRequirement > 0.6
         };
+        // SHA-256 derived: does this design have a footer? (~20% chance of no footer)
+        const hasFooter = b(116) > 0.20;
         const ch23_information_architecture = isForced('ch23_information_architecture') || {
             pattern: this.selectInfoArchitecture(traits, primaryProfile),
             navigationType: this.selectFromHash(b(115), ["header", "sidebar", "floating", "minimal"]),
-            footerType: this.selectFromHash(b(116), ["full", "minimal", "none"])
+            hasFooter, // ← SHA-256 derived existence
+            footerType: hasFooter
+                ? this.selectFromHash(b(117), ["full", "minimal"])
+                : "minimal" // ← Default if no footer (AI ignores)
         };
         const ch24_personalization = isForced('ch24_personalization') || {
             approach: this.selectPersonalization(traits),
@@ -943,10 +959,13 @@ export class GenomeSequencer {
         else {
             topology = this.selectFromHash(b(0), ["flat", "deep", "graph", "radial"]);
         }
+        // SHA-256 derived: does this design have sections? (~15% chance of no sections)
+        const hasSections = b(1) > 0.15;
         return {
+            hasSections, // ← SHA-256 derived existence
+            sectionCount: hasSections ? this.estimateSections(traits) : 0,
             topology,
             maxNesting: Math.floor(b(3) * 4) + 1,
-            sectionCount: this.estimateSections(traits),
             scrollBehavior: traits.informationDensity > 0.7
                 ? "continuous"
                 : this.selectFromHash(b(22), ["continuous", "paginated", "snap"]),

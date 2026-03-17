@@ -236,17 +236,53 @@ export type ImpactDemonstration =
 // ============================================================================
 
 export type ContentDepth =
+    // === SPARSE (4) ===
+    | "micro"         // Single section only
     | "minimal"       // 2-3 sections
+    | "focused"       // 3-4 sections, one primary
+    | "landing"       // 4-5 sections, conversion-focused
+    // === MODERATE (4) ===
     | "moderate"      // 4-6 sections
+    | "standard"      // 5-7 sections, typical brochure
+    | "scannable"     // 6-8 sections, quick-jump friendly
+    | "modular"       // 7-9 sections, interchangeable blocks
+    // === EXTENSIVE (4) ===
     | "extensive"     // 7-10 sections
-    | "comprehensive"; // 10+ sections
+    | "deep"          // 8-12 sections, narrative-driven
+    | "comprehensive" // 10-14 sections
+    | "encyclopedic"  // 12-16 sections, reference-style
+    // === MASSIVE (4) ===
+    | "platform"      // 15-20 sections, multi-product
+    | "ecosystem"     // 20-30 sections, suite showcase
+    | "infinite"      // 30+ sections, scroll-driven
+    | "database";     // Dynamic section count, query-driven
 
 export type InformationArchitecture =
+    // === LINEAR (4) ===
     | "funnel_linear"    // Sequential conversion flow
+    | "step_progress"    // Step-by-step wizard
+    | "timeline"         // Chronological progression
+    | "onboarding"       // Progressive disclosure
+    // === HIERARCHICAL (4) ===
     | "hub_spoke"        // Central page with topic branches
+    | "tree_branch"      // Deep category nesting
+    | "pyramid"          // Broad top, narrow deep
+    | "taxonomy"         // Faceted classification
+    // === MODULAR (4) ===
     | "modular_sections" // Independent, scannable blocks
+    | "bento_grid"       // Grid-based equal-weight
+    | "masonry_flow"     // Pinterest-style cascade
+    | "card_deck"        // Stackable, filterable cards
+    // === NARRATIVE (4) ===
     | "narrative_scroll" // Story-driven, continuous
-    | "data_dashboard";  // Dense, interactive data
+    | "scrollytelling"   // Scroll-triggered reveals
+    | "parallax_journey" // Depth-based storytelling
+    | "chapter_book"     // Clear section boundaries
+    // === SPATIAL (4) ===
+    | "data_dashboard"   // Dense, interactive data
+    | "spatial_canvas"   // 2D zoomable surface
+    | "3d_scene"         // Three-dimensional space
+    | "immersive_world"; // Full-screen takeovers
 
 export type PersonalizationApproach =
     | "static"            // Same for everyone
@@ -483,7 +519,19 @@ export type ScrollBehavior =
     | "smooth"         // Lenis-style smooth dampening
     | "virtual"        // Windowed list virtualization
     | "infinite";      // Endless scroll loading
-export type BreakpointStrategy = "mobile_first" | "desktop_first" | "fluid";
+export type BreakpointStrategy = 
+    | "mobile_first"      // Design for mobile, scale up
+    | "desktop_first"     // Design for desktop, scale down  
+    | "fluid"             // Continuous scaling, no breakpoints
+    | "content_based"     // Break at content widths, not device widths
+    | "container_query"   // Component-level responsive
+    | "macro_micro"       // Separate macro (layout) and micro (component) breakpoints
+    | "viewport_only"     // No breakpoints, viewport scaling only
+    | "device_specific"   // Break at exact device dimensions
+    | "accessibility"     // Break at zoom levels for a11y
+    | "hybrid"            // Mix of strategies per section
+    | "atomic"            // Per-element responsive behavior
+    | "none";             // Single fixed width, no responsiveness
 export type ContentFlow = 
     | "reading_order"  // Top-to-bottom, left-to-right
     | "z_pattern"      // Eye tracking in Z shape
@@ -512,9 +560,53 @@ export type RhythmDensity =
     | "fibonacci";     // Fibonacci sequence spacing
 export type TypeCharge = "geometric" | "humanist" | "monospace" | "transitional" | "grotesque" | "slab_serif" | "expressive";
 export type FontProvider = "bunny" | "google" | "fontshare" | "none";
-export type TypeTracking = "tight" | "normal" | "wide" | "ultra";
-export type TypeCasing = "normal" | "uppercase" | "small_caps";
-export type ColorTemp = "warm" | "cool" | "neutral";
+export type TypeTracking = 
+    | "ultra_tight"       // -0.1em, aggressive compression
+    | "tight"             // -0.05em, slight compression
+    | "snug"              // -0.02em, minimal compression
+    | "normal"            // 0em, default
+    | "relaxed"           // 0.02em, slight expansion
+    | "wide"              // 0.05em, expanded
+    | "extra_wide"        // 0.1em, very expanded
+    | "ultra_wide"        // 0.15em, extreme expansion
+    | "variable"          // Dynamic based on size
+    | "screaming"         // Extreme expansion for impact
+    | "whisper"           // Tight for subtle text
+    | "proportional";     // Scales with font size
+export type TypeCasing = 
+    | "normal"            // Mixed case as typed
+    | "uppercase"         // ALL CAPS
+    | "lowercase"         // all lowercase
+    | "small_caps"        // Small capitals
+    | "title_case"        // First Letter Capitalized
+    | "sentence_case"     // First letter capitalized
+    | "camelCase"         // camelCase for tech
+    | "kebab-case"        // kebab-case for css
+    | "snake_case"        // snake_case for code
+    | "alternating"       // AlTeRnAtInG cAsE
+    | "random"            // Random casing
+    | "inverted"          // iNVERTED cASE
+    | "petite_caps"       // Smaller than small caps
+    | "unicase"           // Mix of upper/lower in single height
+    | "tall_caps"         // Stretched uppercase
+    | "compressed";       // Squashed uppercase
+export type ColorTemp = 
+    | "warm"              // Yellow/orange bias
+    | "cool"              // Blue/cyan bias
+    | "neutral"           // No temperature bias
+    | "hot"               // Extreme warm, red/orange
+    | "cold"              // Extreme cool, blue/purple
+    | "daylight"          // 5500K balanced
+    | "tungsten"          // 2700K incandescent warm
+    | "fluorescent"       // 4100K clinical cool
+    | "overcast"          // Diffused cool gray
+    | "sunset"            // Golden hour warm
+    | "sunrise"           // Pink/orange dawn
+    | "moonlight"         // Silvery cool
+    | "fire"              // Red/orange flicker
+    | "ice"               // Cyan/white arctic
+    | "sepia"             // Brown nostalgic
+    | "monochrome";       // Grayscale only
 export type EdgeStyle =
     | "sharp"        // precise corners, no rounding
     | "soft"         // gentle rounded corners
@@ -591,8 +683,39 @@ export type ExitBehavior =
     | "morph_out";   // shape-morph into next element
 
 export type GridLogic = "column" | "masonry" | "radial" | "broken" | "bento" | "editorial";
-export type GridAlignment = "stretch" | "center" | "start";
-export type HierarchyDepth = "flat" | "overlapping" | "3d-stack";
+export type GridAlignment = 
+    | "stretch"           // Fill available space
+    | "center"            // Center in cell
+    | "start"             // Align to start (left/top in LTR)
+    | "end"               // Align to end (right/bottom in LTR)
+    | "space_between"     // Distribute with space between
+    | "space_around"      // Distribute with space around
+    | "space_evenly"      // Equal space between and edges
+    | "baseline"          // Align to text baseline
+    | "first_baseline"    // First line baseline
+    | "last_baseline"     // Last line baseline
+    | "safe_center"       // Center unless overflow, then start
+    | "unsafe_center"     // Center even if overflow
+    | "self_start"        // Align to item's start
+    | "self_end"          // Align to item's end
+    | "anchor_center";    // Center on specific anchor point
+export type HierarchyDepth = 
+    | "flat"              // Single layer, no z-axis
+    | "subtle"            // 2-3 depth levels
+    | "layered"           // 4-6 distinct layers
+    | "overlapping"       // Elements partially cover each other
+    | "3d-stack"          // Strong 3D depth perception
+    | "deep"              // Many layers, parallax-ready
+    | "infinite"          // Scroll-driven infinite depth
+    | "tunnel"            // Center-focused depth recession
+    | "floating"          // Elements hover at different heights
+    | "sunken"            // Recessed, cave-like depth
+    | "stacked_cards"     // Card stack metaphor
+    | "origami"           // Folded paper depth
+    | "crystal"           // Faceted gemstone layers
+    | "nebula"            // Atmospheric, cloud-like depth
+    | "microscopic"       // Tiny layered details
+    | "cosmic";           // Vast scale depth differences
 
 export type ElevationSystem =
     | "flat"         // no shadows — pure colour separation
@@ -604,7 +727,23 @@ export type ElevationSystem =
     | "embossed"     // pressed-in relief — paper / stamped
     | "frosted";     // backdrop-filter blur depth cue
 
-export type DepthCue = "blur" | "scale" | "opacity" | "none";
+export type DepthCue = 
+    | "blur"              // Distance blur (bokeh effect)
+    | "scale"             // Smaller = further
+    | "opacity"           // More transparent = further
+    | "saturation"        // Less saturated = further
+    | "contrast"          // Lower contrast = further
+    | "lightness"         // Darker/lighter = further
+    | "color_temp"        // Cooler = further
+    | "detail"            // Less detail = further (LOD)
+    | "motion"            // Parallax speed differences
+    | "shadow"            // Softer/lighter shadows = further
+    | "overlap"           // What covers what
+    | "atmospheric"       // Haze/fog with distance
+    | "texture_scale"     // Texture gets smaller with distance
+    | "none"              // No depth cues, flat
+    | "combined"          // Multiple cues together
+    | "psychological";    // Size/position conventions only
 
 export type TextureSurface =
     | "flat"
@@ -650,9 +789,57 @@ export type AtmosphereCoverage =
     | "volumetric"     // 3D volumetric light shafts
     | "aurora"         // Flowing color shifts
     | "holographic";   // Iridescent interference patterns
-export type PerformanceBudget = "high" | "medium" | "low";
-export type PhysicsMaterial = "neumorphism" | "metallic" | "glass" | "matte";
-export type BiomarkerGeometry = "monolithic" | "organic" | "fractal";
+export type PerformanceBudget = 
+    | "ultra"             // 60fps guaranteed, minimal effects
+    | "high"              // 60fps target, some effects
+    | "medium"            // 30fps acceptable, moderate effects
+    | "low"               // Functional over performant
+    | "unlimited"         // Desktop-only, max effects
+    | "adaptive"          // Scale based on device capability
+    | "progressive"       // Enhance from baseline
+    | "deferred"          // Load heavy effects after interaction
+    | "lazy"              // Only load when visible
+    | "static"            // No animation, max quality
+    | "motion_only"       // Animate only, no other effects
+    | "essential"         // Only critical effects
+    | "experimental"      // Push boundaries, may drop frames
+    | "measured"          // Instrument and optimize live
+    | "greedy"            // Use all available resources
+    | "sustainable";      // Long-term energy efficient
+export type PhysicsMaterial = 
+    | "neumorphism"       // Soft extruded plastic
+    | "metallic"          // Reflective metal
+    | "glass"             // Transparent refractive
+    | "matte"             // Non-reflective diffuse
+    | "chrome"            // Mirror-like reflection
+    | "brushed"           // Directional metal grain
+    | "iridescent"        // Color-shifting surface
+    | "pearlescent"       // Soft color shimmer
+    | "holographic"       // Rainbow diffraction
+    | "velvet"            // Soft light absorption
+    | "satin"             // Low sheen, soft reflection
+    | "gloss"             // High shine plastic
+    | "rubber"            // Matte, slightly textured
+    | "ceramic"           // Smooth, slight gloss
+    | "wood"              // Natural grain texture
+    | "stone";            // Rough, porous surface
+export type BiomarkerGeometry = 
+    | "monolithic"        // Single solid mass
+    | "organic"           // Nature-inspired flowing forms
+    | "fractal"           // Self-similar repeating patterns
+    | "crystalline"       // Sharp geometric facets
+    | "cellular"          // Cell-like structures
+    | "fibrous"           // Thread/strand networks
+    | "granular"          // Particle clusters
+    | "lattice"           // Network of connected nodes
+    | "shell"             // Curved hollow forms
+    | "spiral"            // Helix or vortex shapes
+    | "radial"            // Center-out patterns
+    | "linear"            // Straight line arrays
+    | "voronoi"           // Cell division patterns
+    | "diffusion"         // Spread/reaction patterns
+    | "erosion"           // Weathered/worn shapes
+    | "growth";           // Branching expansion forms
 export type BiomarkerShapeFamily = "geometric" | "biological" | "crystalline" | "fluid" | "architectural";
 
 export type BiomarkerAnimStyle =
@@ -667,9 +854,41 @@ export type BiomarkerAnimStyle =
     | "unfold"       // sequential path draw-on reveal
     | "draw_on";     // SVG stroke-dashoffset trace
 
-export type PolyCount = "low" | "medium" | "high";
+export type PolyCount = 
+    | "wireframe"         // Lines only, no faces
+    | "point_cloud"       // Vertices only
+    | "ultra_low"         // < 100 polygons
+    | "low"               // 100-500 polygons
+    | "reduced"           // 500-1000 polygons
+    | "optimized"         // 1000-3000 polygons
+    | "medium"            // 3000-10000 polygons
+    | "detailed"          // 10000-50000 polygons
+    | "high"              // 50000-200000 polygons
+    | "very_high"         // 200k-1M polygons
+    | "ultra"             // 1M-10M polygons
+    | "film"              // 10M+ polygons
+    | "procedural"        // Infinite via algorithms
+    | "subdiv"            // Catmull-Clark surfaces
+    | "nurbs"             // Mathematical curves
+    | "voxel";            // Volumetric pixels
 export type ColorTreatment = "primary" | "complementary" | "monochrome" | "analogous" | "split_complementary";
-export type ImageAspectRatio = "16:9" | "4:3" | "1:1" | "portrait";
+export type ImageAspectRatio = 
+    | "21:9"              // Ultrawide cinematic
+    | "16:9"              // Standard widescreen
+    | "16:10"             // Computer displays
+    | "3:2"               // Classic photography
+    | "4:3"               // Traditional TV
+    | "1:1"               // Square
+    | "5:4"               // Large format photo
+    | "9:16"              // Vertical video
+    | "4:5"               // Instagram portrait
+    | "2:3"               // 35mm portrait
+    | "3:4"               // iPad portrait
+    | "3:5"               // Classic portrait
+    | "1:2"               // Tall panorama
+    | "1:3"               // Extreme vertical
+    | "3:1"               // Extreme horizontal
+    | "golden";           // 1.618:1 golden ratio
 
 export type ColorGrading =
     | "natural"        // true-to-life, no grading
@@ -684,14 +903,142 @@ export type ColorGrading =
     | "infrared"       // false-colour foliage red / sky dark
     | "cyanotype"      // prussian blue monochrome
     | "kodachrome";    // warm reds, rich greens, punchy shadows
-export type AnimationTrigger = "scroll_enter" | "page_load" | "hover";
-export type CounterFormat = "abbreviated" | "full" | "percentage";
-export type TrustAnimationType = "count_up" | "fade_in" | "none";
-export type SocialDisplayStyle = "logos_only" | "logos_with_name" | "full_testimonial";
-export type SocialUpdateFreq = "static" | "daily" | "realtime";
-export type HeroHeight = "full" | "large" | "medium" | "compact";
-export type HeroBgTreatment = "solid" | "image" | "video" | "mesh";
-export type HeroMobileBehavior = "stack" | "collapse_image" | "full_bleed";
+export type AnimationTrigger = 
+    | "page_load"         // When page loads
+    | "scroll_enter"      // When element enters viewport
+    | "scroll_exit"       // When element leaves viewport
+    | "scroll_progress"   // Tied to scroll position (0-100%)
+    | "hover"             // Mouse over
+    | "hover_out"         // Mouse leave
+    | "click"             // On click/tap
+    | "double_click"      // On double click
+    | "long_press"        // Hold for duration
+    | "focus"             // Input focus
+    | "blur"              // Input blur
+    | "drag_start"        // Begin dragging
+    | "drag_end"          // Release drag
+    | "drop"              // Drop target hit
+    | "voice_command"     // Speech recognition
+    | "gesture";          // Swipe/pinch/rotate
+export type CounterFormat = 
+    | "raw"               // 1234567
+    | "full"              // 1,234,567
+    | "abbreviated_k"     // 1.2M
+    | "abbreviated_m"     // 1.2M
+    | "percentage"        // 12%
+    | "basis_points"      // 0.12%
+    | "ratio"             // 1:4
+    | "scientific"        // 1.2e6
+    | "hex"               // 0x12D687
+    | "binary"            // 0b10010110
+    | "octal"             // 0o1234567
+    | "roman"             // CXXIV
+    | "spelled"           // one million
+    | "metric_prefix"     // 1.2 mega
+    | "compact"           // 1.2M (locale aware)
+    | "accounting";       // (1,234,567) for negatives
+export type TrustAnimationType = 
+    | "none"              // Static display
+    | "fade_in"           // Opacity transition
+    | "count_up"          // Number increment animation
+    | "count_down"        // Number decrement animation
+    | "typewriter"        // Character reveal
+    | "scramble"          // Text decode effect
+    | "slide_in"          // Translate from offscreen
+    | "scale_pop"         // Grow from zero
+    | "stagger_reveal"    // Sequential element reveal
+    | "checkmark_draw"    // SVG stroke draw
+    | "stamp"             // Impact/authority effect
+    | "badge_shine"       // Metallic shimmer
+    | "pulse_glow"        // Rhythmic glow
+    | "counter_flip"      // Airport display style
+    | "roll_in"           // 3D tumble
+    | "elastic_snap";     // Bounce settle effect
+export type SocialDisplayStyle = 
+    | "logos_only"        // Just company logos
+    | "logos_with_name"   // Logo + company name
+    | "logos_with_quote"  // Logo + brief quote
+    | "full_testimonial"  // Photo + name + role + quote
+    | "video_testimonial" // Video embed format
+    | "audio_testimonial" // Audio player format
+    | "stats_only"        // Numbers/metrics
+    | "awards_badges"     // Certification badges
+    | "press_mentions"    // Publication logos + quotes
+    | "tweet_embed"       // Social media embeds
+    | "case_study_cards"  // Success story summaries
+    | "trust_score"       // Aggregate rating display
+    | "marquee"           // Scrolling ticker
+    | "carousel"          // Rotating display
+    | "masonry"           // Pinterest-style grid
+    | "comparison_table"; // Side-by-side metrics
+export type SocialUpdateFreq = 
+    | "static"            // Never updates
+    | "manual"            // On user action
+    | "hourly"            // Every hour
+    | "daily"             // Once per day
+    | "weekly"            // Once per week
+    | "event_driven"      // On specific events
+    | "session_based"     // Per visit/session
+    | "realtime"          // Live streaming updates
+    | "polling"           // Periodic API checks
+    | "push"              // Server-sent events
+    | "webhook"           // External trigger
+    | "cache_first"       // Show cache, update async
+    | "optimistic"        // Update UI immediately
+    | "lazy"              // Update when visible
+    | "stale_while_revalidate" // Show old, fetch new
+    | "batch";            // Queue and update together
+export type HeroHeight = 
+    | "viewport"          // 100vh, full screen takeover
+    | "cinema"            // 75vh, cinematic wide
+    | "theater"           // 66vh, presentation style
+    | "large"             // 50vh, dominant but partial
+    | "medium"            // 40vh, balanced presence
+    | "compact"           // 30vh, minimal intrusion
+    | "micro"             // 20vh, banner-like
+    | "peek"              // 15vh, teases content below
+    | "dynamic"           // Scales with content
+    | "parallax"          // Larger for scroll effect
+    | "vh_90"             // 90vh
+    | "vh_80"             // 80vh
+    | "vh_60"             // 60vh
+    | "aspect_16_9"       // Fixed 16:9 ratio
+    | "aspect_21_9"       // Fixed 21:9 ratio
+    | "auto";             // Height from content
+export type HeroBgTreatment = 
+    | "solid"             // Flat color
+    | "gradient"          // Linear/radial gradient
+    | "animated_gradient" // Shifting color gradient
+    | "image"             // Static photograph
+    | "image_parallax"    // Moving on scroll
+    | "image_ken_burns"   // Slow zoom/pan
+    | "video"             // Background video
+    | "video_loop"        // Seamless looping
+    | "mesh"              // Gradient mesh
+    | "shader"            // WebGL procedural
+    | "particles"         // Moving particle field
+    | "pattern"           // Repeating pattern
+    | "texture"           // Noise/grain overlay
+    | "blur"              // Frosted glass effect
+    | "duotone"           // Two-color treatment
+    | "monochrome";       // Grayscale treatment
+export type HeroMobileBehavior = 
+    | "stack"             // Vertical reflow
+    | "collapse_image"    // Hide image, keep text
+    | "collapse_text"     // Hide text, keep image
+    | "full_bleed"        // Edge-to-edge image
+    | "overlay"           // Text over image
+    | "swap_orientation"  // Change layout direction
+    | "reduce_height"     // Shorter on mobile
+    | "hide"              // Remove entirely
+    | "carousel"          // Swipeable slides
+    | "accordion"         // Collapsible sections
+    | "tabbed"            // Switchable tabs
+    | "modal_trigger"     // Tap to expand
+    | "video_thumbnail"   // Play button overlay
+    | "parallax_disabled" // Flat on mobile
+    | "text_only"         // Simplify to copy only
+    | "image_only";       // Simplify to visual only
 
 // ============================================================================
 // DESIGN PERSONALITY — flair axis independent of content traits
@@ -784,9 +1131,10 @@ export interface DesignGenome {
 
         // Original Chromosomes (1-18)
         ch1_structure: {
+            hasSections: boolean;            // ← SHA-256 derived: does this design have sections?
+            sectionCount: number;            // ← SHA-256 derived: how many (only if hasSections)
             topology: Topology;
             maxNesting: number;
-            sectionCount: number;          // estimated section count
             scrollBehavior: ScrollBehavior;
             breakpointStrategy: BreakpointStrategy;
             contentFlow: ContentFlow;
@@ -975,10 +1323,11 @@ export interface DesignGenome {
 
         // Hero & Visual Chromosomes (19-20)
         ch19_hero_type: {
-            type: HeroType;
+            hasHero: boolean;                // ← SHA-256 derived: does this design have a hero?
+            type: HeroType;                  // ← SHA-256 derived: which type (only if hasHero)
             variant: HeroLayoutVariant;
-            variantIndex: number;  // Hash-derived variant selection
-            contentSource?: string;  // Path to screenshot/video
+            variantIndex: number;            // Hash-derived variant selection
+            contentSource?: string;          // Path to screenshot/video
         };
         ch19_hero_variant_detail: {
             layout: HeroLayoutVariant;
@@ -1002,7 +1351,8 @@ export interface DesignGenome {
 
         // Trust & Social Chromosomes (21-22)
         ch21_trust_signals: {
-            approach: TrustApproach;
+            hasTrustSignals: boolean;        // ← SHA-256 derived: does this design have trust signals?
+            approach: TrustApproach;         // ← SHA-256 derived: which approach (only if hasTrustSignals)
             prominence: TrustProminence;
             layoutVariant: string;
             contentProvided: boolean;
@@ -1016,7 +1366,8 @@ export interface DesignGenome {
             securityBadges?: string[];
         };
         ch22_social_proof: {
-            type: SocialProofType;
+            hasSocialProof: boolean;         // ← SHA-256 derived: does this design have social proof?
+            type: SocialProofType;           // ← SHA-256 derived: which type (only if hasSocialProof)
             prominence: TrustProminence;
             layout: "grid" | "marquee" | "carousel" | "static";
             logoCount: 3 | 5 | 8 | "marquee";
@@ -1044,7 +1395,8 @@ export interface DesignGenome {
         ch23_information_architecture: {
             pattern: InformationArchitecture;
             navigationType: "header" | "sidebar" | "floating" | "minimal";
-            footerType: "full" | "minimal" | "none";
+            hasFooter: boolean;              // ← SHA-256 derived: does this design have a footer?
+            footerType: "full" | "minimal"; // ← SHA-256 derived: which type (only if hasFooter)
         };
         ch24_personalization: {
             approach: PersonalizationApproach;

@@ -213,6 +213,20 @@ const ECOSYSTEM_GLOSSARY = {
         collapse_risk: '201–500 organisms — unsustainable, failure imminent.',
         infinite: '500+ organisms — uncountable, boundless.',
     },
+    // Mutation (2 fields) — Rate of change and variance
+    mutation: {
+        rate: 'How rapidly organisms evolve. High = frequent updates, experimental, unstable.',
+        variance: 'Degree of change per mutation. High = dramatic shifts, unpredictable.',
+    },
+    // Design Personality (6 types) — Expressiveness and boldness
+    personality: {
+        clinical: 'Minimal, precise, detached. Scientific, sterile, exact.',
+        corporate: 'Professional, conventional, safe. Business-appropriate, neutral.',
+        balanced: 'Moderate, adaptable, middle-ground. Flexible, context-aware.',
+        bold: 'Confident, assertive, standout. Strong presence, noticeable.',
+        expressive: 'Artistic, emotional, distinctive. Creative, memorable, unique.',
+        disruptive: 'Challenging, radical, rebellious. Breaks conventions, avant-garde.',
+    },
 };
 // ═══════════════════════════════════════════════════════════════════════════════
 // L3 CIVILIZATION GLOSSARY — What each value means for application architecture
@@ -474,7 +488,7 @@ export class DesignBriefGenerator {
             throw new Error("DesignGenome missing sectorContext. Ensure you pass the full genome object from generate_design_genome.");
         }
         const c = dg.chromosomes;
-        const totalChromosomes = eg && cg ? 64 : eg ? 48 : 32; // Updated: L1=32, L2=16, L3=16
+        const totalChromosomes = eg && cg ? 60 : eg ? 44 : 32; // Updated: L1=32, L2=16, L3=16
         const primary = c.ch5_color_primary;
         const pHue = primary?.hue ?? 0;
         const pSat = Math.round((primary?.saturation ?? 0) * 100);
@@ -541,7 +555,7 @@ Constraints:
             const capacityDesc = ECOSYSTEM_GLOSSARY.capacity[ec.eco_ch10_capacity.class] || '';
             prompt += `
 ═══════════════════════════════════════
-LAYER 2 — ECOSYSTEM GENOME (11 chromosomes)
+LAYER 2 — ECOSYSTEM GENOME (12 chromosomes)
 sha256(L1 hash) — derived from L1
 ═══════════════════════════════════════
   eco_ch1 biome: ${ec.eco_ch1_biome.class} (intensity ${ec.eco_ch1_biome.intensity.toFixed(2)})
@@ -564,8 +578,11 @@ sha256(L1 hash) — derived from L1
     → ${spatialDesc}
   eco_ch10 capacity: ${ec.eco_ch10_capacity.class} (pressure ${ec.eco_ch10_capacity.pressure.toFixed(2)})
     → ${capacityDesc}
-  eco_ch11 mutation rate: ${ec.eco_ch11_mutation.rate.toFixed(2)} (variance ${ec.eco_ch11_mutation.variance.toFixed(2)})
-    → How rapidly organisms evolve and adapt
+  eco_ch11 mutation: rate ${ec.eco_ch11_mutation.rate.toFixed(2)}, variance ${ec.eco_ch11_mutation.variance.toFixed(2)}
+    → ${ECOSYSTEM_GLOSSARY.mutation.rate} ${ECOSYSTEM_GLOSSARY.mutation.variance}
+  eco_ch12 expressiveness: ${ec.eco_ch12_expressiveness.personality} (score ${ec.eco_ch12_expressiveness.score.toFixed(2)})
+    → ${ECOSYSTEM_GLOSSARY.personality[ec.eco_ch12_expressiveness.personality]}
+    → Unlocks: ${ec.eco_ch12_expressiveness.unlocks.join(', ') || 'none'}
 `;
         }
         if (cg) {

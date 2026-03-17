@@ -58,7 +58,6 @@ export { ARCHETYPES, detectArchetype, FunctionalArchetype } from './archetypes.j
 
 // Generators
 export { CSSGenerator, CSSGenerationOptions } from '../css-generator.js';
-export { HTMLGenerator, HTMLGenerationOptions } from '../html-generator.js';
 
 // Format Generators
 export { FormatGenerator, FormatOptions, GeneratedFormat } from '../generators/format-generators.js';

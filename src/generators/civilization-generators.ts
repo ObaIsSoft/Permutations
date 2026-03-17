@@ -1122,8 +1122,7 @@ export function generateDesignTokensCSS(tier: CivilizationTier, genome: DesignGe
     const ch6 = genome.chromosomes.ch6_color_temp;
     const radius = genome.chromosomes.ch7_edge.radius;
     const motion = genome.chromosomes.ch8_motion;
-    const surfaceStack = ch6.surfaceStack;
-
+    const surfaceStack = ch6?.surfaceStack;
     return `:root {
   /* Colors — from genome chromosomes */
   --color-primary: hsl(${primary.hue}, ${Math.round(primary.saturation * 100)}%, ${Math.round(primary.lightness * 100)}%);

@@ -25,7 +25,6 @@ import { CallToolRequestSchema, ListToolsRequestSchema, ErrorCode, McpError } fr
 import { SemanticTraitExtractor } from "./semantic/extractor.js";
 import { GenomeSequencer } from "./genome/sequencer.js";
 import { CSSGenerator } from "./css-generator.js";
-import { HTMLGenerator } from "./html-generator.js";
 import { WebGLGenerator } from "./generators/webgl-generator.js";
 import { FXGenerator } from "./generators/fx-generator.js";
 import { SVGGenerator } from "./generators/svg-generator.js";
@@ -47,6 +46,21 @@ import { selectStylingLibrary } from "./styling-catalog.js";
 import { selectOrganismLibrary } from "./organism-catalog.js";
 import { selectInteractionLibraries } from "./interaction-catalog.js";
 import { selectChartLibrary } from "./chart-catalog.js";
+// ── Genome Validation Helper ───────────────────────────────────────────────
+function validateGenome(genome, context) {
+    if (!genome) {
+        throw new McpError(ErrorCode.InvalidParams, `${context}: Missing genome object`);
+    }
+    if (!genome.chromosomes) {
+        throw new McpError(ErrorCode.InvalidParams, `${context}: Genome missing 'chromosomes' field. Ensure you pass the complete genome object from generate_design_genome, not just dnaHash/traits.`);
+    }
+    if (!genome.sectorContext) {
+        throw new McpError(ErrorCode.InvalidParams, `${context}: Genome missing 'sectorContext' field. Ensure you pass the complete genome object from generate_design_genome.`);
+    }
+    if (!genome.dnaHash) {
+        throw new McpError(ErrorCode.InvalidParams, `${context}: Genome missing 'dnaHash' field.`);
+    }
+}
 // ── Security Configuration (environment-overrideable) ───────────────────────
 const SECURITY_CONFIG = {
     // Maximum file size for brand assets (default: 50MB, env overrideable)
@@ -182,7 +196,6 @@ class DesignGenomeServer {
     extractor;
     sequencer;
     cssGen;
-    htmlGen;
     webglGen;
     fxGen;
     svgGen;
@@ -278,7 +291,6 @@ class DesignGenomeServer {
         this.extractor = new SemanticTraitExtractor();
         this.sequencer = new GenomeSequencer();
         this.cssGen = new CSSGenerator();
-        this.htmlGen = new HTMLGenerator();
         this.webglGen = new WebGLGenerator();
         this.fxGen = new FXGenerator();
         this.svgGen = new SVGGenerator();
@@ -318,13 +330,12 @@ class DesignGenomeServer {
                 },
                 {
                     name: "validate_design",
-                    description: "FINAL STEP — Call before shipping any CSS or HTML. Validates code against genome DNA constraints and checks for forbidden slop patterns (gradients on text, bootstrap shadows, AI tells). Returns violation list and slop score.",
+                    description: "FINAL STEP — Call before shipping any CSS. Validates code against genome DNA constraints and checks for forbidden slop patterns (gradients on text, bootstrap shadows, AI tells). Returns violation list and slop score.",
                     inputSchema: {
                         type: "object",
                         properties: {
                             genome: { type: "object", description: "The design genome from generate_design_genome" },
-                            css: { type: "string", description: "CSS code to validate" },
-                            html: { type: "string", description: "HTML code to validate (optional)" }
+                            css: { type: "string", description: "CSS code to validate" }
                         },
                         required: ["genome", "css"]
                     }
@@ -848,6 +859,7 @@ class DesignGenomeServer {
                         if (!args.genome || !args.css) {
                             throw new McpError(ErrorCode.InvalidParams, "Missing genome or css");
                         }
+                        validateGenome(args.genome, "validate_design");
                         // Pattern/slop detection
                         const violations = this.patternDetector.detectInGenome(args.genome, args.css, args.html);
                         // Genome structure validation (new - doesn't break existing)
@@ -916,6 +928,10 @@ class DesignGenomeServer {
                         // LLM names the organisms — product-specific, not abstract topology names.
                         // Non-fatal: ecosystemGenerator falls back to topology-derived names if this fails.
                         const organismsDefinition = await this.extractor.analyzeOrganisms(args.intent, ecoSector, estimatedCounts, ecoBiomeContext);
+                        // Validate existing genome if provided
+                        if (args.genome) {
+                            validateGenome(args.genome, "generate_ecosystem (existingGenome)");
+                        }
                         // Generate ecosystem.
                         // If the caller passes the full L1 genome (from generate_design_genome),
                         // use it directly so L2 gravity reads L1_original chromosomes — not a
@@ -1139,6 +1155,10 @@ class DesignGenomeServer {
                             baseGenome = ecosystem.environment?.genome;
                             organisms = ecosystem.organisms;
                             civEcoGenome = ecosystem.environment?.ecosystemGenome ?? null;
+                            // Validate the ecosystem's genome if provided
+                            if (baseGenome) {
+                                validateGenome(baseGenome, "generate_civilization (ecosystem genome)");
+                            }
                         }
                         // If no ecosystem or genome, generate using already-derived sector (no second LLM call)
                         if (!baseGenome) {
@@ -1174,7 +1194,7 @@ class DesignGenomeServer {
                         let codeOutputs = null;
                         let fileStructure = null;
                         if (args.generate_code === true) {
-                            const topology = this.htmlGen.generateTopology(archetypedGenome);
+                            const topology = undefined; // HTML generation removed - AI builds structure from genome tokens
                             // Generate code using archetype-biased genome + CSS
                             codeOutputs = generateCivilizationOutput(tier, archetypedGenome, archetypedCss, topology);
                             // Use ecosystem organisms if available, otherwise use tier components
@@ -1280,6 +1300,7 @@ class DesignGenomeServer {
                         if (!args.original_genome || !args.changes) {
                             throw new McpError(ErrorCode.InvalidParams, "Missing original_genome or changes");
                         }
+                        validateGenome(args.original_genome, "update_design_genome");
                         const original = args.original_genome;
                         const changes = args.changes;
                         const preserveTraits = args.preserve_traits !== false;
@@ -1362,6 +1383,7 @@ class DesignGenomeServer {
                         if (!args.genome || !args.formats) {
                             throw new McpError(ErrorCode.InvalidParams, "Missing genome or formats");
                         }
+                        validateGenome(args.genome, "generate_formats");
                         const genome = args.genome;
                         const tier = args.tier;
                         const requestedFormats = args.formats;
@@ -1407,6 +1429,7 @@ class DesignGenomeServer {
                         if (!args.genome) {
                             throw new McpError(ErrorCode.InvalidParams, "Missing genome");
                         }
+                        validateGenome(args.genome, "generate_design_brief");
                         const brief = await designBriefGenerator.generate(args.genome, this.extractor.callText.bind(this.extractor), args.ecosystem_genome, args.civilization_genome);
                         const layerCount = 1 + (args.ecosystem_genome ? 1 : 0) + (args.civilization_genome ? 1 : 0);
                         return {

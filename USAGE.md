@@ -237,7 +237,7 @@ STEP 1  generate_design_genome    ← always start here
 STEP 2  generate_design_brief     ← read before writing any code
 STEP 3  generate_ecosystem        ← (optional) component library
 STEP 4  generate_civilization     ← (optional) complexity ≥ 0.68
-FINAL   validate_design           ← before shipping any CSS/HTML
+FINAL   validate_design           ← before shipping CSS
 
 ALTERNATIVE  extract_genome_from_url  ← when you have a reference site
 EXPORT       generate_formats         ← export to Figma/Style Dictionary
