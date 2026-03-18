@@ -2,218 +2,53 @@ import Groq from "groq-sdk";
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { ContentTraits } from "../genome/types.js";
 import * as crypto from "crypto";
-
-type LLMProvider = "groq" | "openai" | "anthropic" | "gemini" | "openrouter" | "huggingface" | "hf-inference";
-
-const LLM_TIMEOUT_MS = 30_000;   // 30s timeout per attempt (increased for cold starts)
-const LLM_MAX_RETRIES = 3;       // Retry up to 3 times with exponential backoff + jitter
-
-/**
- * Structural properties of a product — binary/count answers about what it DOES.
- * Derived from LLM analysis but computed deterministically into complexity score.
- * Vocabulary-invariant: "a tool doctors use to track patients" and
- * "clinical patient monitoring dashboard" produce the same structural answers.
- */
-export interface StructuralProps {
-    /** Does state update while the user is watching? (live data, websocket, polling) */
-    realtimeState: boolean;
-    /** How many distinct data entity types does the product manage? (users, orders, products = 3) */
-    entityCount: number;
-    /** Does it handle sensitive personal data — medical, financial, legal, or authentication? */
-    sensitiveData: boolean;
-    /** Do different users see different interfaces based on role or permission level? */
-    multiRole: boolean;
-    /** Does it process payments, billing, or manage financial accounts? */
-    financialTransactions: boolean;
-    /** Does it guide users through multi-step workflows, wizards, or approval chains? */
-    complexWorkflows: boolean;
-    /** Does navigation have 3 or more levels of hierarchy? */
-    deepNavigation: boolean;
-    /** Does it consume data from external APIs, OAuth providers, or third-party services? */
-    externalIntegrations: boolean;
-    /** Approximate number of distinct screens or views the user can navigate to */
-    screenCount: number;
-    /** Primary surface type — what is the user primarily doing? */
-    primarySurface: 'data' | 'content' | 'media' | 'transaction' | 'balanced';
-}
-
-export interface DesignAnalysis {
-    // Structural complexity — vocabulary-invariant product properties
-    structural: StructuralProps;
-    // 8 trait vectors
-    traits: {
-        informationDensity: number;
-        temporalUrgency: number;
-        emotionalTemperature: number;
-        playfulness: number;
-        spatialDependency: number;
-        trustRequirement: number;
-        visualEmphasis: number;
-        conversionFocus: number;
-    };
-    // Sector classification
-    sector: {
-        primary: string;  // healthcare, fintech, technology, etc.
-        subSector: string; // healthcare_wellness, fintech_trading, etc.
-        confidence: number;
-    };
-    // Functional archetype
-    archetype: {
-        type: string; // dashboard, portfolio, landing, documentation, commerce, blog
-        confidence: number;
-    };
-    // Copy intelligence for ch25_copy_engine
-    copyIntelligence: {
-        industryTerminology: string[]; // e.g., ["portfolio", "assets under management", "returns"] for fintech
-        emotionalRegister: "clinical" | "professional" | "conversational" | "playful" | "luxury" | "urgent";
-        formalityLevel: number; // 0.0 = casual, 1.0 = formal
-        ctaAggression: number; // 0.0 = soft suggestion, 1.0 = aggressive conversion
-        headlineStyle: "benefit_forward" | "curiosity_gap" | "social_proof" | "how_to" | "direct";
-        vocabularyComplexity: "simple" | "moderate" | "technical" | "specialized";
-        sentenceStructure: "short_punchy" | "balanced" | "complex_periodic";
-        emojiUsage: boolean;
-        contractionUsage: boolean; // don't, can't, won't
-    };
-    // Generated copy content from intent
-    copy?: {
-        headline: string;
-        subheadline: string;
-        cta: string;
-        tagline: string;
-        companyName: string;
-        features: { title: string; description: string }[];
-        stats: { label: string; value: string }[];
-        testimonial: string;
-        authorName: string;
-        authorTitle: string;
-        ctaSecondary: string;
-        sectionTitleTestimonials: string;
-        sectionTitleFeatures: string;
-        sectionTitleFAQ: string;
-        faq: { question: string; answer: string }[];
-        footerProductTitle: string;
-        footerCompanyTitle: string;
-        footerNavProduct: string[];
-        footerNavCompany: string[];
-    };
-}
-
-/**
- * Raw LLM response structure (before normalization)
- */
-interface LLMResponse {
-    structural?: {
-        realtimeState?: boolean;
-        entityCount?: number;
-        sensitiveData?: boolean;
-        multiRole?: boolean;
-        financialTransactions?: boolean;
-        complexWorkflows?: boolean;
-        deepNavigation?: boolean;
-        externalIntegrations?: boolean;
-        screenCount?: number;
-        primarySurface?: string;
-    };
-    traits?: {
-        informationDensity?: number;
-        temporalUrgency?: number;
-        emotionalTemperature?: number;
-        playfulness?: number;
-        spatialDependency?: number;
-        trustRequirement?: number;
-        visualEmphasis?: number;
-        conversionFocus?: number;
-    };
-    sector?: {
-        primary?: string;
-        subSector?: string;
-        confidence?: number;
-    };
-    archetype?: {
-        type?: string;
-        confidence?: number;
-    };
-    copyIntelligence?: {
-        industryTerminology?: string[];
-        emotionalRegister?: string;
-        formalityLevel?: number;
-        ctaAggression?: number;
-        headlineStyle?: string;
-        vocabularyComplexity?: string;
-        sentenceStructure?: string;
-        emojiUsage?: boolean;
-        contractionUsage?: boolean;
-    };
-    // COPY CONTENT - extracted/generated from intent
-    copy?: {
-        headline?: string;
-        subheadline?: string;
-        cta?: string;
-        tagline?: string;
-        companyName?: string;
-        features?: { title: string; description: string }[];
-        stats?: { label: string; value: string }[];
-        testimonial?: string;
-        authorName?: string;
-        authorTitle?: string;
-        ctaSecondary?: string;
-        sectionTitleTestimonials?: string;
-        sectionTitleFeatures?: string;
-        sectionTitleFAQ?: string;
-        faq?: { question: string; answer: string }[];
-        footerProductTitle?: string;
-        footerCompanyTitle?: string;
-        footerNavProduct?: string[];
-        footerNavCompany?: string[];
-    };
-}
-
+const LLM_TIMEOUT_MS = 30_000; // 30s timeout per attempt (increased for cold starts)
+const LLM_MAX_RETRIES = 3; // Retry up to 3 times with exponential backoff + jitter
 export class SemanticTraitExtractor {
-    private apiKeyMissing: boolean = false;
-    private groq?: Groq;
-    private openai?: OpenAI;
-    private anthropic?: Anthropic;
-    private gemini?: any;
-    private openrouter?: OpenAI; // OpenRouter uses OpenAI-compatible API
-    private huggingface?: any;
-    private provider: LLMProvider;
-
-    constructor(apiKey?: string, provider?: LLMProvider) {
+    apiKeyMissing = false;
+    groq;
+    openai;
+    anthropic;
+    gemini;
+    openrouter; // OpenRouter uses OpenAI-compatible API
+    huggingface;
+    provider;
+    constructor(apiKey, provider) {
         const groqKey = process.env.GROQ_API_KEY;
         const openaiKey = process.env.OPENAI_API_KEY;
         const anthropicKey = process.env.ANTHROPIC_API_KEY;
         const geminiKey = process.env.GEMINI_API_KEY;
         const openrouterKey = process.env.OPENROUTER_API_KEY;
         const huggingfaceKey = process.env.HUGGINGFACE_API_KEY;
-
         if (provider) {
             this.provider = provider;
-        } else if (groqKey) {
+        }
+        else if (groqKey) {
             this.provider = "groq";
-        } else if (openaiKey) {
+        }
+        else if (openaiKey) {
             this.provider = "openai";
-        } else if (anthropicKey) {
+        }
+        else if (anthropicKey) {
             this.provider = "anthropic";
-        } else if (geminiKey) {
+        }
+        else if (geminiKey) {
             this.provider = "gemini";
-        } else if (openrouterKey) {
+        }
+        else if (openrouterKey) {
             this.provider = "openrouter";
-        } else if (huggingfaceKey) {
+        }
+        else if (huggingfaceKey) {
             this.provider = "huggingface";
-        } else {
+        }
+        else {
             this.provider = "groq";
         }
-
         const key = apiKey || groqKey || openaiKey || anthropicKey || geminiKey || openrouterKey || huggingfaceKey;
-
         if (!key) {
-            throw new Error(
-                "No LLM API key configured. Set one of: GROQ_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY, or HUGGINGFACE_API_KEY."
-            );
+            throw new Error("No LLM API key configured. Set one of: GROQ_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY, or HUGGINGFACE_API_KEY.");
         }
-
         switch (this.provider) {
             case "groq":
                 this.groq = new Groq({ apiKey: key });
@@ -238,11 +73,9 @@ export class SemanticTraitExtractor {
             case "huggingface":
                 // HuggingFace Serverless API is deprecated
                 // Use "hf-inference" provider with HF Inference Providers instead
-                throw new Error(
-                    "Provider 'huggingface' is deprecated. Use 'hf-inference' instead with:\n" +
+                throw new Error("Provider 'huggingface' is deprecated. Use 'hf-inference' instead with:\n" +
                     "new SemanticTraitExtractor(key, 'hf-inference')\n\n" +
-                    "Requires HF Inference Providers (Together, Fireworks, etc.) with billing enabled."
-                );
+                    "Requires HF Inference Providers (Together, Fireworks, etc.) with billing enabled.");
             case "hf-inference":
                 // HF Inference Providers - OpenAI compatible API
                 // User must set up billing and use router.huggingface.co
@@ -253,52 +86,42 @@ export class SemanticTraitExtractor {
                 break;
         }
     }
-
     /**
      * Static startup check — call this at server boot to fail fast if no LLM key exists.
      */
-    static isAvailable(): boolean {
-        return !!(
-            process.env.GROQ_API_KEY ||
+    static isAvailable() {
+        return !!(process.env.GROQ_API_KEY ||
             process.env.OPENAI_API_KEY ||
             process.env.ANTHROPIC_API_KEY ||
             process.env.GEMINI_API_KEY ||
             process.env.OPENROUTER_API_KEY ||
-            process.env.HUGGINGFACE_API_KEY
-        );
+            process.env.HUGGINGFACE_API_KEY);
     }
-
     /**
      * Single-call extraction: traits + sector + subSector + archetype
      */
-    async analyze(intent: string, projectContext?: string): Promise<DesignAnalysis> {
+    async analyze(intent, projectContext) {
         const prompt = this.buildPrompt(intent, projectContext);
-        let lastError: Error | null = null;
-
+        let lastError = null;
         for (let attempt = 1; attempt <= LLM_MAX_RETRIES; attempt++) {
             try {
-                const result = await this.withTimeout(
-                    this.callProvider(prompt),
-                    LLM_TIMEOUT_MS
-                );
+                const result = await this.withTimeout(this.callProvider(prompt), LLM_TIMEOUT_MS);
                 const s = result.structural ?? {};
-                const toBool = (v: unknown) => v === true || v === 'true' || v === 1;
+                const toBool = (v) => v === true || v === 'true' || v === 1;
                 return {
                     structural: {
-                        realtimeState:          toBool(s.realtimeState),
-                        entityCount:            Math.max(1, Math.min(30, Math.round(Number(s.entityCount) || 1))),
-                        sensitiveData:          toBool(s.sensitiveData),
-                        multiRole:              toBool(s.multiRole),
-                        financialTransactions:  toBool(s.financialTransactions),
-                        complexWorkflows:       toBool(s.complexWorkflows),
-                        deepNavigation:         toBool(s.deepNavigation),
-                        externalIntegrations:   toBool(s.externalIntegrations),
-                        screenCount:            Math.max(1, Math.min(50, Math.round(Number(s.screenCount) || 1))),
-                        primarySurface: (
-                            ['data','content','media','transaction','balanced'].includes(s.primarySurface as string)
-                                ? s.primarySurface as StructuralProps['primarySurface']
-                                : 'balanced'
-                        ),
+                        realtimeState: toBool(s.realtimeState),
+                        entityCount: Math.max(1, Math.min(30, Math.round(Number(s.entityCount) || 1))),
+                        sensitiveData: toBool(s.sensitiveData),
+                        multiRole: toBool(s.multiRole),
+                        financialTransactions: toBool(s.financialTransactions),
+                        complexWorkflows: toBool(s.complexWorkflows),
+                        deepNavigation: toBool(s.deepNavigation),
+                        externalIntegrations: toBool(s.externalIntegrations),
+                        screenCount: Math.max(1, Math.min(50, Math.round(Number(s.screenCount) || 1))),
+                        primarySurface: (['data', 'content', 'media', 'transaction', 'balanced'].includes(s.primarySurface)
+                            ? s.primarySurface
+                            : 'balanced'),
                     },
                     traits: {
                         informationDensity: this.clamp(result.traits?.informationDensity ?? 0.5),
@@ -321,39 +144,40 @@ export class SemanticTraitExtractor {
                     },
                     copyIntelligence: {
                         industryTerminology: result.copyIntelligence?.industryTerminology || [],
-                        emotionalRegister: (result.copyIntelligence?.emotionalRegister as any) || "professional",
+                        emotionalRegister: result.copyIntelligence?.emotionalRegister || "professional",
                         formalityLevel: this.clamp(result.copyIntelligence?.formalityLevel ?? 0.5),
                         ctaAggression: this.clamp(result.copyIntelligence?.ctaAggression ?? 0.5),
-                        headlineStyle: (result.copyIntelligence?.headlineStyle as any) || "benefit_forward",
-                        vocabularyComplexity: (result.copyIntelligence?.vocabularyComplexity as any) || "moderate",
-                        sentenceStructure: (result.copyIntelligence?.sentenceStructure as any) || "balanced",
+                        headlineStyle: result.copyIntelligence?.headlineStyle || "benefit_forward",
+                        vocabularyComplexity: result.copyIntelligence?.vocabularyComplexity || "moderate",
+                        sentenceStructure: result.copyIntelligence?.sentenceStructure || "balanced",
                         emojiUsage: result.copyIntelligence?.emojiUsage ?? false,
                         contractionUsage: result.copyIntelligence?.contractionUsage ?? true,
                     },
                     // Copy content generated from intent — no fallbacks, empty = not rendered
                     copy: {
-                        headline:                 result.copy?.headline                 ?? "",
-                        subheadline:              result.copy?.subheadline              ?? "",
-                        cta:                      result.copy?.cta                      ?? "",
-                        tagline:                  result.copy?.tagline                  ?? "",
-                        companyName:              result.copy?.companyName              ?? "",
-                        features:                 result.copy?.features                 ?? [],
-                        stats:                    result.copy?.stats                    ?? [],
-                        testimonial:              result.copy?.testimonial              ?? "",
-                        authorName:               result.copy?.authorName               ?? "",
-                        authorTitle:              result.copy?.authorTitle              ?? "",
-                        ctaSecondary:             result.copy?.ctaSecondary             ?? "",
+                        headline: result.copy?.headline ?? "",
+                        subheadline: result.copy?.subheadline ?? "",
+                        cta: result.copy?.cta ?? "",
+                        tagline: result.copy?.tagline ?? "",
+                        companyName: result.copy?.companyName ?? "",
+                        features: result.copy?.features ?? [],
+                        stats: result.copy?.stats ?? [],
+                        testimonial: result.copy?.testimonial ?? "",
+                        authorName: result.copy?.authorName ?? "",
+                        authorTitle: result.copy?.authorTitle ?? "",
+                        ctaSecondary: result.copy?.ctaSecondary ?? "",
                         sectionTitleTestimonials: result.copy?.sectionTitleTestimonials ?? "",
-                        sectionTitleFeatures:     result.copy?.sectionTitleFeatures     ?? "",
-                        sectionTitleFAQ:          result.copy?.sectionTitleFAQ          ?? "",
-                        faq:                      result.copy?.faq                      ?? [],
-                        footerProductTitle:       result.copy?.footerProductTitle       ?? "",
-                        footerCompanyTitle:       result.copy?.footerCompanyTitle       ?? "",
-                        footerNavProduct:         result.copy?.footerNavProduct         ?? [],
-                        footerNavCompany:         result.copy?.footerNavCompany         ?? [],
+                        sectionTitleFeatures: result.copy?.sectionTitleFeatures ?? "",
+                        sectionTitleFAQ: result.copy?.sectionTitleFAQ ?? "",
+                        faq: result.copy?.faq ?? [],
+                        footerProductTitle: result.copy?.footerProductTitle ?? "",
+                        footerCompanyTitle: result.copy?.footerCompanyTitle ?? "",
+                        footerNavProduct: result.copy?.footerNavProduct ?? [],
+                        footerNavCompany: result.copy?.footerNavCompany ?? [],
                     },
                 };
-            } catch (e: any) {
+            }
+            catch (e) {
                 lastError = e;
                 if (attempt < LLM_MAX_RETRIES) {
                     // Deterministic backoff using hash of attempt number
@@ -365,15 +189,11 @@ export class SemanticTraitExtractor {
                 }
             }
         }
-
-        throw new Error(
-            `LLM extraction failed after ${LLM_MAX_RETRIES} attempts. ` +
+        throw new Error(`LLM extraction failed after ${LLM_MAX_RETRIES} attempts. ` +
             `Provider: ${this.provider}. ` +
             `Last error: ${lastError?.message || "Unknown error"}. ` +
-            `Set a valid API key (GROQ_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY, or HUGGINGFACE_API_KEY).`
-        );
+            `Set a valid API key (GROQ_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY, or HUGGINGFACE_API_KEY).`);
     }
-
     /**
      * Identify the actual UI components (organisms) for this product.
      * The genome/complexity tier determines HOW MANY organisms exist.
@@ -382,20 +202,10 @@ export class SemanticTraitExtractor {
      * Returns organism definitions that the ecosystem generator uses for naming.
      * Falls back gracefully (returns empty arrays) if LLM unavailable.
      */
-    async analyzeOrganisms(
-        intent: string,
-        sector: string,
-        counts: { microbial: number; flora: number; fauna: number },
-        biomeContext?: string
-    ): Promise<{
-        microbial: Array<{ name: string; purpose: string }>;
-        flora:     Array<{ name: string; purpose: string }>;
-        fauna:     Array<{ name: string; purpose: string }>;
-    }> {
+    async analyzeOrganisms(intent, sector, counts, biomeContext) {
         if (this.apiKeyMissing || (counts.microbial + counts.flora + counts.fauna) === 0) {
             return { microbial: [], flora: [], fauna: [] };
         }
-
         const biomeIntro = biomeContext
             ? `\nEcosystem biome: ${biomeContext}\nLet this biome subtly flavor component naming (e.g., in a 'deep-sea' fintech ecosystem, components might evoke depth/discovery; in a 'volcanic' context, intensity/heat).\n`
             : '';
@@ -419,32 +229,25 @@ Rules:
 - No "Generic", "Base", "Component", "Element", "Widget" suffixes
 - Purpose: one sentence describing what the user sees or does with it
 - Exactly ${counts.microbial} microbial, ${counts.flora} flora, ${counts.fauna} fauna entries`;
-
         try {
-            const result = await this.withTimeout(
-                this.callOrganismsProvider(prompt),
-                LLM_TIMEOUT_MS
-            );
+            const result = await this.withTimeout(this.callOrganismsProvider(prompt), LLM_TIMEOUT_MS);
             return {
                 microbial: (result.microbial || []).slice(0, counts.microbial),
-                flora:     (result.flora     || []).slice(0, counts.flora),
-                fauna:     (result.fauna     || []).slice(0, counts.fauna),
+                flora: (result.flora || []).slice(0, counts.flora),
+                fauna: (result.fauna || []).slice(0, counts.fauna),
             };
-        } catch {
+        }
+        catch {
             // Non-fatal — ecosystem generator falls back to topology-derived names
             return { microbial: [], flora: [], fauna: [] };
         }
     }
-
     /** Dispatch to providers for organism naming — larger token budget than trait extraction */
-    private async callOrganismsProvider(prompt: string): Promise<{
-        microbial?: Array<{ name: string; purpose: string }>;
-        flora?:     Array<{ name: string; purpose: string }>;
-        fauna?:     Array<{ name: string; purpose: string }>;
-    }> {
+    async callOrganismsProvider(prompt) {
         switch (this.provider) {
             case "groq": {
-                if (!this.groq) throw new Error("Groq not initialized");
+                if (!this.groq)
+                    throw new Error("Groq not initialized");
                 const r = await this.groq.chat.completions.create({
                     model: "llama-3.3-70b-versatile",
                     messages: [{ role: "user", content: prompt }],
@@ -454,7 +257,8 @@ Rules:
                 return JSON.parse(r.choices[0].message.content || "{}");
             }
             case "openai": {
-                if (!this.openai) throw new Error("OpenAI not initialized");
+                if (!this.openai)
+                    throw new Error("OpenAI not initialized");
                 const r = await this.openai.chat.completions.create({
                     model: "gpt-4.1",
                     messages: [{ role: "user", content: prompt }],
@@ -464,32 +268,38 @@ Rules:
                 return JSON.parse(r.choices[0].message.content || "{}");
             }
             case "anthropic": {
-                if (!this.anthropic) throw new Error("Anthropic not initialized");
+                if (!this.anthropic)
+                    throw new Error("Anthropic not initialized");
                 const r = await this.anthropic.messages.create({
                     model: "claude-3-7-sonnet-latest",
                     max_tokens: 2048,
                     messages: [{ role: "user", content: prompt }],
                 });
                 const c = r.content[0];
-                if (c.type !== "text") throw new Error("Unexpected Anthropic response type");
+                if (c.type !== "text")
+                    throw new Error("Unexpected Anthropic response type");
                 const m = c.text.match(/\{[\s\S]*\}/);
-                if (!m) throw new Error("No JSON in Anthropic response");
+                if (!m)
+                    throw new Error("No JSON in Anthropic response");
                 return JSON.parse(m[0]);
             }
             case "gemini": {
-                if (!this.gemini) throw new Error("Gemini not initialized");
+                if (!this.gemini)
+                    throw new Error("Gemini not initialized");
                 const r = await this.gemini.generateContent({
                     contents: [{ role: "user", parts: [{ text: prompt }] }],
                     generationConfig: { temperature: 0.4, responseMimeType: "application/json" },
                 });
                 const m = r.response.text().match(/\{[\s\S]*\}/);
-                if (!m) throw new Error("No JSON in Gemini response");
+                if (!m)
+                    throw new Error("No JSON in Gemini response");
                 return JSON.parse(m[0]);
             }
             case "openrouter":
             case "hf-inference": {
                 const client = this.openrouter;
-                if (!client) throw new Error("OpenRouter/Inference not initialized");
+                if (!client)
+                    throw new Error("OpenRouter/Inference not initialized");
                 const r = await client.chat.completions.create({
                     model: "meta-llama/llama-3-70b-instruct",
                     messages: [{ role: "user", content: prompt }],
@@ -503,21 +313,14 @@ Rules:
                 return { microbial: [], flora: [], fauna: [] };
         }
     }
-
     /**
      * Names UI components for a civilization tier — product-specific, archetype-flavored.
      * Same pattern as analyzeOrganisms but for application-level components at civilization tiers.
      * Falls back gracefully (returns empty array) if LLM unavailable.
      */
-    async analyzeCivilizationComponents(
-        intent: string,
-        sector: string,
-        tier: string,
-        archetypeContext: string,
-        count: number
-    ): Promise<Array<{ name: string; purpose: string }>> {
-        if (this.apiKeyMissing || count === 0) return [];
-
+    async analyzeCivilizationComponents(intent, sector, tier, archetypeContext, count) {
+        if (this.apiKeyMissing || count === 0)
+            return [];
         const prompt = `You are naming UI components for a ${sector} product.
 Product: ${intent}
 Civilization tier: ${tier}
@@ -536,26 +339,21 @@ Rules:
 - The archetype character should flavor the naming register
 - No "Generic", "Base", "Component", "Element", "Widget" suffixes
 - Exactly ${count} entries`;
-
         try {
-            const result = await this.withTimeout(
-                this.callCivilizationComponentsProvider(prompt),
-                LLM_TIMEOUT_MS
-            );
+            const result = await this.withTimeout(this.callCivilizationComponentsProvider(prompt), LLM_TIMEOUT_MS);
             return (result.components || []).slice(0, count);
-        } catch {
+        }
+        catch {
             // Non-fatal — civilization generator falls back to generic tier component names
             return [];
         }
     }
-
     /** Dispatch to providers for civilization component naming */
-    private async callCivilizationComponentsProvider(prompt: string): Promise<{
-        components?: Array<{ name: string; purpose: string }>;
-    }> {
+    async callCivilizationComponentsProvider(prompt) {
         switch (this.provider) {
             case "groq": {
-                if (!this.groq) throw new Error("Groq not initialized");
+                if (!this.groq)
+                    throw new Error("Groq not initialized");
                 const r = await this.groq.chat.completions.create({
                     model: "llama-3.3-70b-versatile",
                     messages: [{ role: "user", content: prompt }],
@@ -565,7 +363,8 @@ Rules:
                 return JSON.parse(r.choices[0].message.content || "{}");
             }
             case "openai": {
-                if (!this.openai) throw new Error("OpenAI not initialized");
+                if (!this.openai)
+                    throw new Error("OpenAI not initialized");
                 const r = await this.openai.chat.completions.create({
                     model: "gpt-4.1",
                     messages: [{ role: "user", content: prompt }],
@@ -575,32 +374,38 @@ Rules:
                 return JSON.parse(r.choices[0].message.content || "{}");
             }
             case "anthropic": {
-                if (!this.anthropic) throw new Error("Anthropic not initialized");
+                if (!this.anthropic)
+                    throw new Error("Anthropic not initialized");
                 const r = await this.anthropic.messages.create({
                     model: "claude-3-7-sonnet-latest",
                     max_tokens: 2048,
                     messages: [{ role: "user", content: prompt }],
                 });
                 const c = r.content[0];
-                if (c.type !== "text") throw new Error("Unexpected Anthropic response type");
+                if (c.type !== "text")
+                    throw new Error("Unexpected Anthropic response type");
                 const m = c.text.match(/\{[\s\S]*\}/);
-                if (!m) throw new Error("No JSON in Anthropic response");
+                if (!m)
+                    throw new Error("No JSON in Anthropic response");
                 return JSON.parse(m[0]);
             }
             case "gemini": {
-                if (!this.gemini) throw new Error("Gemini not initialized");
+                if (!this.gemini)
+                    throw new Error("Gemini not initialized");
                 const r = await this.gemini.generateContent({
                     contents: [{ role: "user", parts: [{ text: prompt }] }],
                     generationConfig: { temperature: 0.4, responseMimeType: "application/json" },
                 });
                 const m = r.response.text().match(/\{[\s\S]*\}/);
-                if (!m) throw new Error("No JSON in Gemini response");
+                if (!m)
+                    throw new Error("No JSON in Gemini response");
                 return JSON.parse(m[0]);
             }
             case "openrouter":
             case "hf-inference": {
                 const client = this.openrouter;
-                if (!client) throw new Error("OpenRouter/Inference not initialized");
+                if (!client)
+                    throw new Error("OpenRouter/Inference not initialized");
                 const r = await client.chat.completions.create({
                     model: "meta-llama/llama-3-70b-instruct",
                     messages: [{ role: "user", content: prompt }],
@@ -614,17 +419,17 @@ Rules:
                 return { components: [] };
         }
     }
-
     /**
      * Free-form text LLM call — used by design brief synthesis and other philosophy generators.
      * Returns raw text (not JSON). Retries with backoff.
      */
-    async callText(prompt: string): Promise<string> {
-        let lastError: Error | null = null;
+    async callText(prompt) {
+        let lastError = null;
         for (let attempt = 1; attempt <= LLM_MAX_RETRIES; attempt++) {
             try {
                 return await this.withTimeout(this.callTextProvider(prompt), LLM_TIMEOUT_MS);
-            } catch (e: any) {
+            }
+            catch (e) {
                 lastError = e;
                 if (attempt < LLM_MAX_RETRIES) {
                     const hash = crypto.createHash("sha256").update(`retry_${attempt}_${Date.now()}`).digest("hex");
@@ -635,11 +440,11 @@ Rules:
         }
         throw new Error(`LLM text call failed after ${LLM_MAX_RETRIES} attempts. Last error: ${lastError?.message}`);
     }
-
-    private async callTextProvider(prompt: string): Promise<string> {
+    async callTextProvider(prompt) {
         switch (this.provider) {
             case "groq": {
-                if (!this.groq) throw new Error("Groq not initialized");
+                if (!this.groq)
+                    throw new Error("Groq not initialized");
                 const r = await this.groq.chat.completions.create({
                     model: "llama-3.3-70b-versatile",
                     messages: [{ role: "user", content: prompt }],
@@ -649,7 +454,8 @@ Rules:
                 return r.choices[0].message.content || "";
             }
             case "openai": {
-                if (!this.openai) throw new Error("OpenAI not initialized");
+                if (!this.openai)
+                    throw new Error("OpenAI not initialized");
                 const r = await this.openai.chat.completions.create({
                     model: "gpt-4.1",
                     messages: [{ role: "user", content: prompt }],
@@ -659,18 +465,21 @@ Rules:
                 return r.choices[0].message.content || "";
             }
             case "anthropic": {
-                if (!this.anthropic) throw new Error("Anthropic not initialized");
+                if (!this.anthropic)
+                    throw new Error("Anthropic not initialized");
                 const r = await this.anthropic.messages.create({
                     model: "claude-3-7-sonnet-latest",
                     max_tokens: 4096,
                     messages: [{ role: "user", content: prompt }],
                 });
                 const c = r.content[0];
-                if (c.type !== "text") throw new Error("Unexpected Anthropic response type");
+                if (c.type !== "text")
+                    throw new Error("Unexpected Anthropic response type");
                 return c.text;
             }
             case "gemini": {
-                if (!this.gemini) throw new Error("Gemini not initialized");
+                if (!this.gemini)
+                    throw new Error("Gemini not initialized");
                 const r = await this.gemini.generateContent({
                     contents: [{ role: "user", parts: [{ text: prompt }] }],
                     generationConfig: { temperature: 0.7 },
@@ -678,7 +487,8 @@ Rules:
                 return r.response.text();
             }
             case "openrouter": {
-                if (!this.openrouter) throw new Error("OpenRouter not initialized");
+                if (!this.openrouter)
+                    throw new Error("OpenRouter not initialized");
                 const r = await this.openrouter.chat.completions.create({
                     model: "meta-llama/llama-3-70b-instruct",
                     messages: [{ role: "user", content: prompt }],
@@ -689,7 +499,8 @@ Rules:
             }
             case "hf-inference": {
                 // HF Inference Providers (Together, Fireworks, etc. via router.huggingface.co)
-                if (!this.openrouter) throw new Error("HF Inference not initialized");
+                if (!this.openrouter)
+                    throw new Error("HF Inference not initialized");
                 const r = await this.openrouter.chat.completions.create({
                     model: "meta-llama/Llama-3.3-70B-Instruct", // Default model
                     messages: [{ role: "user", content: prompt }],
@@ -704,33 +515,27 @@ Rules:
             }
         }
     }
-
     /**
      * Backward compatibility: extract traits only
      */
-    async extractTraits(intent: string, projectContext?: string): Promise<ContentTraits> {
+    async extractTraits(intent, projectContext) {
         const analysis = await this.analyze(intent, projectContext);
         return analysis.traits;
     }
-
     /**
      * Backward compatibility: classify sector
      */
-    async classifySector(content: string): Promise<{ primary: string; confidence: number }> {
+    async classifySector(content) {
         const analysis = await this.analyze(content);
         return { primary: analysis.sector.primary, confidence: analysis.sector.confidence };
     }
-
     /** Race a promise against a timeout */
-    private withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-        const timeout = new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error(`LLM request timed out after ${ms}ms`)), ms)
-        );
+    withTimeout(promise, ms) {
+        const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error(`LLM request timed out after ${ms}ms`)), ms));
         return Promise.race([promise, timeout]);
     }
-
     /** Dispatch to the configured provider */
-    private callProvider(prompt: string): Promise<LLMResponse> {
+    callProvider(prompt) {
         switch (this.provider) {
             case "groq": return this.extractWithGroq(prompt);
             case "openai": return this.extractWithOpenAI(prompt);
@@ -741,8 +546,7 @@ Rules:
             default: throw new Error(`Unknown provider: ${this.provider}`);
         }
     }
-
-    private buildPrompt(intent: string, projectContext?: string): string {
+    buildPrompt(intent, projectContext) {
         return `You are a Semantic Trait Extractor for a parametric design system with 32-chromosome DNA generation (ch0-sector through ch32-token_inheritance).
 
 Analyze the design intent and map to 8 trait vectors (0.0-1.0). Your output directly generates the design genome.
@@ -1133,9 +937,9 @@ OUTPUT INSTRUCTIONS
 }
 `;
     }
-
-    private async extractWithGroq(prompt: string): Promise<LLMResponse> {
-        if (!this.groq) throw new Error("Groq client not initialized");
+    async extractWithGroq(prompt) {
+        if (!this.groq)
+            throw new Error("Groq client not initialized");
         const response = await this.groq.chat.completions.create({
             model: "llama-3.3-70b-versatile",
             messages: [{ role: "user", content: prompt }],
@@ -1145,9 +949,9 @@ OUTPUT INSTRUCTIONS
         const content = response.choices[0].message.content || "{}";
         return JSON.parse(content);
     }
-
-    private async extractWithOpenAI(prompt: string): Promise<LLMResponse> {
-        if (!this.openai) throw new Error("OpenAI client not initialized");
+    async extractWithOpenAI(prompt) {
+        if (!this.openai)
+            throw new Error("OpenAI client not initialized");
         const response = await this.openai.chat.completions.create({
             model: "gpt-4.1",
             messages: [{ role: "user", content: prompt }],
@@ -1157,9 +961,9 @@ OUTPUT INSTRUCTIONS
         const content = response.choices[0].message.content || "{}";
         return JSON.parse(content);
     }
-
-    private async extractWithAnthropic(prompt: string): Promise<LLMResponse> {
-        if (!this.anthropic) throw new Error("Anthropic client not initialized");
+    async extractWithAnthropic(prompt) {
+        if (!this.anthropic)
+            throw new Error("Anthropic client not initialized");
         const response = await this.anthropic.messages.create({
             model: "claude-3-7-sonnet-latest",
             max_tokens: 1024,
@@ -1169,28 +973,31 @@ OUTPUT INSTRUCTIONS
         let text = "";
         if (content.type === "text") {
             text = content.text;
-        } else {
+        }
+        else {
             throw new Error("Unexpected response type from Anthropic");
         }
         const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error("No JSON found in Anthropic response");
+        if (!jsonMatch)
+            throw new Error("No JSON found in Anthropic response");
         return JSON.parse(jsonMatch[0]);
     }
-
-    private async extractWithGemini(prompt: string): Promise<LLMResponse> {
-        if (!this.gemini) throw new Error("Gemini client not initialized");
+    async extractWithGemini(prompt) {
+        if (!this.gemini)
+            throw new Error("Gemini client not initialized");
         const result = await this.gemini.generateContent({
             contents: [{ role: "user", parts: [{ text: prompt }] }],
             generationConfig: { temperature: 0.2, responseMimeType: "application/json" },
         });
         const text = result.response.text();
         const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error("No JSON found in Gemini response");
+        if (!jsonMatch)
+            throw new Error("No JSON found in Gemini response");
         return JSON.parse(jsonMatch[0]);
     }
-
-    private async extractWithOpenRouter(prompt: string): Promise<LLMResponse> {
-        if (!this.openrouter) throw new Error("OpenRouter client not initialized");
+    async extractWithOpenRouter(prompt) {
+        if (!this.openrouter)
+            throw new Error("OpenRouter client not initialized");
         const response = await this.openrouter.chat.completions.create({
             model: "meta-llama/llama-3.3-70b-versatile", // Default to Llama 4 Scout
             messages: [{ role: "user", content: prompt }],
@@ -1200,29 +1007,25 @@ OUTPUT INSTRUCTIONS
         const content = response.choices[0].message.content || "{}";
         return JSON.parse(content);
     }
-
-    private async extractWithHuggingFace(prompt: string): Promise<LLMResponse> {
+    async extractWithHuggingFace(prompt) {
         // HF Inference Providers (Together, Fireworks, etc. via router.huggingface.co)
         // Requires separate billing setup on HuggingFace
         const client = this.openrouter;
-        if (!client) throw new Error("HF Inference not initialized");
-        
+        if (!client)
+            throw new Error("HF Inference not initialized");
         const response = await client.chat.completions.create({
             model: "meta-llama/Llama-3.3-70B-Instruct",
             messages: [{ role: "user", content: prompt }],
             response_format: { type: "json_object" },
             temperature: 0.2,
         });
-        
         const content = response.choices[0].message.content || "{}";
         return JSON.parse(content);
     }
-
-    private clamp(value: number): number {
+    clamp(value) {
         return Math.max(0, Math.min(1, value));
     }
-
-    getProvider(): LLMProvider {
+    getProvider() {
         return this.provider;
     }
 }

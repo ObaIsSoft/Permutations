@@ -1,0 +1,199 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - banner [ref=e14]:
+      - generic [ref=e15]:
+        - navigation [ref=e16]:
+          - link "How it works" [ref=e17]:
+            - /url: "#how"
+            - text: How it works
+          - link "Locations" [ref=e19]:
+            - /url: "#locations"
+            - text: Locations
+        - link "Planetoño" [ref=e21]:
+          - /url: "#hero"
+          - img "Planetoño" [ref=e24]
+        - navigation [ref=e25]:
+          - link "Contact" [ref=e26]:
+            - /url: mailto:mail@tubikstudio.com
+            - generic: Contact
+          - button [ref=e28]
+    - main [ref=e31]:
+      - generic [ref=e33]:
+        - generic:
+          - generic:
+            - generic:
+              - img
+        - generic:
+          - generic:
+            - generic:
+              - img
+        - generic:
+          - generic:
+            - generic:
+              - img
+        - generic:
+          - img
+          - img
+          - img
+        - generic:
+          - img
+          - img
+          - img
+        - generic:
+          - img
+          - img
+          - img
+        - generic [ref=e34]:
+          - generic [ref=e35]:
+            - generic:
+              - generic:
+                - heading "BiGgerthan hunger.SMALler thanA plAnet" [level=2]:
+                  - generic "BiGgerthan hunger.SMALler thanA plAnet":
+                    - generic:
+                      - paragraph:
+                        - generic: BiGger
+                    - generic:
+                      - paragraph:
+                        - generic: than
+                        - generic: hunger.
+                    - generic:
+                      - paragraph:
+                        - generic: SMALler
+                        - generic: than
+                    - generic:
+                      - paragraph:
+                        - generic: A
+                        - generic: plAnet
+                  - generic:
+                    - img
+                    - img
+                - generic "Stacked cosmic burger with orbit fries and stardust sauce.":
+                  - generic: Stacked cosmic
+                  - generic: burger with orbit
+                  - generic: fries and stardust
+                  - generic: sauce.
+                - generic "Comes with Major Paws, the fluffiest captain in the Milky Way.":
+                  - generic: Comes with Major
+                  - generic: Paws, the fluffiest
+                  - generic: captain in the Milky
+                  - generic: Way.
+            - generic:
+              - generic:
+                - heading "CelEstiAlFuEl fOrinteRstelLarApPeTitES" [level=2]:
+                  - generic "CelEstiAlFuEl fOrinteRstelLarApPeTitES":
+                    - generic:
+                      - paragraph:
+                        - generic: CelEstiAl
+                    - generic:
+                      - paragraph:
+                        - generic: FuEl
+                        - generic: fOr
+                    - generic:
+                      - paragraph:
+                        - generic: inteRstelLar
+                    - generic:
+                      - paragraph:
+                        - generic: ApPeTitES
+                  - generic:
+                    - img
+                    - img
+                - generic "A warp-speed hot dog with solar ketchup and nebula mustard.":
+                  - generic: A warp-speed hot
+                  - generic: dog with solar
+                  - generic: ketchup and nebula
+                  - generic: mustard.
+                - generic "Includes Cluck Rogers, the space chick on a flavor mission.":
+                  - generic: Includes Cluck
+                  - generic: Rogers, the space
+                  - generic: chick on a flavor
+                  - generic: mission.
+            - generic [ref=e69]:
+              - heading "PizZasO goOD,GraViTY canwAit" [level=2] [ref=e179]:
+                - generic "PizZasO goOD,GraViTY canwAit" [ref=e180]:
+                  - paragraph [ref=e72]:
+                    - generic [ref=e182]: PizZa
+                  - paragraph [ref=e73]:
+                    - generic [ref=e184]: sO
+                    - generic [ref=e185]: goOD,
+                  - paragraph [ref=e74]:
+                    - generic [ref=e187]: GraViTY
+                    - generic [ref=e188]: can
+                  - paragraph [ref=e75]:
+                    - generic [ref=e190]: wAit
+                - generic:
+                  - img [ref=e76]
+                  - img [ref=e79]
+              - generic "Pepperoni supernova, asteroid fries, and a cosmic shake." [ref=e191]:
+                - generic [ref=e192]: Pepperoni
+                - generic [ref=e193]: supernova, asteroid
+                - generic [ref=e194]: fries, and a cosmic
+                - generic [ref=e195]: shake.
+              - generic "Served with Koalantis, the chillest koala in the galaxy." [ref=e196]:
+                - generic [ref=e197]: Served with
+                - generic [ref=e198]: Koalantis, the chillest
+                - generic [ref=e199]: koala in the galaxy.
+          - generic [ref=e84]:
+            - button [ref=e86]:
+              - img
+            - button [ref=e92]:
+              - img
+        - link [ref=e93]:
+          - /url: "#how"
+          - img [ref=e94]
+      - generic [ref=e95]:
+        - heading "HOW iT worKS" [level=2] [ref=e97]
+        - generic [ref=e100]:
+          - heading "gifT iT tO a frienD oR KEep it AlL to YOuRsElf" [level=2] [ref=e101]:
+            - generic [ref=e102]:
+              - paragraph [ref=e103]: gifT iT tO a frienD
+              - paragraph [ref=e104]: oR KEep it AlL to
+              - paragraph [ref=e105]: YOuRsElf
+          - paragraph [ref=e106]: We won’t judge 😏
+        - generic:
+          - img
+          - img
+          - img
+          - img
+          - img
+          - img
+          - img
+          - img
+          - img
+          - img
+          - img
+          - img
+      - generic [ref=e108]:
+        - heading "WhERE TO FIND uS" [level=2] [ref=e109]:
+          - paragraph [ref=e111]: WhERE TO FIND uS
+        - paragraph [ref=e112]: May the coordinates be ever in your favor
+        - generic [ref=e173]:
+          - generic [ref=e174]:
+            - generic:
+              - img
+            - button [ref=e115]
+            - button [ref=e119]
+          - generic [ref=e175]:
+            - generic:
+              - img
+            - button [ref=e123]
+            - button [ref=e127]
+            - button [ref=e131]
+            - button [ref=e135]
+      - generic [ref=e137]:
+        - link [ref=e138]:
+          - /url: https://tubikstudio.com/
+          - img [ref=e139]
+        - heading "We tried maKing this real. NaSA said nO. So for nOw, it’s just a deliCiOus Concept By tubik 💛" [level=2] [ref=e140]:
+          - generic [ref=e141]:
+            - paragraph [ref=e142]: We tried maKing this real. NaSA said nO.
+            - paragraph [ref=e143]: So for nOw, it’s just a deliCiOus Concept
+            - paragraph [ref=e144]:
+              - text: By
+              - link "tubik" [ref=e147]:
+                - /url: https://www.tubikstudio.com/
+              - text: 💛
+        - generic [ref=e149]: © 2026
+  - generic:
+    - generic:
+      - generic:
+        - img "Cursor"

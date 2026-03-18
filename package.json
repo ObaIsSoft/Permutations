@@ -11,12 +11,12 @@
     "build": "tsc",
     "start": "node --env-file=.env dist/server.js",
     "dev": "tsc --watch",
-    "test": "node --env-file=.env tests/run-all.mjs",
-    "test:intent": "node --env-file=.env tests/intent-epigenetics.test.mjs",
-    "test:genome": "node --env-file=.env tests/genome.test.mjs",
-    "test:production": "node --env-file=.env tests/production.test.mjs",
-    "test:sequencer": "node --env-file=.env tests/sequencer.test.mjs",
-    "test:ecosystem": "node --env-file=.env tests/ecosystem-civilization.test.mjs"
+    "test": "source .env && node tests/run-all.mjs",
+    "test:intent": "source .env && node tests/intent-epigenetics.test.mjs",
+    "test:genome": "source .env && node tests/genome.test.mjs",
+    "test:production": "source .env && node tests/production.test.mjs",
+    "test:sequencer": "source .env && node tests/sequencer.test.mjs",
+    "test:ecosystem": "source .env && node tests/ecosystem-civilization.test.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",

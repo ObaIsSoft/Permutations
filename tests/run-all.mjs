@@ -16,7 +16,7 @@ const tests = [
     { name: 'Production', file: 'production.test.mjs' },
     { name: 'Ecosystem/Civilization', file: 'ecosystem-civilization.test.mjs' },
     { name: 'URL Extractor', file: 'url-extractor.test.mjs' },
-    { name: 'Intent/Epigenetics', file: 'intent-epigenetics.test.mjs', optional: true }
+    { name: 'L0 Creator DNA', file: '../dist/tests/creator/epigenetic.test.js', optional: true }
 ];
 
 const results = [];
