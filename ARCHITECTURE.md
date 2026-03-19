@@ -1,11 +1,11 @@
-# Permutations Architecture
+# Genome Architecture
 ## Three-Layer SHA-256 Genome Chain — v1.0.0
 
 ---
 
 ## Core Principle
 
-Permutations is a **design constitution generator**. It produces three interlocking genomes — design, ecosystem, civilization — each deterministically derived from the previous via SHA-256 hash. The same seed always produces the same three genomes. Different seeds always produce distinct genomes at all three layers.
+Genome is a **design constitution generator**. It produces three interlocking genomes — design, ecosystem, civilization — each deterministically derived from the previous via SHA-256 hash. The same seed always produces the same three genomes. Different seeds always produce distinct genomes at all three layers.
 
 **No vocabulary dependency.** Complexity tier is computed from structural product behavior (what the product *does*), not from keywords in the description.
 

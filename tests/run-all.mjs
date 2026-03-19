@@ -1,5 +1,5 @@
 /**
- * Unified Test Runner for Permutations MCP
+ * Unified Test Runner for Genome MCP
  * Runs all test suites sequentially with comprehensive reporting
  */
 
@@ -23,7 +23,7 @@ const results = [];
 let totalPassed = 0;
 let totalFailed = 0;
 
-console.log('🧬 Permutations MCP Test Suite\n');
+console.log('🧬 Genome MCP Test Suite\n');
 console.log('=' .repeat(50));
 
 for (const test of tests) {

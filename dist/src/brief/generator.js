@@ -137,10 +137,10 @@ A client comes to you with: "${intent.description}"
 ${intent.sector ? `Sector: ${intent.sector}` : ''}
 ${intent.audience ? `Audience: ${intent.audience}` : ''}
 
-As this persona, generate a creative brief. Return ONLY valid JSON:
+As this persona, generate a creative brief. The concept MUST directly reference the client's intent (photography, portfolio, etc.). Return ONLY valid JSON:
 {
   "concept": {
-    "statement": "What if...",
+    "statement": "What if... (MUST reference photography/portfolio/artist intent)",
     "insight": "The creative insight",
     "tension": "Productive friction"
   },

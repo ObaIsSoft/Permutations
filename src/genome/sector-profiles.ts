@@ -1,5 +1,5 @@
 /**
- * Permutations MCP - Sector Profiles
+ * Genome MCP - Sector Profiles
  * 
  * Mathematical trait biases for chromosome-derived generation.
  * NO named colors. NO templates. Only mathematical constraints.

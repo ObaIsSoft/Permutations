@@ -1,5 +1,5 @@
 /**
- * Permutations — EcosystemGenome Type System
+ * Genome — EcosystemGenome Type System
  *
  * Layer 2 of the SHA-256 hash chain.
  *   hash = sha256(designGenome.dnaHash)

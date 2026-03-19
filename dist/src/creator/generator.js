@@ -273,9 +273,10 @@ export function crossoverGenomes(parentA, parentB, offspringSeed) {
         const t = rng.range(0.3, 0.7);
         return a * t + b * (1 - t);
     };
+    const selectParent = (a, b) => rng.next() > 0.5 ? a : b;
     return {
         c0_cultural_vector: blendVectors(parentA.c0_cultural_vector, parentB.c0_cultural_vector),
-        c1_temporal_nostalgia: Math.random() > 0.5 ? parentA.c1_temporal_nostalgia : parentB.c1_temporal_nostalgia,
+        c1_temporal_nostalgia: selectParent(parentA.c1_temporal_nostalgia, parentB.c1_temporal_nostalgia),
         c2_obsession_traversal: {
             origin_domain: rng.signed(),
             depth: blendScalars(parentA.c2_obsession_traversal.depth, parentB.c2_obsession_traversal.depth),
@@ -293,7 +294,7 @@ export function crossoverGenomes(parentA, parentB, offspringSeed) {
         c11_chaos_tolerance: blendScalars(parentA.c11_chaos_tolerance, parentB.c11_chaos_tolerance),
         c12_cross_pollination: blendScalars(parentA.c12_cross_pollination, parentB.c12_cross_pollination),
         c13_temporal_sense: blendVectors(parentA.c13_temporal_sense, parentB.c13_temporal_sense),
-        c14_sensory_weights: Math.random() > 0.5 ? parentA.c14_sensory_weights : parentB.c14_sensory_weights,
+        c14_sensory_weights: selectParent(parentA.c14_sensory_weights, parentB.c14_sensory_weights),
         c15_coherence_style: blendScalars(parentA.c15_coherence_style, parentB.c15_coherence_style),
         seed: `${parentA.seed}:CROSS:${parentB.seed}:${offspringSeed}`,
         dna_hash: computeDNAHash(`${parentA.seed}:CROSS:${parentB.seed}:${offspringSeed}`, rng),

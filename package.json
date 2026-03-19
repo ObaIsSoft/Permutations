@@ -1,11 +1,11 @@
 {
-  "name": "permutations",
+  "name": "genome",
   "version": "1.0.0",
   "description": "Parametric Design Genome MCP Server",
   "type": "module",
   "main": "dist/server.js",
   "bin": {
-    "permutations": "./dist/server.js"
+    "genome": "./dist/server.js"
   },
   "scripts": {
     "build": "tsc",

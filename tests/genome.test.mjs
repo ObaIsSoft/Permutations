@@ -1,12 +1,12 @@
 /**
- * Permutations Genome Tests
+ * Genome Genome Tests
  * Run with: node tests/genome.test.mjs
  */
 
-import { GenomeSequencer } from "../dist/genome/sequencer.js";
-import { PatternDetector } from "../dist/constraints/pattern-detector.js";
-import { ComplexityAnalyzer } from "../dist/genome/complexity-analyzer.js";
-import { CivilizationGenerator } from "../dist/genome/civilization.js";
+import { GenomeSequencer } from "../dist/src/genome/sequencer.js";
+import { PatternDetector } from "../dist/src/constraints/pattern-detector.js";
+import { ComplexityAnalyzer } from "../dist/src/genome/complexity-analyzer.js";
+import { CivilizationGenerator } from "../dist/src/genome/civilization.js";
 
 // Test utilities
 function assert(condition, message) {
@@ -21,7 +21,7 @@ function assertEqual(a, b, message) {
 }
 
 // Run tests
-console.log("🧬 Running Permutations Genome Tests\n");
+console.log("🧬 Running Genome Genome Tests\n");
 
 // Shared base traits — now all 8 required ContentTraits fields
 const baseTraits = {

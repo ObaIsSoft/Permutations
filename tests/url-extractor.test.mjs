@@ -3,7 +3,7 @@
  * Tests the Playwright-based and fetch-fallback URL extraction
  */
 
-import { urlGenomeExtractor } from '../dist/genome/extractor-url.js';
+import { urlGenomeExtractor } from '../dist/src/genome/extractor-url.js';
 
 const TESTS = [];
 const PASSED = [];

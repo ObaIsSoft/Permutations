@@ -1,5 +1,5 @@
 /**
- * Permutations MCP - Genome Sequencer
+ * Genome MCP - Sequencer
  *
  * Enhanced sequencer with sector awareness, content analysis,
  * hero type selection, and brand integration.
@@ -9,14 +9,19 @@ import { fontCatalog } from "../font-catalog.js";
 import { GenomeConstraintSolver } from "./constraint-solver.js";
 import { getSectorProfile, generateHueFromForbidden, generateSaturationFromBias, generateLightnessFromBias, selectHeroType, selectTrustApproach, SUB_SECTOR_KEYWORDS } from "./sector-profiles.js";
 import { COPY_PATTERN_BANKS, generateHeadlineFromPatterns, generateCTAFromPatterns, generateTaglineFromPatterns, generateSentenceFromTemplate } from "./copy-patterns.js";
+import { EntropyPool } from "./entropy-pool.js";
 export class GenomeSequencer {
+    // FIX 2/3: EntropyPool for uniform selection and unlimited entropy
+    pool = null;
     /**
      * Generate a design genome with full sector awareness
      */
     generate(seed, traits, config, epigenetics) {
         const hash = crypto.createHash("sha256").update(seed).digest("hex");
         const bytes = Buffer.from(hash, 'hex');
-        const b = (index) => bytes[index % 32] / 255; // Wrap around 32-byte hash
+        // FIX 3: Use EntropyPool for unlimited deterministic entropy (no more index % 32)
+        this.pool = new EntropyPool(seed);
+        const b = (index) => this.pool.getFloat(index); // [0, 1) from expanded entropy
         const { primarySector, secondarySector, brand, options } = config;
         // Get sector profiles
         const primaryProfile = getSectorProfile(primarySector);
@@ -79,56 +84,62 @@ export class GenomeSequencer {
      */
     generateChromosomes(params) {
         const { hash, bytes, b, traits, primaryProfile, secondaryProfile, subSector, subSectorConfidence, brand, brandWeight, sectorWeight, epigenetics, options } = params;
+        // FIX 2/3: Access pool via this.pool for uniform selection
+        const pool = this.pool;
         // Check if chromosomes are disabled
         const isDisabled = (ch) => options?.disabledChromosomes?.includes(ch) ?? false;
-        const isForced = (ch) => options?.forcedChromosomes?.[ch];
+        // FIX 5: Type-safe chromosome retrieval with proper generic typing
+        const getForced = (ch, defaultValue) => {
+            const forced = options?.forcedChromosomes?.[ch];
+            return forced ?? defaultValue;
+        };
         // Sector Chromosomes
-        const ch0_sector_primary = isForced('ch0_sector_primary') || {
+        const ch0_sector_primary = getForced('ch0_sector_primary', {
             sector: primaryProfile.sector,
             influence: sectorWeight
-        };
-        const ch0_sector_secondary = isForced('ch0_sector_secondary') || {
+        });
+        const ch0_sector_secondary = getForced('ch0_sector_secondary', {
             sector: secondaryProfile?.sector || null,
             influence: secondaryProfile ? (1 - sectorWeight) * 0.3 : 0
-        };
-        const ch0_sub_sector = isForced('ch0_sub_sector') || {
+        });
+        const ch0_sub_sector = getForced('ch0_sub_sector', {
             classification: subSector,
             confidence: subSectorConfidence,
             keywords: this.extractKeywords(traits)
-        };
-        const ch0_brand_weight = isForced('ch0_brand_weight') || {
+        });
+        const ch0_brand_weight = getForced('ch0_brand_weight', {
             brandVsSector: brandWeight,
             appliedOverrides: []
-        };
+        });
         // Original Chromosomes (1-18)
-        const ch1_structure = isForced('ch1_structure') || this.generateStructure(traits, b);
-        const ch2_rhythm = isForced('ch2_rhythm') || this.generateRhythm(traits, b);
-        const ch3_type_display = isForced('ch3_type_display') || this.generateDisplayType(traits, b, primaryProfile, options);
-        const ch4_type_body = isForced('ch4_type_body') || this.generateBodyType(traits, b, primaryProfile, options);
-        const ch5_color_primary = isForced('ch5_color_primary') || this.generatePrimaryColor(b, primaryProfile, secondaryProfile, brand, brandWeight, epigenetics);
-        const ch6_color_temp = isForced('ch6_color_temp') || this.generateColorTemp(ch5_color_primary.temperature, primaryProfile, b);
-        const ch7_edge = isForced('ch7_edge') || this.generateEdge(traits, b, primaryProfile);
-        const ch8_motion = isForced('ch8_motion') || this.generateMotion(traits, b, primaryProfile);
-        const ch27_motion_choreography = isForced('ch27_motion_choreography') || this.generateMotionChoreography(traits, b);
-        const ch9_grid = isForced('ch9_grid') || this.generateGrid(traits, b);
-        const ch10_hierarchy = isForced('ch10_hierarchy') || this.generateHierarchy(traits, b);
-        const ch11_texture = isForced('ch11_texture') || this.generateTexture(traits, b);
-        const ch12_signature = isForced('ch12_signature') || {
+        const ch1_structure = getForced('ch1_structure', this.generateStructure(traits, b));
+        const ch2_rhythm = getForced('ch2_rhythm', this.generateRhythm(traits, b));
+        const ch3_type_display = getForced('ch3_type_display', this.generateDisplayType(traits, b, primaryProfile, options));
+        const ch4_type_body = getForced('ch4_type_body', this.generateBodyType(traits, b, primaryProfile, options));
+        const ch5_color_primary = getForced('ch5_color_primary', this.generatePrimaryColor(b, primaryProfile, secondaryProfile, brand, brandWeight, epigenetics));
+        const ch6_color_temp = getForced('ch6_color_temp', this.generateColorTemp(ch5_color_primary.temperature, primaryProfile, b));
+        const ch7_edge = getForced('ch7_edge', this.generateEdge(traits, b, primaryProfile));
+        const ch8_motion = getForced('ch8_motion', this.generateMotion(traits, b, primaryProfile));
+        const ch27_motion_choreography = getForced('ch27_motion_choreography', this.generateMotionChoreography(traits, b));
+        const ch9_grid = getForced('ch9_grid', this.generateGrid(traits, b));
+        const ch10_hierarchy = getForced('ch10_hierarchy', this.generateHierarchy(traits, b));
+        const ch11_texture = getForced('ch11_texture', this.generateTexture(traits, b));
+        const ch12_signature = getForced('ch12_signature', {
             entropy: b(17),
             uniqueMutation: hash.slice(0, 8),
             variantSeed: b(18) // Byte 18 — distinct from entropy (byte 17)
-        };
-        const ch28_iconography = isForced('ch28_iconography') || this.generateIconography(traits, b, primaryProfile);
-        const ch13_atmosphere = isForced('ch13_atmosphere') || this.generateAtmosphere(traits, b, isDisabled('ch13_atmosphere'));
-        const ch14_physics = isForced('ch14_physics') || this.generatePhysics(traits, b, isDisabled('ch14_physics'));
-        const ch15_biomarker = isForced('ch15_biomarker') || this.generateBiomarker(traits, b, primaryProfile, isDisabled('ch15_biomarker'), options?.enable3D);
-        const ch16_typography = isForced('ch16_typography') || this.generateTypography(traits, b);
-        const ch17_accessibility = isForced('ch17_accessibility') || this.generateAccessibility(traits, b);
-        const ch18_rendering = isForced('ch18_rendering') || this.generateRendering(traits, b);
+        });
+        const ch28_iconography = getForced('ch28_iconography', this.generateIconography(traits, b, primaryProfile));
+        const ch13_atmosphere = getForced('ch13_atmosphere', this.generateAtmosphere(traits, b, isDisabled('ch13_atmosphere')));
+        const ch14_physics = getForced('ch14_physics', this.generatePhysics(traits, b, isDisabled('ch14_physics')));
+        const ch15_biomarker = getForced('ch15_biomarker', this.generateBiomarker(traits, b, primaryProfile, isDisabled('ch15_biomarker'), options?.enable3D));
+        const ch16_typography = getForced('ch16_typography', this.generateTypography(traits, b));
+        const ch17_accessibility = getForced('ch17_accessibility', this.generateAccessibility(traits, b));
+        const ch18_rendering = getForced('ch18_rendering', this.generateRendering(traits, b));
         // Hero & Visual Chromosomes (19-20)
-        const forcedHero = isForced('ch19_hero_type');
-        // SHA-256 derived: does this design have a hero? (~10% chance of no hero)
-        const hasHero = forcedHero?.hasHero ?? (b(100) > 0.10);
+        const forcedHero = options?.forcedChromosomes?.ch19_hero_type;
+        // Genome-derived: does this design have a hero? (both bytes from hash)
+        const hasHero = forcedHero?.hasHero ?? (b(100) > b(101));
         const heroType = forcedHero?.type ||
             selectHeroType(primaryProfile.sector, Math.floor(b(101) * 255));
         const heroVariant = forcedHero?.variant ||
@@ -140,40 +151,40 @@ export class GenomeSequencer {
             variantIndex: Math.floor(b(30) * 10) % 10, // Use byte 30, wrap to 0-9
             contentSource: undefined
         };
-        const ch19_hero_variant_detail = isForced('ch19_hero_variant_detail') || {
+        const ch19_hero_variant_detail = getForced('ch19_hero_variant_detail', {
             layout: heroVariant,
             elements: this.getHeroElements(heroType),
             alignment: this.selectFromHash(b(103), ["left", "center", "right"]),
             textPosition: this.selectFromHash(b(104), ["overlay", "adjacent", "below"]),
-            height: traits.spatialDependency > 0.6 ? "full"
+            height: traits.spatialDependency > 0.6 ? "viewport"
                 : traits.informationDensity > 0.7 ? "compact"
                     : traits.informationDensity > 0.4 ? "medium"
                         : "large",
             backgroundTreatment: heroType === "product_video" || heroType === "aspirational_imagery"
-                ? (b(118) > 0.5 ? "video" : "image")
+                ? (b(118) > b(119) ? "video" : "image")
                 : traits.spatialDependency > 0.6 ? "mesh" : "solid",
             overlayOpacity: 0.3 + b(119) * 0.5,
             mobileBehavior: traits.informationDensity > 0.7
                 ? "stack"
                 : this.selectFromHash(b(120), ["stack", "collapse_image", "full_bleed"])
-        };
-        const ch20_visual_treatment = isForced('ch20_visual_treatment') || {
+        });
+        const ch20_visual_treatment = getForced('ch20_visual_treatment', {
             treatment: this.selectVisualTreatment(primaryProfile, b(105)),
             videoStrategy: this.selectVideoStrategy(primaryProfile, b(106)),
             imageTreatment: this.selectFromHash(b(107), ["natural", "high_contrast", "warm", "cool", "monochrome"]),
-            hasVideo: b(106) > 0.7,
-            imageAspectRatio: this.selectFromHash(b(121), ["16:9", "4:3", "1:1", "portrait"]),
+            hasVideo: b(106) > b(107),
+            imageAspectRatio: this.selectFromHash(b(121), ["16:9", "4:3", "1:1", "4:5"]),
             colorGrading: traits.emotionalTemperature > 0.7
                 ? "vibrant"
                 : traits.emotionalTemperature < 0.3
                     ? "desaturated"
                     : this.selectFromHash(b(122), ["natural", "natural", "desaturated", "duotone"]),
             imageCount: traits.informationDensity > 0.7 ? 1 : traits.visualEmphasis > 0.6 ? "many" : 3
-        };
+        });
         // Trust & Social Chromosomes (21-22)
-        const forcedTrust = isForced('ch21_trust_signals');
-        // SHA-256 derived: does this design have trust signals? (~25% chance of none)
-        const hasTrustSignals = forcedTrust?.hasTrustSignals ?? (b(107) > 0.25);
+        const forcedTrust = options?.forcedChromosomes?.ch21_trust_signals;
+        // Genome-derived: does this design have trust signals? (both bytes from hash)
+        const hasTrustSignals = forcedTrust?.hasTrustSignals ?? (b(107) > b(108));
         const trustApproach = forcedTrust?.approach ||
             selectTrustApproach(primaryProfile.sector, Math.floor(b(108) * 255));
         const ch21_trust_signals = forcedTrust || {
@@ -190,7 +201,7 @@ export class GenomeSequencer {
                     : "none"
         };
         // Populate trust content with template tokens (not fake data)
-        const ch21_trust_content = isForced('ch21_trust_content') || {
+        const ch21_trust_content = getForced('ch21_trust_content', {
             credentials: primaryProfile.sector === "healthcare" || primaryProfile.sector === "legal"
                 ? ["{{CREDENTIAL_1}}", "{{CREDENTIAL_2}}"]
                 : [],
@@ -205,39 +216,39 @@ export class GenomeSequencer {
             securityBadges: traits.trustRequirement > 0.7
                 ? ["{{BADGE_ISO}}", "{{BADGE_SOC2}}"]
                 : []
-        };
+        });
         // SHA-256 derived: does this design have social proof? (~30% chance of none)
-        const hasSocialProof = b(110) > 0.30;
-        const ch22_social_proof = isForced('ch22_social_proof') || {
+        const hasSocialProof = b(110) > b(111);
+        const ch22_social_proof = getForced('ch22_social_proof', {
             hasSocialProof, // ← SHA-256 derived existence
             type: hasSocialProof ? this.selectSocialProofType(b(111), primaryProfile) : "none",
             prominence: this.selectTrustProminence(traits, primaryProfile),
             layout: this.selectFromHash(b(112), ["grid", "marquee", "carousel", "static"]),
             logoCount: hasSocialProof
                 ? (traits.conversionFocus > 0.6 ? 8 : traits.informationDensity > 0.5 ? 5 : 3)
-                : 0,
+                : 3, // minimum logo count when disabled
             updateFrequency: traits.temporalUrgency > 0.7 ? "realtime" : traits.temporalUrgency > 0.4 ? "daily" : "static",
             displayStyle: traits.trustRequirement > 0.6
                 ? "full_testimonial"
                 : traits.informationDensity > 0.6
                     ? "logos_only"
                     : "logos_with_name"
-        };
-        const ch22_impact_demonstration = isForced('ch22_impact_demonstration') || {
+        });
+        const ch22_impact_demonstration = getForced('ch22_impact_demonstration', {
             type: this.selectImpactType(b(112), primaryProfile),
-            realTime: b(113) > 0.7,
-            interactive: b(114) > 0.6,
+            realTime: b(113) > b(115),
+            interactive: b(114) > b(115),
             animationTrigger: traits.temporalUrgency > 0.6
                 ? "page_load"
                 : this.selectFromHash(b(123), ["scroll_enter", "scroll_enter", "page_load", "hover"]),
             counterFormat: traits.informationDensity > 0.7
-                ? "abbreviated"
+                ? "abbreviated_k"
                 : traits.conversionFocus > 0.6
                     ? "full"
-                    : "abbreviated"
-        };
+                    : "percentage",
+        });
         // Content Structure Chromosomes (23-24)
-        const ch23_content_depth = isForced('ch23_content_depth') || {
+        const ch23_content_depth = getForced('ch23_content_depth', {
             level: this.selectContentDepth(traits, primaryProfile),
             estimatedSections: this.estimateSections(traits),
             hasHero: true,
@@ -245,28 +256,28 @@ export class GenomeSequencer {
             hasCTA: traits.conversionFocus > 0.5,
             hasFAQ: traits.informationDensity > 0.6,
             hasTestimonials: traits.trustRequirement > 0.6
-        };
+        });
         // SHA-256 derived: does this design have a footer? (~20% chance of no footer)
-        const hasFooter = b(116) > 0.20;
-        const ch23_information_architecture = isForced('ch23_information_architecture') || {
+        const hasFooter = b(116) > b(117);
+        const ch23_information_architecture = getForced('ch23_information_architecture', {
             pattern: this.selectInfoArchitecture(traits, primaryProfile),
             navigationType: this.selectFromHash(b(115), ["header", "sidebar", "floating", "minimal"]),
             hasFooter, // ← SHA-256 derived existence
             footerType: hasFooter
                 ? this.selectFromHash(b(117), ["full", "minimal"])
                 : "minimal" // ← Default if no footer (AI ignores)
-        };
-        const ch24_personalization = isForced('ch24_personalization') || {
+        });
+        const ch24_personalization = getForced('ch24_personalization', {
             approach: this.selectPersonalization(traits),
-            dynamicContent: b(117) > 0.7,
+            dynamicContent: b(118) > b(119),
             userSegmentation: traits.informationDensity > 0.7,
             abTestingReady: traits.conversionFocus > 0.5,
             segmentCount: (traits.informationDensity > 0.7 ? 4 : traits.informationDensity > 0.4 ? 3 : 2)
-        };
-        const ch25_copy_engine = isForced('ch25_copy_engine') || this.generateCopyEngine(primaryProfile, b, options?.copyIntelligence, options?.copy);
+        });
+        const ch25_copy_engine = getForced('ch25_copy_engine', this.generateCopyEngine(primaryProfile, b, options?.copyIntelligence, options?.copy));
         const ch29_copy_intelligence = options?.copyIntelligence || this.generateDefaultCopyIntelligence(primaryProfile);
         // Ensure ch25 uses the same intelligence for consistency
-        if (options?.copyIntelligence && !isForced('ch25_copy_engine')) {
+        if (options?.copyIntelligence && !options.forcedChromosomes?.ch25_copy_engine) {
             // Regenerate copy engine with the provided intelligence
             const regeneratedCopy = this.generateCopyEngine(primaryProfile, b, options.copyIntelligence, options.copy);
             // Copy regenerated content back to ch25_copy_engine
@@ -275,24 +286,24 @@ export class GenomeSequencer {
         // Civilization Chromosomes (30–32)
         // Always generated from hash bytes; only read when complexity >= 0.81 (tribal+).
         // b() wraps at 32, so indices 219-224 map deterministically via modulo.
-        const ch30_state_topology = isForced('ch30_state_topology') || {
+        const ch30_state_topology = getForced('ch30_state_topology', {
             topology: this.selectFromHash(b(219), [
                 'local', 'shared_context', 'reactive_store', 'distributed', 'federated'
             ]),
             sharedSurfaces: Math.floor(b(220) * 6) // 0–5
-        };
-        const ch31_routing_pattern = isForced('ch31_routing_pattern') || {
+        });
+        const ch31_routing_pattern = getForced('ch31_routing_pattern', {
             pattern: this.selectFromHash(b(221), [
                 'single_page', 'multi_page', 'protected', 'platform', 'federated'
             ]),
             guardedRoutes: Math.floor(b(222) * 9) // 0–8
-        };
-        const ch32_token_inheritance = isForced('ch32_token_inheritance') || {
+        });
+        const ch32_token_inheritance = getForced('ch32_token_inheritance', {
             inheritance: this.selectFromHash(b(223), [
                 'flat', 'semantic', 'component', 'governed', 'cross_system'
             ]),
             themeLayers: Math.floor(b(224) * 4) + 1 // 1–4
-        };
+        });
         return {
             ch0_sector_primary,
             ch0_sector_secondary,
@@ -341,8 +352,9 @@ export class GenomeSequencer {
      */
     generateColorSystem(primary, profile, b) {
         // Hash-derived secondary color relationship
+        // FIX 2: Use uniform selection to eliminate modulo bias
         const relationships = ["complementary", "analogous", "split", "triadic"];
-        const relationship = relationships[Math.floor(b(208) * relationships.length)];
+        const relationship = this.pool.selectUniform(208, relationships);
         let secondaryHue;
         switch (relationship) {
             case "complementary":
@@ -357,6 +369,8 @@ export class GenomeSequencer {
             case "triadic":
                 secondaryHue = (primary.hue + 120 + Math.floor(b(211) * 120)) % 360;
                 break;
+            default:
+                secondaryHue = (primary.hue + 180) % 360; // fallback
         }
         const secondary = {
             hue: Math.round(secondaryHue),
@@ -372,7 +386,7 @@ export class GenomeSequencer {
             saturation: Math.round(Math.max(0.4, b(215)) * 100) / 100,
             lightness: Math.round(Math.max(0.4, Math.min(0.6, 0.5 + (b(216) - 0.5) * 0.2)) * 100) / 100,
             hex: this.hslToHex(accentHue, Math.max(40, b(215) * 100), Math.max(40, Math.min(60, (0.5 + (b(216) - 0.5) * 0.2) * 100))),
-            usage: ["cta", "highlight", "alert", "success"][Math.floor(b(217) * 4)]
+            usage: this.pool.selectUniform(217, ["cta", "highlight", "alert", "success"])
         };
         // Sector-biased semantic colors
         const semantic = {
@@ -772,11 +786,12 @@ export class GenomeSequencer {
         const banks = COPY_PATTERN_BANKS;
         const terms = banks.industryTerms[sector] || banks.industryTerms.technology;
         const verbs = banks.verbs[ci.emotionalRegister] || banks.verbs.professional;
-        const t0 = terms[Math.floor(b(200) * terms.length)];
-        const t1 = terms[Math.floor(b(201) * terms.length)];
-        const t2 = terms[Math.floor(b(202) * terms.length)];
-        const v0 = verbs[Math.floor(b(203) * verbs.length)];
-        const v1 = verbs[Math.floor(b(204) * verbs.length)];
+        // FIX 2: Use uniform selection to eliminate modulo bias
+        const t0 = this.pool.selectUniform(200, terms);
+        const t1 = this.pool.selectUniform(201, terms);
+        const t2 = this.pool.selectUniform(202, terms);
+        const v0 = this.pool.selectUniform(203, verbs);
+        const v1 = this.pool.selectUniform(204, verbs);
         return [
             {
                 question: `How does your ${t0} approach work?`,
@@ -960,7 +975,7 @@ export class GenomeSequencer {
             topology = this.selectFromHash(b(0), ["flat", "deep", "graph", "radial"]);
         }
         // SHA-256 derived: does this design have sections? (~15% chance of no sections)
-        const hasSections = b(1) > 0.15;
+        const hasSections = b(1) > b(2);
         return {
             hasSections, // ← SHA-256 derived existence
             sectionCount: hasSections ? this.estimateSections(traits) : 0,
@@ -1026,8 +1041,8 @@ export class GenomeSequencer {
             // Hash-driven variance when traits are moderate — full charge pool available
             // Prevents every "balanced" product from getting the same sector default
             const allCharges = ["geometric", "humanist", "monospace", "transitional", "grotesque", "slab_serif", "expressive"];
-            if (b(5) > 0.55) {
-                charge = allCharges[Math.floor(b(5) * allCharges.length) % allCharges.length];
+            if (b(5) > b(6)) {
+                charge = this.pool.selectUniform(5, allCharges); // FIX 2: uniform selection
             }
         }
         const provider = options?.fontProvider || "bunny";
@@ -1037,7 +1052,7 @@ export class GenomeSequencer {
             ? "tight"
             : traits.emotionalTemperature > 0.7
                 ? "wide"
-                : this.selectFromHash(b(25), ["normal", "tight", "wide", "ultra", "tight", "normal", "wide"]);
+                : this.selectFromHash(b(25), ["normal", "tight", "wide", "ultra_tight", "ultra_wide", "tight", "normal", "wide"]);
         // Casing — uppercase more frequently for low-emotion (cold/clinical look)
         const casing = traits.emotionalTemperature < 0.3
             ? "uppercase"
@@ -1048,7 +1063,7 @@ export class GenomeSequencer {
             importUrl: fontData.importUrl,
             provider: fontData.provider,
             charge,
-            weight: [400, 700, 900][Math.floor(b(6) * 3) % 3],
+            weight: this.pool.selectUniform(6, [400, 700, 900]), // FIX 2: uniform selection
             fallback: fontData.fallback,
             tracking,
             casing
@@ -1140,7 +1155,7 @@ export class GenomeSequencer {
         let saturation = generateSaturationFromBias(primarySector, Math.floor(b(11) * 255));
         let lightness = generateLightnessFromBias(primarySector, Math.floor(b(12) * 255));
         // Blend with secondary sector if present
-        if (secondaryProfile && b(13) > 0.5) {
+        if (secondaryProfile && b(13) > b(14)) {
             const secondaryHue = generateHueFromForbidden(secondaryProfile.sector, Math.floor(b(14) * 255));
             // Blend 70% primary, 30% secondary
             hue = this.blendHue(hue, secondaryHue, 0.3);
@@ -1176,7 +1191,7 @@ export class GenomeSequencer {
         }
         // Epistasis: Warm primary forces neutral/cool background
         if (primaryTemp === "warm") {
-            backgroundTemp = b(16) > 0.5 ? "neutral" : "cool";
+            backgroundTemp = b(16) > b(17) ? "neutral" : "cool";
         }
         const isDark = backgroundTemp === "cool";
         // Accent: primary hue +30° rotation
@@ -1270,7 +1285,7 @@ export class GenomeSequencer {
             variableRadius: traits.playfulness > 0.6,
             componentRadius: Math.round(radius * 0.6),
             imageRadius: Math.round(radius * 0.4),
-            asymmetric: traits.playfulness > 0.8 && b(27) > 0.6
+            asymmetric: traits.playfulness > 0.8 && b(27) > b(28)
         };
     }
     /**
@@ -1346,8 +1361,9 @@ export class GenomeSequencer {
      */
     generateMotionChoreography(traits, b) {
         // Hash-driven entry sequence
+        // FIX 2: Use uniform selection to eliminate modulo bias
         const entrySequences = ["hero_first", "cascade_down", "cascade_up", "simultaneous", "stagger_center"];
-        const entrySequence = entrySequences[Math.floor(b(219) * entrySequences.length)];
+        const entrySequence = this.pool.selectUniform(219, entrySequences);
         // Stagger interval derived from information density (dense = fast, sparse = slow)
         const staggerInterval = traits.informationDensity > 0.7
             ? 20 + Math.floor(b(220) * 30) // 20-50ms for dashboards
@@ -1362,13 +1378,13 @@ export class GenomeSequencer {
         // Hover microinteraction from playfulness
         const hoverTypes = ["scale", "color_shift", "shadow", "lift", "glow"];
         const hoverMicrointeraction = {
-            type: hoverTypes[Math.floor(b(223) * hoverTypes.length)],
+            type: this.pool.selectUniform(223, hoverTypes), // FIX 2: uniform selection
             intensity: traits.playfulness * 0.8 + b(224) * 0.2,
             duration: 150 + Math.floor(b(225) * 350) // 150-500ms
         };
         // Page transition from topology
         const pageTransitions = ["fade", "slide", "morph", "wipe", "dissolve"];
-        const pageTransition = pageTransitions[Math.floor(b(226) * pageTransitions.length)];
+        const pageTransition = this.pool.selectUniform(226, pageTransitions); // FIX 2: uniform selection
         // Choreography style from emotional temperature
         const choreographyStyles = ["elegant", "energetic", "smooth", "snappy", "dramatic"];
         const styleIndex = Math.floor(traits.emotionalTemperature > 0.7 ? 0 + b(227) * 2 : // elegant/smooth for warm
@@ -1439,39 +1455,42 @@ export class GenomeSequencer {
      * Generate iconography - hash-driven icon system
      */
     generateIconography(traits, b, profile) {
-        // Hash-driven style
+        // Hash-driven style - FIX 2: uniform selection
         const styles = ["outline", "filled", "duotone", "rounded", "sharp"];
-        const style = styles[Math.floor(b(228) * styles.length)];
-        // Stroke weight from playfulness (low = thin/clean, high = bold/expressive)
+        const style = this.pool.selectUniform(228, styles);
+        // Stroke weight from playfulness (low = thin/clean, high = bold/expressive) - FIX 2: uniform selection
         const strokeWeights = ["thin", "regular", "bold", "variable"];
-        const strokeWeight = strokeWeights[Math.floor(traits.playfulness < 0.3 ? b(229) * 2 : // thin/regular for strict
-            traits.playfulness > 0.7 ? 2 + b(229) * 2 : // bold/variable for playful
-                b(229) * 4 // any for neutral
-        )];
-        // Corner treatment from edge chromosome style
+        const strokeWeight = traits.playfulness < 0.3
+            ? this.pool.selectUniform(229, ["thin", "regular"])
+            : traits.playfulness > 0.7
+                ? this.pool.selectUniform(229, ["bold", "variable"])
+                : this.pool.selectUniform(229, strokeWeights);
+        // Corner treatment from edge chromosome style - FIX 2: uniform selection
         const cornerTreatments = ["sharp", "rounded", "pill"];
-        const cornerTreatment = cornerTreatments[Math.floor(b(230) * cornerTreatments.length)];
+        const cornerTreatment = this.pool.selectUniform(230, cornerTreatments);
         // Size scale from information density (dense = smaller icons)
         const sizeScale = traits.informationDensity > 0.7
             ? 0.8 + b(231) * 0.2 // 0.8-1.0 for dense
             : traits.informationDensity < 0.3
                 ? 1.2 + b(231) * 0.3 // 1.2-1.5 for sparse
                 : 1.0 + b(231) * 0.2; // 1.0-1.2 default
-        // Library from emotional register
+        // Library from emotional register - FIX 2: uniform selection
         const libraries = ["lucide", "phosphor", "heroicons", "feather", "radix"];
-        const libraryIndex = Math.floor(profile.defaultTypography === "geometric" ? b(232) * 2 : // lucide/phosphor
-            profile.defaultTypography === "humanist" ? 2 + b(232) * 2 : // heroicons/feather
-                profile.defaultTypography === "monospace" ? 4 : // radix for tech
-                    b(232) * 5);
-        const library = libraries[libraryIndex % libraries.length];
-        // Color treatment from sector
+        const library = profile.defaultTypography === "geometric"
+            ? this.pool.selectUniform(232, ["lucide", "phosphor"])
+            : profile.defaultTypography === "humanist"
+                ? this.pool.selectUniform(232, ["heroicons", "feather"])
+                : profile.defaultTypography === "monospace"
+                    ? "radix"
+                    : this.pool.selectUniform(232, libraries);
+        // Color treatment from sector - FIX 2: uniform selection
         const colorTreatments = ["inherit", "primary", "secondary", "muted"];
-        const colorTreatment = colorTreatments[Math.floor(b(233) * colorTreatments.length)];
-        // Animation from playfulness
+        const colorTreatment = this.pool.selectUniform(233, colorTreatments);
+        // Animation from playfulness - FIX 2: uniform selection
         const animations = ["none", "bounce", "pulse", "spin", "draw"];
         const animation = traits.playfulness < 0.2
             ? "none"
-            : animations[Math.floor(b(234) * (animations.length - 1)) + 1];
+            : this.pool.selectUniform(234, ["bounce", "pulse", "spin", "draw"]);
         return {
             style,
             strokeWeight,
@@ -1520,7 +1539,9 @@ export class GenomeSequencer {
             return {
                 material: "matte",
                 roughness: 0.5,
+                metalness: 0,
                 transmission: 0,
+                emissive: false,
                 enabled: false
             };
         }
@@ -1671,13 +1692,17 @@ export class GenomeSequencer {
             "svg_js", "canvas2d", "canvas_bitmap", "video", "dom",
             "hybrid_gpu", "hybrid_canvas", "progressive", "regressive"
         ];
-        // Select primary rendering based on traits and hash
-        let primaryIndex = Math.floor(b(200) * primaries.length) % primaries.length;
-        if (traits.spatialDependency > 0.6 && traits.playfulness > 0.4)
-            primaryIndex = 0; // webgl
-        else if (traits.informationDensity > 0.9)
-            primaryIndex = 4; // static
-        const primary = primaries[primaryIndex];
+        // Select primary rendering based on traits and hash - FIX 2: uniform selection
+        let primary;
+        if (traits.spatialDependency > 0.6 && traits.playfulness > 0.4) {
+            primary = "webgl"; // webgl
+        }
+        else if (traits.informationDensity > 0.9) {
+            primary = "static"; // static
+        }
+        else {
+            primary = this.pool.selectUniform(200, primaries);
+        }
         const complexities = ["minimal", "balanced", "rich", "extreme", "adaptive"];
         const antialiasOptions = ["none", "msaa", "fxaa", "taa"];
         const shadowOptions = ["none", "hard", "pcf", "pcss", "vsm"];
@@ -1685,12 +1710,13 @@ export class GenomeSequencer {
             primary,
             fallback: primary.includes("webgl") ? "css" : (traits.playfulness < 0.2 ? "static" : "css"),
             animate: !(traits.temporalUrgency > 0.9 || (traits.playfulness < 0.3 && traits.informationDensity > 0.7)),
+            // FIX 2: Use uniform selection to eliminate modulo bias
             complexity: traits.informationDensity > 0.8 ? "minimal" :
                 (traits.spatialDependency > 0.6 && traits.playfulness > 0.5) ? "extreme" :
-                    complexities[Math.floor(b(201) * complexities.length)],
-            antialias: antialiasOptions[Math.floor(b(202) * antialiasOptions.length)],
-            hdr: b(203) > 0.7,
-            shadowQuality: shadowOptions[Math.floor(b(204) * shadowOptions.length)]
+                    this.pool.selectUniform(201, complexities),
+            antialias: this.pool.selectUniform(202, antialiasOptions),
+            hdr: b(203) > b(204),
+            shadowQuality: this.pool.selectUniform(204, shadowOptions)
         };
     }
     // ==================== HERO TYPE SELECTION ====================
@@ -1777,29 +1803,29 @@ export class GenomeSequencer {
     }
     selectSocialProofType(byte, profile) {
         const weights = {
-            healthcare: { customer_logos: 0.1, user_count: 0.2, rating_stars: 0.3, testimonials_grid: 0.3, community_size: 0.05, press_mentions: 0.05 },
-            fintech: { customer_logos: 0.2, user_count: 0.3, rating_stars: 0.2, testimonials_grid: 0.15, community_size: 0.1, press_mentions: 0.05 },
-            automotive: { customer_logos: 0.1, user_count: 0.2, rating_stars: 0.3, testimonials_grid: 0.2, community_size: 0.1, press_mentions: 0.1 },
-            education: { customer_logos: 0.15, user_count: 0.25, rating_stars: 0.2, testimonials_grid: 0.25, community_size: 0.1, press_mentions: 0.05 },
-            commerce: { customer_logos: 0.1, user_count: 0.2, rating_stars: 0.4, testimonials_grid: 0.2, community_size: 0.05, press_mentions: 0.05 },
-            entertainment: { customer_logos: 0.1, user_count: 0.4, rating_stars: 0.2, testimonials_grid: 0.15, community_size: 0.1, press_mentions: 0.05 },
-            manufacturing: { customer_logos: 0.3, user_count: 0.1, rating_stars: 0.1, testimonials_grid: 0.2, community_size: 0.1, press_mentions: 0.2 },
-            legal: { customer_logos: 0.1, user_count: 0.15, rating_stars: 0.2, testimonials_grid: 0.4, community_size: 0.05, press_mentions: 0.1 },
-            real_estate: { customer_logos: 0.15, user_count: 0.15, rating_stars: 0.3, testimonials_grid: 0.3, community_size: 0.05, press_mentions: 0.05 },
-            travel: { customer_logos: 0.1, user_count: 0.2, rating_stars: 0.3, testimonials_grid: 0.25, community_size: 0.1, press_mentions: 0.05 },
-            food: { customer_logos: 0.1, user_count: 0.15, rating_stars: 0.4, testimonials_grid: 0.25, community_size: 0.05, press_mentions: 0.05 },
-            sports: { customer_logos: 0.15, user_count: 0.3, rating_stars: 0.2, testimonials_grid: 0.15, community_size: 0.15, press_mentions: 0.05 },
-            technology: { customer_logos: 0.25, user_count: 0.25, rating_stars: 0.15, testimonials_grid: 0.15, community_size: 0.1, press_mentions: 0.1 },
-            nonprofit: { customer_logos: 0.1, user_count: 0.25, rating_stars: 0.1, testimonials_grid: 0.3, community_size: 0.2, press_mentions: 0.05 },
-            government: { customer_logos: 0.1, user_count: 0.3, rating_stars: 0.05, testimonials_grid: 0.2, community_size: 0.2, press_mentions: 0.15 },
-            media: { customer_logos: 0.05, user_count: 0.3, rating_stars: 0.1, testimonials_grid: 0.1, community_size: 0.15, press_mentions: 0.30 },
-            crypto_web3: { customer_logos: 0.15, user_count: 0.35, rating_stars: 0.1, testimonials_grid: 0.1, community_size: 0.25, press_mentions: 0.05 },
-            gaming: { customer_logos: 0.1, user_count: 0.35, rating_stars: 0.25, testimonials_grid: 0.1, community_size: 0.15, press_mentions: 0.05 },
-            hospitality: { customer_logos: 0.05, user_count: 0.15, rating_stars: 0.40, testimonials_grid: 0.3, community_size: 0.05, press_mentions: 0.05 },
-            beauty_fashion: { customer_logos: 0.1, user_count: 0.2, rating_stars: 0.3, testimonials_grid: 0.25, community_size: 0.1, press_mentions: 0.05 },
-            insurance: { customer_logos: 0.15, user_count: 0.2, rating_stars: 0.25, testimonials_grid: 0.25, community_size: 0.05, press_mentions: 0.1 },
-            agency: { customer_logos: 0.30, user_count: 0.1, rating_stars: 0.1, testimonials_grid: 0.25, community_size: 0.05, press_mentions: 0.2 },
-            energy: { customer_logos: 0.25, user_count: 0.2, rating_stars: 0.05, testimonials_grid: 0.15, community_size: 0.1, press_mentions: 0.25 }
+            healthcare: { none: 0, customer_logos: 0.1, user_count: 0.2, rating_stars: 0.3, testimonials_grid: 0.3, community_size: 0.05, press_mentions: 0.05 },
+            fintech: { none: 0, customer_logos: 0.2, user_count: 0.3, rating_stars: 0.2, testimonials_grid: 0.15, community_size: 0.1, press_mentions: 0.05 },
+            automotive: { none: 0, customer_logos: 0.1, user_count: 0.2, rating_stars: 0.3, testimonials_grid: 0.2, community_size: 0.1, press_mentions: 0.1 },
+            education: { none: 0, customer_logos: 0.15, user_count: 0.25, rating_stars: 0.2, testimonials_grid: 0.25, community_size: 0.1, press_mentions: 0.05 },
+            commerce: { none: 0, customer_logos: 0.1, user_count: 0.2, rating_stars: 0.4, testimonials_grid: 0.2, community_size: 0.05, press_mentions: 0.05 },
+            entertainment: { none: 0, customer_logos: 0.1, user_count: 0.4, rating_stars: 0.2, testimonials_grid: 0.15, community_size: 0.1, press_mentions: 0.05 },
+            manufacturing: { none: 0, customer_logos: 0.3, user_count: 0.1, rating_stars: 0.1, testimonials_grid: 0.2, community_size: 0.1, press_mentions: 0.2 },
+            legal: { none: 0, customer_logos: 0.1, user_count: 0.15, rating_stars: 0.2, testimonials_grid: 0.4, community_size: 0.05, press_mentions: 0.1 },
+            real_estate: { none: 0, customer_logos: 0.15, user_count: 0.15, rating_stars: 0.3, testimonials_grid: 0.3, community_size: 0.05, press_mentions: 0.05 },
+            travel: { none: 0, customer_logos: 0.1, user_count: 0.2, rating_stars: 0.3, testimonials_grid: 0.25, community_size: 0.1, press_mentions: 0.05 },
+            food: { none: 0, customer_logos: 0.1, user_count: 0.15, rating_stars: 0.4, testimonials_grid: 0.25, community_size: 0.05, press_mentions: 0.05 },
+            sports: { none: 0, customer_logos: 0.15, user_count: 0.3, rating_stars: 0.2, testimonials_grid: 0.15, community_size: 0.15, press_mentions: 0.05 },
+            technology: { none: 0, customer_logos: 0.25, user_count: 0.25, rating_stars: 0.15, testimonials_grid: 0.15, community_size: 0.1, press_mentions: 0.1 },
+            nonprofit: { none: 0, customer_logos: 0.1, user_count: 0.25, rating_stars: 0.1, testimonials_grid: 0.3, community_size: 0.2, press_mentions: 0.05 },
+            government: { none: 0, customer_logos: 0.1, user_count: 0.3, rating_stars: 0.05, testimonials_grid: 0.2, community_size: 0.2, press_mentions: 0.15 },
+            media: { none: 0, customer_logos: 0.05, user_count: 0.3, rating_stars: 0.1, testimonials_grid: 0.1, community_size: 0.15, press_mentions: 0.30 },
+            crypto_web3: { none: 0, customer_logos: 0.15, user_count: 0.35, rating_stars: 0.1, testimonials_grid: 0.1, community_size: 0.25, press_mentions: 0.05 },
+            gaming: { none: 0, customer_logos: 0.1, user_count: 0.35, rating_stars: 0.25, testimonials_grid: 0.1, community_size: 0.15, press_mentions: 0.05 },
+            hospitality: { none: 0, customer_logos: 0.05, user_count: 0.15, rating_stars: 0.40, testimonials_grid: 0.3, community_size: 0.05, press_mentions: 0.05 },
+            beauty_fashion: { none: 0, customer_logos: 0.1, user_count: 0.2, rating_stars: 0.3, testimonials_grid: 0.25, community_size: 0.1, press_mentions: 0.05 },
+            insurance: { none: 0, customer_logos: 0.15, user_count: 0.2, rating_stars: 0.25, testimonials_grid: 0.25, community_size: 0.05, press_mentions: 0.1 },
+            agency: { none: 0, customer_logos: 0.30, user_count: 0.1, rating_stars: 0.1, testimonials_grid: 0.25, community_size: 0.05, press_mentions: 0.2 },
+            energy: { none: 0, customer_logos: 0.25, user_count: 0.2, rating_stars: 0.05, testimonials_grid: 0.15, community_size: 0.1, press_mentions: 0.25 }
         };
         const sector = profile.sector;
         const sectorWeights = weights[sector];

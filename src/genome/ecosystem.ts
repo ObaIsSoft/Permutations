@@ -1,5 +1,5 @@
 /**
- * Permutations MCP - Ecosystem Generator
+ * Genome MCP - Ecosystem Generator
  * 
  * A living design system where components are organisms in a shared environment.
  * 
@@ -203,8 +203,10 @@ export class EcosystemGenerator {
              *
              * Without this: L2 gravity uses sha256(dnaHash) chromosomes (L1_internal).
              * With this:    L2 gravity uses dnaHash chromosomes (L1_original) — correct.
+             * 
+             * FIX 7: Made required to prevent hash divergence. Caller MUST pass genome from generate_design_genome.
              */
-            existingGenome?: DesignGenome;
+            existingGenome: DesignGenome; // FIX 7: Required to prevent hash divergence
             // LLM-supplied organism identities — product-specific names and purposes.
             // When provided, overrides topology-derived abstract naming.
             // Falls back to TOPOLOGY_PATTERNS if empty or not supplied.
@@ -232,11 +234,16 @@ export class EcosystemGenerator {
             inferredSector = "manufacturing";
         }
 
-        // L1 genome — use existing if provided (correct chain), otherwise generate fresh.
-        // Passing the genome from generate_design_genome ensures L2 gravity reads
-        // L1_original chromosomes, not a newly-derived L1_internal child.
-        const genome = options?.existingGenome
-            ?? this.sequencer.generate(seed, traits, { primarySector: inferredSector, options: { enable3D: true } });
+        // FIX 7: L1 genome — MUST be provided to maintain hash chain integrity.
+        // Caller is responsible for passing genome from generate_design_genome.
+        if (!options?.existingGenome) {
+            throw new Error(
+                "FIX 7: existingGenome is required. " +
+                "Pass the full genome object from generate_design_genome to maintain hash chain continuity. " +
+                "Do not call generate_ecosystem without a genome - this creates hash divergence."
+            );
+        }
+        const genome = options.existingGenome;
 
         // Layer 2: sequence ecosystem genome from design genome.
         // Hash = sha256(genome.dnaHash) — chain integrity holds whether genome

@@ -8,8 +8,8 @@
  * 4. Same intent + different genomes = different briefs
  * 5. Chaos and cross-pollination introduce unpredictability
  */
-import { generateCreatorGenome } from '../../src/creator/generator.js';
-import { generatePersona, generateBrief, decodeLatentSpace } from '../../src/brief/generator.js';
+import { generateCreatorGenome } from '../../dist/src/creator/generator.js';
+import { generatePersona, generateBrief, decodeLatentSpace } from '../../dist/src/brief/generator.js';
 import { strict as assert } from 'assert';
 console.log('=== Epigenetic Generator Tests ===\n');
 // Test 1: Latent Space Decoding

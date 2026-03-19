@@ -1,8 +1,8 @@
-# Permutations MCP — Usage Guide
+# Genome MCP — Usage Guide
 
 ## What Is This?
 
-Permutations is a Model Context Protocol (MCP) server that mathematically generates **Design DNA** from your intent. It prevents AI code generators from defaulting to generic "slop" by exposing a single tool: `generate_design_genome`.
+Genome is a Model Context Protocol (MCP) server that mathematically generates **Design DNA** from your intent. It prevents AI code generators from defaulting to generic "slop" by exposing a single tool: `generate_design_genome`.
 
 The tool takes a natural language prompt + optional context/assets and outputs a complete, parametric design system — Tailwind config, CSS variables, WebGL components, FX layer, and an SVG brand mark — all derived from a SHA-256 hash + semantic trait vectors.
 
@@ -12,8 +12,8 @@ The tool takes a natural language prompt + optional context/assets and outputs a
 
 ```bash
 # 1. Clone and install
-git clone https://github.com/your-username/permutations
-cd permutations
+git clone https://github.com/your-username/genome
+cd genome
 npm install
 
 # 2. Set your LLM API key (pick one)
@@ -35,9 +35,9 @@ npm run build
 ```json
 {
   "mcpServers": {
-    "permutations": {
+    "genome": {
       "command": "node",
-      "args": ["/absolute/path/to/permutations/dist/server.js"],
+      "args": ["/absolute/path/to/genome/dist/server.js"],
       "env": {
         "GROQ_API_KEY": "your_key_here"
       }
@@ -62,7 +62,7 @@ npm run build
 
 ## ⚠️ MANDATORY Workflow Enforcement
 
-The Permutations MCP server **enforces** a strict workflow. AI agents CANNOT skip steps.
+The Genome MCP server **enforces** a strict workflow. AI agents CANNOT skip steps.
 
 ### Required Sequence (Standard L1 Entry)
 
@@ -234,8 +234,8 @@ Keywords in conversation trigger tool selection:
 ✅ **Explicit** — "Generate a design genome for a fintech dashboard with dark mode"
 → AI sees "design genome" → calls `generate_design_genome`
 
-✅ **With context** — "Use permutations to extract the design from https://example.com"
-→ AI sees "permutations" + "extract" → calls `extract_genome_from_url`
+✅ **With context** — "Use genome to extract the design from https://example.com"
+→ AI sees "genome" + "extract" → calls `extract_genome_from_url`
 
 ### The `suggested_next` Field
 Every `generate_design_genome` response includes `suggested_next` — an array telling you (and the AI) which tools to call next:

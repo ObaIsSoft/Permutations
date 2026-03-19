@@ -1,5 +1,5 @@
 /**
- * Permutations — CivilizationGenome Type System
+ * Genome — CivilizationGenome Type System
  *
  * Layer 3 of the SHA-256 hash chain.
  *   hash = sha256(ecosystemGenome.hash)

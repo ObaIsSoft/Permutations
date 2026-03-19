@@ -1,5 +1,5 @@
 /**
- * Permutations — Ecosystem Sequencer
+ * Genome — Ecosystem Sequencer
  *
  * Sequences EcosystemGenome from a DesignGenome.
  * This is Layer 2 of the SHA-256 hash chain:

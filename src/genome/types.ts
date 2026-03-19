@@ -1,5 +1,5 @@
 /**
- * Permutations MCP - Design Genome Types
+ * Genome MCP - Design Genome Types
  * 
  * Extended type system with sector awareness, content analysis,
  * hero types, trust signals, and brand integration.
@@ -217,6 +217,7 @@ export type TrustProminence =
     | "hero_feature"; // Above the fold, prominent
 
 export type SocialProofType =
+    | "none"                // No social proof (hasSocialProof = false)
     | "customer_logos"      // Company logos
     | "user_count"          // "X million users"
     | "rating_stars"        // Star ratings

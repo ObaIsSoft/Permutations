@@ -180,7 +180,7 @@ The mark should feel: ${shapeChar}. It should look like it belongs to a ${genome
   data-anim="${bm.animationStyle}"
   data-complexity="${bm.complexity.toFixed(3)}"
   data-dna="${genome.dnaHash.slice(0, 8)}">
-  <!-- Permutations Biomarker — ${bm.shapeFamily}/${bm.animationStyle} — ${genome.sectorContext.primary} -->
+  <!-- Genome Biomarker — ${bm.shapeFamily}/${bm.animationStyle} — ${genome.sectorContext.primary} -->
   <g stroke-width="${Math.max(1.5, Math.min(4, genome.chromosomes.ch3_type_display.weight / 100)).toFixed(1)}" fill="none" stroke="currentColor">
     ${inner}
   </g>
@@ -225,7 +225,7 @@ The mark should feel: ${shapeChar}. It should look like it belongs to a ${genome
   data-complexity="${bm.complexity.toFixed(3)}"
   data-dna="${genome.dnaHash.slice(0, 8)}"
   data-fallback="true">
-  <!-- Permutations Biomarker (fallback) — ${bm.shapeFamily} — ${genome.sectorContext.primary} -->
+  <!-- Genome Biomarker (fallback) — ${bm.shapeFamily} — ${genome.sectorContext.primary} -->
   <g stroke-width="${weight.toFixed(1)}" fill="none" stroke="currentColor">
     ${inner}
   </g>

@@ -1,5 +1,5 @@
 /**
- * Permutations MCP - Ecosystem Generator
+ * Genome MCP - Ecosystem Generator
  *
  * A living design system where components are organisms in a shared environment.
  *
@@ -95,11 +95,14 @@ export class EcosystemGenerator {
         else if (traits.informationDensity > 0.7 && traits.emotionalTemperature < 0.3) {
             inferredSector = "manufacturing";
         }
-        // L1 genome — use existing if provided (correct chain), otherwise generate fresh.
-        // Passing the genome from generate_design_genome ensures L2 gravity reads
-        // L1_original chromosomes, not a newly-derived L1_internal child.
-        const genome = options?.existingGenome
-            ?? this.sequencer.generate(seed, traits, { primarySector: inferredSector, options: { enable3D: true } });
+        // FIX 7: L1 genome — MUST be provided to maintain hash chain integrity.
+        // Caller is responsible for passing genome from generate_design_genome.
+        if (!options?.existingGenome) {
+            throw new Error("FIX 7: existingGenome is required. " +
+                "Pass the full genome object from generate_design_genome to maintain hash chain continuity. " +
+                "Do not call generate_ecosystem without a genome - this creates hash divergence.");
+        }
+        const genome = options.existingGenome;
         // Layer 2: sequence ecosystem genome from design genome.
         // Hash = sha256(genome.dnaHash) — chain integrity holds whether genome
         // is L1_original or L1_internal. Gravity reads genome.chromosomes directly.

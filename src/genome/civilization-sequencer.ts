@@ -1,5 +1,5 @@
 /**
- * Permutations — Civilization Sequencer
+ * Genome — Civilization Sequencer
  *
  * Sequences CivilizationGenome from an EcosystemGenome.
  * This is Layer 3 of the SHA-256 hash chain:

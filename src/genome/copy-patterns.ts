@@ -1,5 +1,5 @@
 /**
- * Permutations MCP - Copy Pattern Banks
+ * Genome MCP - Copy Pattern Banks
  * 
  * Mathematical copy generation using hash-derived selection.
  * No hardcoded content - only pattern primitives that combine via hash bytes.

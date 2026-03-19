@@ -392,7 +392,13 @@ export class SemanticTraitExtractor {
         flora:     Array<{ name: string; purpose: string }>;
         fauna:     Array<{ name: string; purpose: string }>;
     }> {
-        if (this.apiKeyMissing || (counts.microbial + counts.flora + counts.fauna) === 0) {
+        if (this.apiKeyMissing) {
+            throw new Error(
+                `LLM API key missing. Provider: ${this.provider}. ` +
+                `Set GROQ_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY, or HUGGINGFACE_API_KEY.`
+            );
+        }
+        if ((counts.microbial + counts.flora + counts.fauna) === 0) {
             return { microbial: [], flora: [], fauna: [] };
         }
 
@@ -430,9 +436,12 @@ Rules:
                 flora:     (result.flora     || []).slice(0, counts.flora),
                 fauna:     (result.fauna     || []).slice(0, counts.fauna),
             };
-        } catch {
-            // Non-fatal — ecosystem generator falls back to topology-derived names
-            return { microbial: [], flora: [], fauna: [] };
+        } catch (e) {
+            throw new Error(
+                `Organism naming failed: ${e instanceof Error ? e.message : String(e)}. ` +
+                `Provider: ${this.provider}. Intent: "${intent.slice(0, 100)}${intent.length > 100 ? '...' : ''}". ` +
+                `Counts: microbial=${counts.microbial}, flora=${counts.flora}, fauna=${counts.fauna}`
+            );
         }
     }
 
@@ -516,7 +525,13 @@ Rules:
         archetypeContext: string,
         count: number
     ): Promise<Array<{ name: string; purpose: string }>> {
-        if (this.apiKeyMissing || count === 0) return [];
+        if (this.apiKeyMissing) {
+            throw new Error(
+                `LLM API key missing. Provider: ${this.provider}. ` +
+                `Set GROQ_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY, or HUGGINGFACE_API_KEY.`
+            );
+        }
+        if (count === 0) return [];
 
         const prompt = `You are naming UI components for a ${sector} product.
 Product: ${intent}
@@ -543,9 +558,12 @@ Rules:
                 LLM_TIMEOUT_MS
             );
             return (result.components || []).slice(0, count);
-        } catch {
-            // Non-fatal — civilization generator falls back to generic tier component names
-            return [];
+        } catch (e) {
+            throw new Error(
+                `Civilization component naming failed: ${e instanceof Error ? e.message : String(e)}. ` +
+                `Provider: ${this.provider}. Intent: "${intent.slice(0, 100)}${intent.length > 100 ? '...' : ''}". ` +
+                `Tier: ${tier}, Count: ${count}`
+            );
         }
     }
 
@@ -954,7 +972,7 @@ Generate ACTUAL copy content by extracting key information from the user's inten
    Example: "No Templates. Only Math.", "Build Wealth Automatically"
 
 5. companyName: Product/company name from intent. If not explicitly stated, derive from context.
-   Example: "Permutations", "TradeAI", "HealthFlow"
+   Example: "Genome", "TradeAI", "HealthFlow"
 
 6. features: Array of 3 key features extracted from intent. Each has title (3-5 words) and description (15-25 words).
    Example: [{"title": "SHA-256 Design DNA", "description": "Every design is mathematically generated from a hash, ensuring uniqueness and reproducibility."}, ...]

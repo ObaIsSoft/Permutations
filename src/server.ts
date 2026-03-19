@@ -478,7 +478,7 @@ class DesignGenomeServer {
 
     constructor() {
         this.server = new Server(
-            { name: "permutations", version: PACKAGE_VERSION },
+            { name: "genome", version: PACKAGE_VERSION },
             { capabilities: { tools: {} } }
         );
 
@@ -943,9 +943,11 @@ class DesignGenomeServer {
                         const genomeCivHash = civHashFromEcoHash(genomeEcoHash);
 
                         // Ecosystem always runs — organism counts scale from 0 (abiotic) to max (endotherm_fauna)
+                        // FIX 7: Pass existingGenome to maintain hash chain continuity
                         {
                             const eco = ecosystemGenerator.generate(seed, traits, {
-                                primarySector: detectedSector
+                                primarySector: detectedSector,
+                                existingGenome: genome
                             });
 
                             const allOrganisms = [
@@ -2512,7 +2514,7 @@ class DesignGenomeServer {
     async run() {
         const transport = new StdioServerTransport();
         await this.server.connect(transport);
-        console.error("Permutations MCP server running on stdio");
+        console.error("Genome MCP server running on stdio");
     }
 }
 

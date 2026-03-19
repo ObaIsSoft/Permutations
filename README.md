@@ -1,4 +1,4 @@
-# Permutations MCP Engine
+# Genome MCP Engine
 
 A Model Context Protocol (MCP) server that generates **unique, reproducible design systems** from a four-layer SHA-256 genome chain. Prevents AI-generated "slop" (identical Tailwind UI) by enforcing mathematical constraints at every layer — now with **simulated designer personas** for truly unique creative directions.
 
@@ -18,7 +18,7 @@ Every AI-generated website looks the same:
 
 ## What This Tool Does
 
-Permutations generates four interlocking genomes from a single seed:
+Genome generates four interlocking genomes from a single seed:
 
 **Layer 0 — CreatorGenome:** *Who is designing this?* (NEW)
 16-chromosome latent-space DNA encoding a simulated designer persona: cultural vector, temporal nostalgia, obsession traversal, formative era, authorial voice, technical spectrum, aesthetic sensibility, cognitive style, social positioning, material affinity, narrative instinct, chaos tolerance, cross-pollination, temporal perception, sensory priority, and coherence style. Decoded via LLM into unique personas with voices like "whispered forest diaries" or "Forged industrial poetry" — each interpreting the same intent through different creative lenses.
@@ -51,10 +51,10 @@ Each layer is deterministic (same seed = same result forever) and derived from t
 ### 1. Install
 
 ```bash
-npm install -g permutations-mcp
+npm install -g genome-mcp
 # or clone and build
-git clone https://github.com/ObaIsSoft/Permutations.git
-cd Permutations && npm install && npm run build
+git clone https://github.com/ObaIsSoft/genome.git
+cd Genome && npm install && npm run build
 ```
 
 ### 2. Configure Your IDE
@@ -64,9 +64,9 @@ Add to Cursor/Claude Desktop/Windsurf `mcp.json`:
 ```json
 {
   "mcpServers": {
-    "permutations": {
+    "genome": {
       "command": "node",
-      "args": ["/path/to/permutations/dist/server.js"],
+      "args": ["/path/to/genome/dist/server.js"],
       "env": {
         "GROQ_API_KEY": "gsk_..."
       }

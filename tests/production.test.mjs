@@ -12,9 +12,9 @@ import assert from "assert";
 // ──────────────────────────────────────────────
 // Imports from src (compiled JS in dist/)
 // ──────────────────────────────────────────────
-import { GenomeSequencer } from "../dist/genome/sequencer.js";
-import { SemanticTraitExtractor } from "../dist/semantic/extractor.js";
-import { PatternDetector } from "../dist/constraints/pattern-detector.js";
+import { GenomeSequencer } from "../dist/src/genome/sequencer.js";
+import { SemanticTraitExtractor } from "../dist/src/semantic/extractor.js";
+import { PatternDetector } from "../dist/src/constraints/pattern-detector.js";
 
 let passed = 0;
 let failed = 0;

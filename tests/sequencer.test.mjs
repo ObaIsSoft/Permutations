@@ -1,4 +1,4 @@
-import { GenomeSequencer } from '../dist/genome/sequencer.js';
+import { GenomeSequencer } from '../dist/src/genome/sequencer.js';
 import { strict as assert } from 'assert';
 
 const sequencer = new GenomeSequencer();

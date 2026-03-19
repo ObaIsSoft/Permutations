@@ -1,5 +1,5 @@
 /**
- * Permutations MCP - Genome System
+ * Genome MCP - Design System
  * 
  * Main exports for the design genome system
  */

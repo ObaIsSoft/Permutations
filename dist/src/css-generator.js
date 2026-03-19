@@ -1,5 +1,5 @@
 /**
- * Permutations MCP - CSS Generator
+ * Genome MCP - CSS Generator
  *
  * Generates CSS with hero type support, trust signals,
  * and sector-aware styling.
@@ -60,7 +60,7 @@ export class CSSGenerator {
         return parts.join(newline + newline);
     }
     generateReset(indent, newline) {
-        return `/* Permutations CSS Reset */
+        return `/* Genome CSS Reset */
 *, *::before, *::after {
 ${indent}box-sizing: border-box;
 ${indent}margin: 0;
