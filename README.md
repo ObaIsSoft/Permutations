@@ -66,7 +66,7 @@ Add to Cursor/Claude Desktop/Windsurf `mcp.json`:
   "mcpServers": {
     "genome": {
       "command": "node",
-      "args": ["/path/to/genome/dist/server.js"],
+      "args": ["/path/to/genome/dist/src/server.js"],
       "env": {
         "GROQ_API_KEY": "gsk_..."
       }

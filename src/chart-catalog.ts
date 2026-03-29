@@ -56,7 +56,15 @@ export interface ChartLibraryEntry {
     minimalExample: string;
     combinableWith?: string[];
     /**
-     * Scoring boost fields — additive bonuses only.
+     * What this library is WRONG for — hard exclusion gate.
+     * Same philosophy as sector forbiddenRanges. Applied BEFORE scoring.
+     */
+    forbiddenFor: {
+        complexityBelow?: number;  // WRONG when complexity is below this (too powerful)
+        complexityAbove?: number;  // WRONG when complexity is above this (too simplistic)
+    };
+    /**
+     * Scoring boost fields — additive bonuses within the eligible pool.
      */
     fitsPersonality?: DesignPersonality[];
     fitsEdge?: EdgeStyle[];
@@ -66,8 +74,6 @@ export interface ChartLibraryEntry {
     fitsAdaptation?: AdaptationAxis[];
     fitsEnergy?: EnergySource[];
     fitsBiome?: BiomeClass[];
-    /** Complexity threshold — higher = better suited to complex genomes */
-    complexityFloor?: number; // 0.0–1.0
 }
 
 // ── Catalog ───────────────────────────────────────────────────────────────────
@@ -92,6 +98,7 @@ export const CHART_LIBRARY_CATALOG: ChartLibraryEntry[] = [
         importExample: `import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';`,
         minimalExample: `<ResponsiveContainer width="100%" height={300}>\n  <LineChart data={data}>\n    <Line type="monotone" dataKey="value" stroke="var(--color-primary)" />\n    <XAxis dataKey="name" />\n    <YAxis />\n    <Tooltip />\n  </LineChart>\n</ResponsiveContainer>`,
         combinableWith: ["@tanstack/react-virtual", "@tanstack/react-table", "@mantine/core", "@chakra-ui/react"],
+        forbiddenFor: {},
         fitsPersonality: ["balanced", "bold", "expressive", "corporate"],
         fitsEdge: ["soft", "organic", "hand_drawn"],
         fitsMotion: ["spring", "elastic", "none"],
@@ -100,7 +107,6 @@ export const CHART_LIBRARY_CATALOG: ChartLibraryEntry[] = [
         fitsAdaptation: ["temporal", "radiation", "chemical"],
         fitsEnergy: ["photosynthetic", "mixotrophic"],
         fitsBiome: ["reef", "hydrothermal", "tidal", "savanna"],
-        complexityFloor: 0.35,
     },
 
     // ── Grammar of Graphics ───────────────────────────────────────────────────
@@ -121,6 +127,7 @@ export const CHART_LIBRARY_CATALOG: ChartLibraryEntry[] = [
         importExample: `import * as Plot from '@observablehq/plot';`,
         minimalExample: `const chart = Plot.plot({\n  marks: [\n    Plot.barY(data, { x: 'name', y: 'value', fill: 'var(--color-primary)' }),\n    Plot.ruleY([0])\n  ]\n});\nuseEffect(() => { containerRef.current?.append(chart); }, []);`,
         combinableWith: ["d3", "@tanstack/react-virtual", "react-aria-components"],
+        forbiddenFor: { complexityBelow: 0.40 },
         fitsPersonality: ["clinical", "corporate", "balanced"],
         fitsEdge: ["sharp", "chiseled", "techno"],
         fitsMotion: ["none", "step"],
@@ -129,7 +136,6 @@ export const CHART_LIBRARY_CATALOG: ChartLibraryEntry[] = [
         fitsAdaptation: ["chemical", "pressure", "radiation"],
         fitsEnergy: ["chemosynthetic", "photosynthetic"],
         fitsBiome: ["arctic", "alpine", "steppe", "desert"],
-        complexityFloor: 0.50,
     },
 
     // ── Composable ────────────────────────────────────────────────────────────
@@ -150,6 +156,7 @@ export const CHART_LIBRARY_CATALOG: ChartLibraryEntry[] = [
         importExample: `import { ResponsiveBar } from '@nivo/bar';\nimport { ResponsiveLine } from '@nivo/line';`,
         minimalExample: `<ResponsiveBar\n  data={data}\n  theme={{ textColor: 'var(--color-text-primary)', fontSize: 12 }}\n  colors={{ scheme: 'nivo' }}\n  animate={true}\n  motionConfig="gentle"\n/>`,
         combinableWith: ["recharts", "@visx/visx", "@tanstack/react-table"],
+        forbiddenFor: {},
         fitsPersonality: ["clinical", "balanced", "corporate", "expressive"],
         fitsEdge: ["sharp", "soft", "organic", "chiseled"],
         fitsMotion: ["spring", "none", "step", "elastic"],
@@ -158,7 +165,6 @@ export const CHART_LIBRARY_CATALOG: ChartLibraryEntry[] = [
         fitsAdaptation: ["chemical", "thermal", "radiation"],
         fitsEnergy: ["photosynthetic", "chemosynthetic", "mixotrophic"],
         fitsBiome: ["urban", "boreal", "wetland", "alpine"],
-        complexityFloor: 0.40,
     },
 
     {
@@ -177,6 +183,7 @@ export const CHART_LIBRARY_CATALOG: ChartLibraryEntry[] = [
         importExample: `import { BarGroup } from '@visx/shape';\nimport { scaleBand, scaleLinear } from '@visx/scale';\nimport { AxisBottom, AxisLeft } from '@visx/axis';`,
         minimalExample: `<svg width={width} height={height}>\n  <BarGroup data={data} keys={keys} xScale={xScale} yScale={yScale} color={colorScale} />\n  <AxisBottom scale={xScale} top={yMax} />\n</svg>`,
         combinableWith: ["d3", "@observablehq/plot", "@use-gesture/react", "framer-motion"],
+        forbiddenFor: { complexityBelow: 0.55 },
         fitsPersonality: ["clinical", "disruptive", "bold", "expressive"],
         fitsEdge: ["sharp", "chiseled", "brutalist", "techno"],
         fitsMotion: ["none", "spring", "particle", "glitch"],
@@ -185,7 +192,6 @@ export const CHART_LIBRARY_CATALOG: ChartLibraryEntry[] = [
         fitsAdaptation: ["radiation", "chemical", "pressure"],
         fitsEnergy: ["chemosynthetic", "predatory", "mixotrophic"],
         fitsBiome: ["cave", "abyssal", "volcanic", "hydrothermal"],
-        complexityFloor: 0.60,
     },
 
     // ── Business / Dashboard ──────────────────────────────────────────────────
@@ -206,6 +212,7 @@ export const CHART_LIBRARY_CATALOG: ChartLibraryEntry[] = [
         importExample: `import { AreaChart, BarList, DonutChart, Card, Metric } from '@tremor/react';`,
         minimalExample: `<Card>\n  <Metric>$1,234</Metric>\n  <AreaChart data={chartData} index="date" categories={['Revenue']} colors={['blue']} />\n</Card>`,
         combinableWith: ["tailwindcss", "recharts", "@tanstack/react-table"],
+        forbiddenFor: {},
         fitsPersonality: ["corporate", "balanced", "bold"],
         fitsEdge: ["sharp", "soft", "chiseled"],
         fitsMotion: ["none", "spring"],
@@ -214,7 +221,6 @@ export const CHART_LIBRARY_CATALOG: ChartLibraryEntry[] = [
         fitsAdaptation: ["pressure", "temporal"],
         fitsEnergy: ["photosynthetic", "chemosynthetic"],
         fitsBiome: ["urban", "steppe", "boreal"],
-        complexityFloor: 0.30,
     },
 
     // ── Imperative ────────────────────────────────────────────────────────────
@@ -235,6 +241,7 @@ export const CHART_LIBRARY_CATALOG: ChartLibraryEntry[] = [
         importExample: `import { select, scaleLinear, axisBottom, line, area } from 'd3';`,
         minimalExample: `const svg = select('#chart').append('svg').attr('width', w).attr('height', h);\nsvg.selectAll('rect').data(data).join('rect')\n  .attr('x', d => x(d.name))\n  .attr('height', d => h - y(d.value))\n  .attr('fill', 'var(--color-primary)');`,
         combinableWith: ["@visx/visx", "@observablehq/plot", "@use-gesture/react"],
+        forbiddenFor: { complexityBelow: 0.65 },
         fitsPersonality: ["clinical", "disruptive", "bold"],
         fitsEdge: ["sharp", "brutalist", "techno", "chiseled"],
         fitsMotion: ["none", "glitch", "particle"],
@@ -243,7 +250,6 @@ export const CHART_LIBRARY_CATALOG: ChartLibraryEntry[] = [
         fitsAdaptation: ["radiation", "chemical", "pressure"],
         fitsEnergy: ["chemosynthetic", "predatory"],
         fitsBiome: ["abyssal", "cave", "volcanic", "hydrothermal"],
-        complexityFloor: 0.70,
     },
 ];
 
@@ -273,12 +279,23 @@ export interface ChartSelection {
 }
 
 /**
- * Score-ranked chart selection.
- * Complexity floor acts as a soft filter — libraries below their floor get
- * a score penalty but are never fully excluded.
+ * Score-ranked chart selection within the eligible pool.
+ *
+ * 1. forbiddenFor gates libraries that are WRONG for this complexity level.
+ * 2. Within eligible pool, L1+L2 chromosome bonuses differentiate candidates.
  */
 export function selectChartLibrary(input: ChartGenomeInput): ChartSelection {
     const chartsRecommended = input.hasFauna && input.complexityScore >= 0.30;
+
+    // Hard exclusion gate
+    const eligible = CHART_LIBRARY_CATALOG.filter(lib => {
+        const f = lib.forbiddenFor;
+        if (f.complexityBelow !== undefined && input.complexityScore < f.complexityBelow) return false;
+        if (f.complexityAbove !== undefined && input.complexityScore > f.complexityAbove) return false;
+        return true;
+    });
+
+    const pool = eligible.length > 0 ? eligible : CHART_LIBRARY_CATALOG;
 
     function score(lib: ChartLibraryEntry): number {
         let s = lib.devxScore * 50;
@@ -295,15 +312,10 @@ export function selectChartLibrary(input: ChartGenomeInput): ChartSelection {
         if (lib.fitsEnergy?.includes(input.energy))           s += 8;
         if (lib.fitsBiome?.includes(input.biome))             s += 8;
 
-        // Complexity floor — soft penalty if genome is below the library's floor
-        if (lib.complexityFloor && input.complexityScore < lib.complexityFloor) {
-            s -= (lib.complexityFloor - input.complexityScore) * 40;
-        }
-
         return s;
     }
 
-    const ranked = [...CHART_LIBRARY_CATALOG]
+    const ranked = [...pool]
         .map(lib => ({ lib, score: score(lib) }))
         .sort((a, b) => b.score - a.score);
 

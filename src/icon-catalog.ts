@@ -1,20 +1,16 @@
 /**
  * Icon Catalog Service
  *
- * Chromosome-driven icon library selection — mirrors the font catalog pattern.
- * Maps genome visual character (edge style, type charge, sector, density) to
- * the most appropriate icon library from a diverse set.
+ * Chromosome-driven icon library selection — mirrors the sector color system.
  *
- * Libraries span the full range of visual philosophies:
- *   thin/elegant → Iconoir, Feather
- *   sharp/precise → Heroicons, Material Symbols, Tabler
- *   rounded/friendly → Lucide, Phosphor
- *   bold/assertive → Bootstrap Icons, Remix
- *   expressive/personality → Hugeicons, Solar
- *   systematic/UI-focused → Radix Icons
+ * Philosophy: forbiddenFor defines what is psychologically WRONG for an icon library.
+ * The genome hash selects freely from all remaining eligible libraries.
+ * Same approach as sector forbidden hue ranges — no whitelist, only exclusions.
  *
- * Selection is deterministic given genome chromosomes — same genome always
- * produces the same icon library recommendation.
+ * A library with empty forbiddenFor is valid for EVERY genome.
+ * Icon visual weight must match the design's edge style — a thin elegant icon
+ * on a brutalist layout, or a heavy bold icon on a hand-drawn organic design,
+ * are psychologically wrong. Only those conflicts are blocked.
  */
 
 import type { EdgeStyle, TypeCharge } from "./genome/types.js";
@@ -33,19 +29,27 @@ export type IconStyle =
 
 export interface IconLibraryEntry {
     name: string;
-    package: string;               // npm package name
-    reactPackage: string;          // React-specific package
-    cdn: string;                   // CDN import URL for web-only use
+    package: string;
+    reactPackage: string;
+    cdn: string;
     style: IconStyle;
-    weightVariants: string[];      // available weight/style variants
-    count: number;                 // approximate icon count
+    weightVariants: string[];
+    count: number;
     license: "MIT" | "Apache-2.0" | "OFL" | "ISC";
-    description: string;           // one-line design character
-    importExample: string;         // how to import in code
-    fitsWith: {
-        edgeStyles: EdgeStyle[];
-        typeCharges: TypeCharge[];
-        sectors?: string[];        // optional sector affinity
+    description: string;
+    importExample: string;
+    /**
+     * What this library is WRONG for — same philosophy as sector forbiddenRanges.
+     * The hash picks freely from all libraries NOT excluded by these conditions.
+     * Empty object = valid for every genome.
+     */
+    forbiddenFor: {
+        /** WRONG for these edge styles — visual weight mismatch */
+        edgeStyles?: EdgeStyle[];
+        /** WRONG for these type charges — character / visual language mismatch */
+        typeCharges?: TypeCharge[];
+        /** WRONG for these sectors — psychological mismatch */
+        sectors?: string[];
     };
 }
 
@@ -62,10 +66,11 @@ export const ICON_CATALOG: IconLibraryEntry[] = [
         license: "MIT",
         description: "Clean thin-stroke icons with architectural precision — editorial and premium feel",
         importExample: `import { Home, User } from "iconoir-react";`,
-        fitsWith: {
-            edgeStyles: ["soft", "sharp"],
-            typeCharges: ["humanist", "transitional", "expressive"],
-            sectors: ["real_estate", "travel", "beauty_fashion", "media"],
+        // Thin icons read as weak on brutalist/deconstructed/blob layouts
+        // Expressive/slab type charge → editorial bold feel → thin icons contradict it
+        forbiddenFor: {
+            edgeStyles: ["brutalist", "deconstructed", "blob"],
+            typeCharges: ["slab_serif", "expressive"],
         },
     },
     {
@@ -79,10 +84,11 @@ export const ICON_CATALOG: IconLibraryEntry[] = [
         license: "MIT",
         description: "Minimal open-source icons — sparse, airy, developer-beloved simplicity",
         importExample: `import FeatherIcon from "feather-icons-react"; // <FeatherIcon icon="home" />`,
-        fitsWith: {
-            edgeStyles: ["soft", "sharp"],
-            typeCharges: ["geometric", "grotesque"],
-            sectors: ["technology", "agency"],
+        // Thin/minimal icons clash with heavy/organic/irregular edge styles
+        // Slab serif and expressive typography signal boldness — thin Feather icons contradict it
+        forbiddenFor: {
+            edgeStyles: ["brutalist", "blob", "deconstructed", "organic"],
+            typeCharges: ["slab_serif", "expressive"],
         },
     },
 
@@ -98,10 +104,9 @@ export const ICON_CATALOG: IconLibraryEntry[] = [
         license: "MIT",
         description: "Tailwind's icons — crisp outlines and solid fills, system-quality precision",
         importExample: `import { HomeIcon } from "@heroicons/react/24/outline";`,
-        fitsWith: {
-            edgeStyles: ["sharp", "techno"],
-            typeCharges: ["geometric", "grotesque"],
-            sectors: ["technology", "fintech", "commerce"],
+        // Sharp geometric icons clash with organic/amorphous/irregular edge styles
+        forbiddenFor: {
+            edgeStyles: ["blob", "hand_drawn", "organic", "scalloped"],
         },
     },
     {
@@ -115,10 +120,9 @@ export const ICON_CATALOG: IconLibraryEntry[] = [
         license: "Apache-2.0",
         description: "Google's variable-weight symbol system — vast coverage, systematic, scalable",
         importExample: `import HomeIcon from "@mui/icons-material/Home";`,
-        fitsWith: {
-            edgeStyles: ["sharp", "techno", "soft"],
-            typeCharges: ["geometric", "grotesque", "monospace"],
-            sectors: ["technology", "healthcare", "education", "government"],
+        // System icons clash with hand-drawn/organic edge styles
+        forbiddenFor: {
+            edgeStyles: ["blob", "hand_drawn", "organic"],
         },
     },
     {
@@ -132,10 +136,9 @@ export const ICON_CATALOG: IconLibraryEntry[] = [
         license: "MIT",
         description: "Massive 2px-stroke library — the most comprehensive sharp set available",
         importExample: `import { IconHome } from "@tabler/icons-react";`,
-        fitsWith: {
-            edgeStyles: ["sharp", "techno"],
-            typeCharges: ["geometric", "grotesque", "monospace"],
-            sectors: ["technology", "fintech", "manufacturing", "legal"],
+        // Sharp stroke icons clash with amorphous/irregular edge styles
+        forbiddenFor: {
+            edgeStyles: ["blob", "hand_drawn", "organic", "scalloped"],
         },
     },
 
@@ -151,10 +154,9 @@ export const ICON_CATALOG: IconLibraryEntry[] = [
         license: "ISC",
         description: "The most beautiful rounded icon set — consistent, warm, widely used",
         importExample: `import { Home, User } from "lucide-react";`,
-        fitsWith: {
-            edgeStyles: ["soft", "organic"],
-            typeCharges: ["humanist", "grotesque", "geometric"],
-            sectors: ["healthcare", "education", "nonprofit", "food"],
+        // Friendly rounded icons clash with brutal/aggressive/destructured edge styles
+        forbiddenFor: {
+            edgeStyles: ["brutalist", "serrated", "notched", "cutout", "deconstructed"],
         },
     },
     {
@@ -168,10 +170,9 @@ export const ICON_CATALOG: IconLibraryEntry[] = [
         license: "MIT",
         description: "Six-weight flexible system — the most versatile rounded library, duotone capable",
         importExample: `import { House } from "@phosphor-icons/react";`,
-        fitsWith: {
-            edgeStyles: ["soft", "organic"],
-            typeCharges: ["humanist", "transitional", "grotesque"],
-            sectors: ["healthcare", "entertainment", "sports", "food", "travel"],
+        // Rounded icons clash with brutalist/serrated/notched edge styles
+        forbiddenFor: {
+            edgeStyles: ["brutalist", "serrated", "notched"],
         },
     },
 
@@ -187,10 +188,9 @@ export const ICON_CATALOG: IconLibraryEntry[] = [
         license: "MIT",
         description: "Solid, chunky icons with strong visual weight — assertive, no-nonsense",
         importExample: `import { HouseFill } from "react-bootstrap-icons";`,
-        fitsWith: {
-            edgeStyles: ["sharp", "soft"],
-            typeCharges: ["slab_serif", "grotesque"],
-            sectors: ["commerce", "insurance", "legal", "manufacturing"],
+        // Bold UI-component icons clash with organic/amorphous/sketch-like edge styles
+        forbiddenFor: {
+            edgeStyles: ["blob", "hand_drawn", "organic", "scalloped", "pill"],
         },
     },
     {
@@ -204,10 +204,9 @@ export const ICON_CATALOG: IconLibraryEntry[] = [
         license: "Apache-2.0",
         description: "Dual-mode line/fill library — functional and expressive, media-native feel",
         importExample: `import HomeSmileLine from "remixicon-react/HomeSmileLine";`,
-        fitsWith: {
-            edgeStyles: ["soft", "sharp"],
-            typeCharges: ["grotesque", "slab_serif"],
-            sectors: ["media", "entertainment", "crypto_web3", "gaming"],
+        // Bold icons clash with amorphous/sketch-like edge styles
+        forbiddenFor: {
+            edgeStyles: ["blob", "hand_drawn", "scalloped"],
         },
     },
 
@@ -223,10 +222,11 @@ export const ICON_CATALOG: IconLibraryEntry[] = [
         license: "MIT",
         description: "Rich multi-style system — the most expressive and personality-forward library",
         importExample: `import { Home01Icon } from "@hugeicons/react";`,
-        fitsWith: {
-            edgeStyles: ["organic", "soft"],
-            typeCharges: ["expressive", "humanist"],
-            sectors: ["beauty_fashion", "entertainment", "gaming", "sports", "food"],
+        // Expressive icons are psychologically wrong for trust-critical sectors
+        // Monospace type charge = systematic / developer context → expressive icons are wrong
+        forbiddenFor: {
+            sectors: ["healthcare", "fintech", "legal", "government"],
+            typeCharges: ["monospace"],
         },
     },
     {
@@ -240,10 +240,11 @@ export const ICON_CATALOG: IconLibraryEntry[] = [
         license: "MIT",
         description: "Ultra-comprehensive premium system — six weights including broken/duotone styles",
         importExample: `// Import by weight variant from solar-icon-set`,
-        fitsWith: {
-            edgeStyles: ["organic", "soft", "sharp"],
-            typeCharges: ["expressive", "humanist", "geometric"],
-            sectors: ["beauty_fashion", "real_estate", "automotive", "travel", "agency"],
+        // Expressive/decorative icons wrong for high-trust sectors
+        // Monospace = developer/systematic context → expressive personality icons wrong
+        forbiddenFor: {
+            sectors: ["healthcare", "legal", "government"],
+            typeCharges: ["monospace"],
         },
     },
 
@@ -259,10 +260,11 @@ export const ICON_CATALOG: IconLibraryEntry[] = [
         license: "MIT",
         description: "Small curated UI-component set — precise, systematic, built for design systems",
         importExample: `import { HomeIcon } from "@radix-ui/react-icons";`,
-        fitsWith: {
-            edgeStyles: ["sharp", "techno"],
-            typeCharges: ["geometric", "monospace"],
-            sectors: ["technology", "fintech"],
+        // Tiny systematic set (318 icons) clashes with expressive/organic edge styles
+        // Expressive type charge needs icons with personality — the Radix systematic set is wrong
+        forbiddenFor: {
+            edgeStyles: ["blob", "hand_drawn", "organic", "scalloped", "brutalist", "serrated"],
+            typeCharges: ["expressive", "slab_serif"],
         },
     },
 ];
@@ -270,47 +272,34 @@ export const ICON_CATALOG: IconLibraryEntry[] = [
 // ── Selection logic ──────────────────────────────────────────────────────────
 
 /**
- * Select the best-matching icon library for a given genome.
- * Deterministic: same inputs always return same library.
+ * Select icon library using exclude logic — same philosophy as sector forbidden hue ranges.
+ *
+ * 1. Filter out libraries that are psychologically WRONG for this genome's context.
+ * 2. Pick deterministically from the eligible pool using dnaHashByte.
+ *
+ * Every library not explicitly forbidden is a valid candidate — the hash provides
+ * variety without forcing arbitrary whitelist matches.
  */
 export function selectIconLibrary(params: {
     edgeStyle: EdgeStyle;
     typeCharge: TypeCharge;
     sector: string;
-    dnaHashByte: number;   // single byte from dnaHash for tiebreaking (deterministic)
+    dnaHashByte: number;
 }): IconLibraryEntry {
     const { edgeStyle, typeCharge, sector, dnaHashByte } = params;
 
-    // Score each library by chromosome fit
-    const scored = ICON_CATALOG.map(lib => {
-        let score = 0;
-
-        // Edge style match — primary signal
-        if (lib.fitsWith.edgeStyles.includes(edgeStyle as EdgeStyle)) score += 3;
-
-        // Type charge match — secondary signal
-        if (lib.fitsWith.typeCharges.includes(typeCharge as TypeCharge)) score += 2;
-
-        // Sector affinity — tertiary
-        if (lib.fitsWith.sectors?.includes(sector)) score += 1;
-
-        return { lib, score };
+    const eligible = ICON_CATALOG.filter(lib => {
+        const f = lib.forbiddenFor;
+        if (f.edgeStyles?.includes(edgeStyle)) return false;
+        if (f.typeCharges?.includes(typeCharge)) return false;
+        if (f.sectors?.includes(sector)) return false;
+        return true;
     });
 
-    // Sort by score descending, use dnaHashByte to break ties deterministically
-    scored.sort((a, b) => {
-        if (b.score !== a.score) return b.score - a.score;
-        // Same score — use hash byte to pick consistently within the score tier
-        const aIdx = ICON_CATALOG.indexOf(a.lib);
-        const bIdx = ICON_CATALOG.indexOf(b.lib);
-        return ((aIdx + dnaHashByte) % ICON_CATALOG.length) -
-               ((bIdx + dnaHashByte) % ICON_CATALOG.length);
-    });
+    // Fallback: if all excluded (shouldn't happen), use full catalog
+    const pool = eligible.length > 0 ? eligible : ICON_CATALOG;
 
-    // Never return the same top-N without variety — ensure selection spans the catalog
-    // Pick from top-3 candidates, biased by dnaHashByte
-    const topCandidates = scored.slice(0, 3);
-    return topCandidates[dnaHashByte % topCandidates.length].lib;
+    return pool[dnaHashByte % pool.length];
 }
 
 /**

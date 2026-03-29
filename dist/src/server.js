@@ -4,7 +4,7 @@ import * as crypto from "crypto";
 import { createRequire } from "module";
 // Load package.json for version (avoids hardcoded version drift)
 const require = createRequire(import.meta.url);
-const PACKAGE_VERSION = require("../package.json").version;
+const PACKAGE_VERSION = require("../../package.json").version;
 // Load .env if present (no dotenv dep — pure Node.js)
 // Does NOT override vars already set in the environment, so shell vars win.
 try {
@@ -182,11 +182,11 @@ function createFullGenomeTracker(genome, ecosystemGenome, civilizationGenome) {
 // ── Security Configuration (environment-overrideable) ───────────────────────
 const SECURITY_CONFIG = {
     // Maximum file size for brand assets (default: 50MB, env overrideable)
-    maxAssetSizeBytes: parseInt(process.env.PERMUTATIONS_MAX_ASSET_SIZE_MB || "50", 10) * 1024 * 1024,
+    maxAssetSizeBytes: parseInt(process.env.GENOME_MAX_ASSET_SIZE_MB || "50", 10) * 1024 * 1024,
     // Maximum number of assets to process (default: 10)
-    maxAssetCount: parseInt(process.env.PERMUTATIONS_MAX_ASSET_COUNT || "10", 10),
+    maxAssetCount: parseInt(process.env.GENOME_MAX_ASSET_COUNT || "10", 10),
     // Allowed file extensions for assets
-    allowedAssetExtensions: (process.env.PERMUTATIONS_ALLOWED_ASSET_EXTENSIONS || ".png,.jpg,.jpeg,.svg,.pdf").split(",").map(s => s.trim().toLowerCase()),
+    allowedAssetExtensions: (process.env.GENOME_ALLOWED_ASSET_EXTENSIONS || ".png,.jpg,.jpeg,.svg,.pdf").split(",").map(s => s.trim().toLowerCase()),
 };
 // ── Ecosystem biomes: hash-selectable structural character per tier ─────────
 // Different seeds at same tier get different biome characters.
@@ -377,7 +377,7 @@ class DesignGenomeServer {
         }
         // Essential chromosome groups (not all 32, just critical ones for operation)
         const essentialChromosomes = [
-            'ch1_structure', 'ch5_primary_color', 'ch6_color_temp',
+            'ch1_structure', 'ch5_color_primary', 'ch6_color_temp',
             'ch7_edge', 'ch8_motion', 'ch9_grid', 'ch19_hero_type'
         ];
         for (const ch of essentialChromosomes) {
@@ -416,8 +416,11 @@ class DesignGenomeServer {
         this.patternDetector = new PatternDetector();
         this.civilizationGen = new CivilizationGenerator();
         this.complexityAnalyzer = new ComplexityAnalyzer();
-        // Pre-warm font catalogs at startup — non-blocking, failures fall back to hardcoded lists
-        fontCatalog.warmCache(["bunny", "google", "fontshare"]);
+        // Pre-warm font catalogs at startup — genome generation requires these to be loaded
+        fontCatalog.warmCache(["bunny", "google", "fontshare"]).catch(err => {
+            console.error(`[FontCatalog] Startup warm failed: ${err.message}`);
+            process.exit(1);
+        });
         this.setupHandlers();
     }
     setupHandlers() {
@@ -480,7 +483,7 @@ class DesignGenomeServer {
                                 }
                             }
                         },
-                        required: ["intent", "seed"]
+                        required: ["intent", "seed", "genome"]
                     }
                 },
                 {
@@ -783,7 +786,6 @@ class DesignGenomeServer {
                         // Chromosome-driven animation library selection
                         const animationLibrary = selectAnimationLibrary({
                             physics: genome.chromosomes.ch8_motion?.physics ?? "none",
-                            choreographyStyle: genome.chromosomes.ch27_motion_choreography?.choreographyStyle ?? "smooth",
                             sector: detectedSector,
                             complexity: complexityResult.finalComplexity,
                             dnaHashByte: parseInt(genome.dnaHash.slice(2, 4), 16),
@@ -791,7 +793,7 @@ class DesignGenomeServer {
                         // Chromosome-driven state management selection
                         // Uses ch30_state topology + complexity score
                         const stateTopology = genome.chromosomes.ch30_state?.topology ?? "local";
-                        const stateLibrarySelection = selectStateLibrary(stateTopology, complexityResult.finalComplexity);
+                        const stateLibrarySelection = selectStateLibrary(stateTopology, complexityResult.finalComplexity, parseInt(genome.dnaHash.slice(4, 6), 16));
                         // Chromosome-driven styling system selection
                         // Uses eco_ch12_expressiveness personality (if ecosystem ran) + edge style
                         const edgeStyle = genome.chromosomes.ch7_edge?.style ?? "soft";
@@ -1316,6 +1318,13 @@ class DesignGenomeServer {
                         ecoTracker.track('eco_ch11_mutation');
                         ecoTracker.track('eco_ch12_expressiveness');
                         const l2Utilization = ecoTracker.getReport();
+                        // Animation library for component implementation — same exclude logic as step 1
+                        const ecoAnimationLibrary = selectAnimationLibrary({
+                            physics: genomeChromosomes.ch8_motion.physics,
+                            sector: ecoSector,
+                            complexity: ecosystem.evolution.complexity,
+                            dnaHashByte: parseInt(ecoBiomeHash.slice(4, 6), 16),
+                        });
                         const organismSelection = selectOrganismLibrary({
                             edgeStyle: genomeChromosomes.ch7_edge.style,
                             motionPhysics: genomeChromosomes.ch8_motion.physics,
@@ -1327,6 +1336,7 @@ class DesignGenomeServer {
                             adaptation: ecoChromosomes.eco_ch6_adaptation.axis,
                             personality: ecoChromosomes.eco_ch12_expressiveness.personality,
                             hasFauna,
+                            complexity: ecosystem.evolution.complexity,
                         });
                         const interactionSelection = selectInteractionLibraries({
                             motionPhysics: genomeChromosomes.ch8_motion.physics,
@@ -1339,6 +1349,7 @@ class DesignGenomeServer {
                             personality: ecoChromosomes.eco_ch12_expressiveness.personality,
                             hasFauna,
                             hasDataHeavyFauna,
+                            complexity: ecosystem.evolution.complexity,
                         });
                         const chartSelection = selectChartLibrary({
                             edgeStyle: genomeChromosomes.ch7_edge.style,
@@ -1431,6 +1442,19 @@ class DesignGenomeServer {
                                         biomeDescription: ecoBiomeDesc,
                                         css,
                                         libraries: {
+                                            animation: {
+                                                name: ecoAnimationLibrary.name,
+                                                package: ecoAnimationLibrary.reactPackage ?? ecoAnimationLibrary.package,
+                                                style: ecoAnimationLibrary.style,
+                                                bundle_size: ecoAnimationLibrary.bundleSize,
+                                                license: ecoAnimationLibrary.license,
+                                                description: ecoAnimationLibrary.description,
+                                                choreography: ecoAnimationLibrary.choreography,
+                                                import_example: ecoAnimationLibrary.importExample,
+                                                usage_example: ecoAnimationLibrary.usageExample,
+                                                cdn: ecoAnimationLibrary.cdn,
+                                                note: formatAnimationLibraryNote(ecoAnimationLibrary),
+                                            },
                                             organism: {
                                                 primary: { name: organismSelection.primary.name, package: organismSelection.primary.package, philosophy: organismSelection.primary.philosophy, installCmd: organismSelection.primary.installCmd, importExample: organismSelection.primary.importExample, combinableWith: organismSelection.primary.combinableWith },
                                                 alternative: { name: organismSelection.alternative.name, package: organismSelection.alternative.package, philosophy: organismSelection.alternative.philosophy, installCmd: organismSelection.alternative.installCmd, importExample: organismSelection.alternative.importExample, combinableWith: organismSelection.alternative.combinableWith },
@@ -2094,7 +2118,7 @@ class DesignGenomeServer {
         });
     }
     buildLayoutContract(genome, complexity, tier) {
-        const ch = genome.chromosomes;
+        const ch = genome?.chromosomes ?? {};
         const cd = ch.ch23_content_depth ?? {};
         const ia = ch.ch23_information_architecture ?? {};
         const ts = ch.ch21_trust_signals ?? {};

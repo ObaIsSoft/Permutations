@@ -1,20 +1,15 @@
 /**
  * Animation Library Catalog
  *
- * Chromosome-driven animation library selection — mirrors font-catalog and icon-catalog.
- * Maps genome motion character (physics, choreography, atmosphere, sector, complexity)
- * to the most appropriate animation library from a diverse ecosystem.
+ * Chromosome-driven animation library selection — mirrors the sector color system.
  *
- * Libraries span the full range of animation philosophies:
- *   css/declarative  → Animate.css, Motion One
- *   spring/physics   → Framer Motion, react-spring, Popmotion
- *   timeline/orchestration → GSAP, Anime.js, Theatre.js
- *   scroll-driven    → AOS, ScrollReveal, Lottie
- *   gesture/interactive → Framer Motion, use-gesture
- *   3d/webgl         → Three.js + GSAP, Theatre.js
+ * Philosophy: forbiddenFor defines what is psychologically WRONG for a library.
+ * The genome hash selects freely from all remaining eligible libraries.
+ * Same approach as sector forbidden hue ranges — no whitelist, only exclusions.
  *
- * Selection is deterministic given genome chromosomes — same genome always
- * produces the same animation library recommendation.
+ * A library with empty forbiddenFor is valid for EVERY genome.
+ * A library excluded for certain physics/sectors won't appear for those contexts.
+ * The hash byte then picks deterministically from the eligible pool.
  */
 
 import type { MotionPhysics } from "./genome/types.js";
@@ -47,18 +42,28 @@ export interface AnimationLibraryEntry {
     reactPackage?: string;
     cdn: string;
     style: AnimationStyle;
-    bundleSize: string;          // approx gzipped size
+    bundleSize: string;
     license: "MIT" | "commercial" | "ISC";
-    description: string;         // one-line design character
-    choreography: ChoreographyStyle[];
+    description: string;
+    choreography: ChoreographyStyle[];  // informational — used in format output
     importExample: string;
-    usageExample: string;        // minimal usage snippet
-    fitsWith: {
-        physics: MotionPhysics[];
+    usageExample: string;
+    deps: string[];
+    /**
+     * What this library is WRONG for — same philosophy as sector forbiddenRanges.
+     * The hash picks freely from all libraries NOT excluded by these conditions.
+     * Empty object = valid for every genome.
+     */
+    forbiddenFor: {
+        /** WRONG for these physics styles — fundamental mismatch in animation model */
+        physics?: MotionPhysics[];
+        /** WRONG for these sectors — psychological mismatch */
         sectors?: string[];
-        complexity?: "any" | "low" | "high"; // product complexity affinity
+        /** WRONG when complexity exceeds this value (0.0–1.0) */
+        complexityAbove?: number;
+        /** WRONG when complexity is below this value (0.0–1.0) */
+        complexityBelow?: number;
     };
-    deps: string[];              // peer dependencies
 }
 
 export const ANIMATION_CATALOG: AnimationLibraryEntry[] = [
@@ -75,12 +80,12 @@ export const ANIMATION_CATALOG: AnimationLibraryEntry[] = [
         choreography: ["snappy", "energetic"],
         importExample: `import "animate.css";`,
         usageExample: `<div class="animate__animated animate__fadeInUp">...</div>`,
-        fitsWith: {
-            physics: ["none", "step"],
-            sectors: ["education", "nonprofit", "healthcare", "commerce"],
-            complexity: "low",
-        },
         deps: [],
+        // CSS class animations can't simulate spring/physics — wrong model
+        forbiddenFor: {
+            physics: ["spring", "elastic", "inertia", "magnetic", "particle", "fluid", "chaos", "orbital", "bounce", "harmonic", "momentum", "decay"],
+            complexityAbove: 0.70,
+        },
     },
     {
         name: "Motion One",
@@ -94,12 +99,11 @@ export const ANIMATION_CATALOG: AnimationLibraryEntry[] = [
         choreography: ["smooth", "snappy", "elegant"],
         importExample: `import { animate, inView, scroll } from "motion";`,
         usageExample: `animate(".card", { opacity: [0, 1], y: [20, 0] }, { duration: 0.4, easing: [0.25, 0.1, 0.25, 1] });`,
-        fitsWith: {
-            physics: ["none", "step"],
-            sectors: ["technology", "fintech", "agency"],
-            complexity: "any",
-        },
         deps: [],
+        // WAA doesn't support physics-spring simulation
+        forbiddenFor: {
+            physics: ["spring", "elastic", "inertia", "magnetic", "particle"],
+        },
     },
     {
         name: "Hover.css",
@@ -112,12 +116,12 @@ export const ANIMATION_CATALOG: AnimationLibraryEntry[] = [
         choreography: ["smooth", "elegant"],
         importExample: `import "hover.css";`,
         usageExample: `<button class="hvr-grow">Hover me</button>`,
-        fitsWith: {
-            physics: ["none"],
-            sectors: ["beauty_fashion", "media", "travel", "real_estate"],
-            complexity: "low",
-        },
         deps: [],
+        // Hover-only CSS — wrong for interactive physics and complex apps
+        forbiddenFor: {
+            physics: ["spring", "glitch", "magnetic", "inertia", "elastic", "particle", "fluid", "chaos", "orbital", "bounce", "harmonic", "momentum", "decay"],
+            complexityAbove: 0.50,
+        },
     },
 
     // ── Spring / Physics ──────────────────────────────────────────────────────
@@ -133,12 +137,11 @@ export const ANIMATION_CATALOG: AnimationLibraryEntry[] = [
         choreography: ["elegant", "smooth", "energetic"],
         importExample: `import { motion, AnimatePresence } from "framer-motion";`,
         usageExample: `<motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 300, damping: 24 }} />`,
-        fitsWith: {
-            physics: ["spring"],
-            sectors: ["technology", "saas", "agency", "fintech", "crypto_web3"],
-            complexity: "any",
-        },
         deps: ["react"],
+        // Wrong only for zero-animation designs — everything else is valid
+        forbiddenFor: {
+            physics: ["none"],
+        },
     },
     {
         name: "react-spring",
@@ -152,12 +155,11 @@ export const ANIMATION_CATALOG: AnimationLibraryEntry[] = [
         choreography: ["smooth", "elegant", "snappy"],
         importExample: `import { useSpring, animated } from "@react-spring/web";`,
         usageExample: `const springs = useSpring({ from: { opacity: 0 }, to: { opacity: 1 }, config: { tension: 280, friction: 60 } });`,
-        fitsWith: {
-            physics: ["spring"],
-            sectors: ["technology", "gaming", "entertainment", "sports"],
-            complexity: "any",
-        },
         deps: ["react"],
+        // Spring lib — wrong for zero-animation, rigid-step, or glitch paradigms
+        forbiddenFor: {
+            physics: ["none", "step", "glitch"],
+        },
     },
     {
         name: "Popmotion",
@@ -170,12 +172,11 @@ export const ANIMATION_CATALOG: AnimationLibraryEntry[] = [
         choreography: ["snappy", "smooth"],
         importExample: `import { spring, animate } from "popmotion";`,
         usageExample: `spring({ from: 0, to: 100, stiffness: 300, damping: 20 }).start(v => el.style.transform = \`translateY(\${v}px)\`);`,
-        fitsWith: {
-            physics: ["spring"],
-            sectors: ["technology", "fintech"],
-            complexity: "any",
-        },
         deps: [],
+        // Spring primitives — wrong for static or glitch designs
+        forbiddenFor: {
+            physics: ["none", "glitch"],
+        },
     },
 
     // ── Timeline / Orchestration ──────────────────────────────────────────────
@@ -190,12 +191,11 @@ export const ANIMATION_CATALOG: AnimationLibraryEntry[] = [
         choreography: ["dramatic", "elegant", "energetic", "smooth"],
         importExample: `import gsap from "gsap"; import { ScrollTrigger } from "gsap/ScrollTrigger";`,
         usageExample: `gsap.timeline().from(".hero", { opacity: 0, y: 60, duration: 1, ease: "power3.out" }).from(".nav", { opacity: 0, duration: 0.4 }, "-=0.6");`,
-        fitsWith: {
-            physics: ["glitch", "spring", "step", "none"],
-            sectors: ["agency", "entertainment", "gaming", "beauty_fashion", "automotive", "media"],
-            complexity: "high",
-        },
         deps: [],
+        // Timeline lib — wrong for spring physics (use Framer Motion / react-spring instead)
+        forbiddenFor: {
+            physics: ["spring"],
+        },
     },
     {
         name: "Anime.js",
@@ -208,12 +208,11 @@ export const ANIMATION_CATALOG: AnimationLibraryEntry[] = [
         choreography: ["elegant", "smooth", "dramatic"],
         importExample: `import anime from "animejs";`,
         usageExample: `anime.timeline({ easing: "easeOutExpo" }).add({ targets: ".element", translateX: 250, duration: 800 }).add({ targets: ".element", scale: 2, duration: 800 }, "-=600");`,
-        fitsWith: {
-            physics: ["step", "glitch", "none"],
-            sectors: ["agency", "media", "education", "nonprofit"],
-            complexity: "any",
-        },
         deps: [],
+        // Timeline lib — wrong for interactive physics (spring/gesture)
+        forbiddenFor: {
+            physics: ["spring", "magnetic", "inertia"],
+        },
     },
     {
         name: "Theatre.js",
@@ -227,12 +226,12 @@ export const ANIMATION_CATALOG: AnimationLibraryEntry[] = [
         choreography: ["dramatic", "elegant"],
         importExample: `import { getProject, types } from "@theatre/core";`,
         usageExample: `const project = getProject("MyProject"); const sheet = project.sheet("Main"); const obj = sheet.object("Box", { x: types.number(0) });`,
-        fitsWith: {
-            physics: ["glitch", "spring"],
-            sectors: ["agency", "entertainment", "automotive", "gaming"],
-            complexity: "high",
-        },
         deps: [],
+        // Studio tooling — wrong for spring physics and simple products (massive overkill)
+        forbiddenFor: {
+            physics: ["spring"],
+            complexityBelow: 0.50,
+        },
     },
 
     // ── Scroll-driven ─────────────────────────────────────────────────────────
@@ -247,12 +246,11 @@ export const ANIMATION_CATALOG: AnimationLibraryEntry[] = [
         choreography: ["smooth", "snappy"],
         importExample: `import AOS from "aos"; import "aos/dist/aos.css"; AOS.init();`,
         usageExample: `<div data-aos="fade-up" data-aos-duration="800" data-aos-delay="100">...</div>`,
-        fitsWith: {
-            physics: ["none", "step"],
-            sectors: ["education", "healthcare", "nonprofit", "real_estate", "hospitality"],
-            complexity: "low",
-        },
         deps: [],
+        // Scroll-reveal only — wrong for interactive/physics-driven animation styles
+        forbiddenFor: {
+            physics: ["spring", "magnetic", "inertia", "elastic", "glitch", "fluid", "chaos", "particle"],
+        },
     },
     {
         name: "ScrollReveal",
@@ -265,12 +263,11 @@ export const ANIMATION_CATALOG: AnimationLibraryEntry[] = [
         choreography: ["smooth", "elegant"],
         importExample: `import ScrollReveal from "scrollreveal";`,
         usageExample: `ScrollReveal().reveal(".section", { distance: "30px", origin: "bottom", duration: 800, interval: 100 });`,
-        fitsWith: {
-            physics: ["none"],
-            sectors: ["real_estate", "hospitality", "travel", "beauty_fashion"],
-            complexity: "low",
-        },
         deps: [],
+        // Scroll-reveal only — wrong for interactive physics
+        forbiddenFor: {
+            physics: ["spring", "magnetic", "inertia", "elastic", "glitch", "fluid", "chaos", "particle"],
+        },
     },
     {
         name: "Auto-Animate",
@@ -284,12 +281,11 @@ export const ANIMATION_CATALOG: AnimationLibraryEntry[] = [
         choreography: ["smooth", "snappy"],
         importExample: `import autoAnimate from "@formkit/auto-animate";`,
         usageExample: `const parent = useRef(null); useAutoAnimate(parent); // done — all child changes animate automatically`,
-        fitsWith: {
-            physics: ["none", "spring"],
-            sectors: ["technology", "saas", "healthcare", "education"],
-            complexity: "any",
-        },
         deps: [],
+        // Zero-config — wrong for high-physics-expressiveness contexts
+        forbiddenFor: {
+            physics: ["glitch", "magnetic", "chaos", "fluid", "particle"],
+        },
     },
 
     // ── Lottie / Rich Illustration ────────────────────────────────────────────
@@ -305,12 +301,11 @@ export const ANIMATION_CATALOG: AnimationLibraryEntry[] = [
         choreography: ["elegant", "dramatic", "smooth"],
         importExample: `import Lottie from "@lottiefiles/react-lottie-player";`,
         usageExample: `<Player autoplay loop src="https://assets.lottiefiles.com/animation.json" style={{ height: "300px" }} />`,
-        fitsWith: {
-            physics: ["none", "spring"],
-            sectors: ["healthcare", "fintech", "education", "entertainment", "saas"],
-            complexity: "any",
-        },
         deps: [],
+        // JSON playback — wrong for interactive physics (it plays pre-authored animations)
+        forbiddenFor: {
+            physics: ["spring", "magnetic", "inertia", "elastic"],
+        },
     },
 
     // ── 3D / WebGL ────────────────────────────────────────────────────────────
@@ -326,12 +321,11 @@ export const ANIMATION_CATALOG: AnimationLibraryEntry[] = [
         choreography: ["dramatic", "elegant"],
         importExample: `import * as THREE from "three"; // or: import { Canvas } from "@react-three/fiber";`,
         usageExample: `const mesh = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshStandardMaterial({ color: 0x3b82f6 })); scene.add(mesh);`,
-        fitsWith: {
-            physics: ["spring", "glitch"],
-            sectors: ["automotive", "gaming", "agency", "entertainment", "crypto_web3"],
-            complexity: "high",
-        },
         deps: [],
+        // 3D WebGL — wrong for simple low-complexity products (massive overkill)
+        forbiddenFor: {
+            complexityBelow: 0.50,
+        },
     },
     {
         name: "use-gesture",
@@ -345,62 +339,46 @@ export const ANIMATION_CATALOG: AnimationLibraryEntry[] = [
         choreography: ["energetic", "snappy", "smooth"],
         importExample: `import { useDrag, useScroll } from "@use-gesture/react";`,
         usageExample: `const bind = useDrag(({ offset: [x, y] }) => api.start({ x, y })); return <animated.div {...bind()} style={springs} />;`,
-        fitsWith: {
-            physics: ["spring"],
-            sectors: ["gaming", "entertainment", "sports", "crypto_web3"],
-            complexity: "high",
-        },
         deps: ["react"],
+        // Gesture lib — wrong for zero-animation and mechanical-step designs
+        forbiddenFor: {
+            physics: ["none", "step"],
+        },
     },
 ];
 
 // ── Selection logic ───────────────────────────────────────────────────────────
 
 /**
- * Select the best-matching animation library for a given genome.
- * Deterministic: same inputs always return same library.
+ * Select animation library using exclude logic — same philosophy as sector forbidden hue ranges.
+ *
+ * 1. Filter out libraries that are psychologically WRONG for this genome's context.
+ * 2. Pick deterministically from the eligible pool using dnaHashByte.
+ *
+ * Every library not explicitly forbidden is a valid candidate.
+ * The hash ensures variety — different seeds pick different libraries from the same eligible pool.
  */
 export function selectAnimationLibrary(params: {
     physics: MotionPhysics;
-    choreographyStyle: ChoreographyStyle;
     sector: string;
     complexity: number;     // 0.0–1.0 from complexityAnalyzer
-    dnaHashByte: number;    // deterministic tiebreaker
+    dnaHashByte: number;    // deterministic pick from eligible pool
 }): AnimationLibraryEntry {
-    const { physics, choreographyStyle, sector, complexity, dnaHashByte } = params;
+    const { physics, sector, complexity, dnaHashByte } = params;
 
-    const scored = ANIMATION_CATALOG.map(lib => {
-        let score = 0;
-
-        // Physics match — primary signal
-        if (lib.fitsWith.physics.includes(physics)) score += 4;
-
-        // Choreography match — secondary signal
-        if (lib.choreography.includes(choreographyStyle)) score += 2;
-
-        // Sector affinity — tertiary
-        if (lib.fitsWith.sectors?.includes(sector)) score += 1;
-
-        // Complexity match
-        if (lib.fitsWith.complexity === "any") score += 1;
-        else if (lib.fitsWith.complexity === "high" && complexity >= 0.57) score += 1;
-        else if (lib.fitsWith.complexity === "low" && complexity < 0.34) score += 1;
-
-        return { lib, score };
+    const eligible = ANIMATION_CATALOG.filter(lib => {
+        const f = lib.forbiddenFor;
+        if (f.physics?.includes(physics)) return false;
+        if (f.sectors?.includes(sector)) return false;
+        if (f.complexityAbove !== undefined && complexity > f.complexityAbove) return false;
+        if (f.complexityBelow !== undefined && complexity < f.complexityBelow) return false;
+        return true;
     });
 
-    // Sort by score, use dnaHashByte to break ties
-    scored.sort((a, b) => {
-        if (b.score !== a.score) return b.score - a.score;
-        const aIdx = ANIMATION_CATALOG.indexOf(a.lib);
-        const bIdx = ANIMATION_CATALOG.indexOf(b.lib);
-        return ((aIdx + dnaHashByte) % ANIMATION_CATALOG.length) -
-               ((bIdx + dnaHashByte) % ANIMATION_CATALOG.length);
-    });
+    // Fallback: if all excluded (shouldn't happen), use full catalog
+    const pool = eligible.length > 0 ? eligible : ANIMATION_CATALOG;
 
-    // Pick from top-3, biased by dnaHashByte for variety
-    const topCandidates = scored.slice(0, 3);
-    return topCandidates[dnaHashByte % topCandidates.length].lib;
+    return pool[dnaHashByte % pool.length];
 }
 
 /**

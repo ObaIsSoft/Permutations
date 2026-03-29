@@ -1,8 +1,8 @@
 {
   "mcpServers": {
-    "permutations": {
+    "genome": {
       "command": "node",
-      "args": ["./dist/server.js"],
+      "args": ["./dist/src/server.js"],
       "env": {
         "GROQ_API_KEY": "",
         "OPENAI_API_KEY": "",

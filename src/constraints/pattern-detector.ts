@@ -322,7 +322,7 @@ export const FORBIDDEN_PATTERNS: ForbiddenPattern[] = [
 export class PatternDetector {
     // Configurable max input size to prevent ReDoS (default 1MB, env overrideable)
     private static readonly MAX_INPUT_SIZE = parseInt(
-        process.env.PERMUTATIONS_MAX_PATTERN_INPUT_BYTES || "1048576", 
+        process.env.GENOME_MAX_PATTERN_INPUT_BYTES || "1048576",
         10
     );
 

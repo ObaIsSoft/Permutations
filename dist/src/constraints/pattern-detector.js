@@ -295,7 +295,7 @@ export const FORBIDDEN_PATTERNS = [
 ];
 export class PatternDetector {
     // Configurable max input size to prevent ReDoS (default 1MB, env overrideable)
-    static MAX_INPUT_SIZE = parseInt(process.env.PERMUTATIONS_MAX_PATTERN_INPUT_BYTES || "1048576", 10);
+    static MAX_INPUT_SIZE = parseInt(process.env.GENOME_MAX_PATTERN_INPUT_BYTES || "1048576", 10);
     detect(css, html) {
         // Guard against huge inputs (ReDoS protection) - truncates with warning
         if (css.length > PatternDetector.MAX_INPUT_SIZE) {

@@ -37,7 +37,7 @@ npm run build
   "mcpServers": {
     "genome": {
       "command": "node",
-      "args": ["/absolute/path/to/genome/dist/server.js"],
+      "args": ["/absolute/path/to/genome/dist/src/server.js"],
       "env": {
         "GROQ_API_KEY": "your_key_here"
       }
@@ -514,7 +514,7 @@ To generate designs without an MCP-enabled IDE:
 
 ```bash
 npm run build
-node dist/generate-design.js
+node dist/src/server.js
 ```
 
 Or use the MCP tools directly via the server.

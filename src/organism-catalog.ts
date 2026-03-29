@@ -1,9 +1,12 @@
 /**
  * Organism / Component Library Catalog
  *
- * Chromosome-driven scoring — no hard exclusions.
- * Every library is a candidate for every genome.
- * Chromosome matches add bonus points; misses don't penalise.
+ * Chromosome-driven selection — forbiddenFor gates psychologically wrong matches,
+ * then L2 chromosome scoring differentiates within the eligible pool.
+ *
+ * Philosophy: forbiddenFor defines what is WRONG (hard exclusion).
+ * Within the eligible pool, fits* scoring adds signal from L1+L2 chromosomes.
+ * Same approach as sector forbidden hue ranges — no whitelist, only exclusions.
  *
  * Draws from BOTH layers:
  *   L1 DesignGenome  — ch7_edge, ch8_motion, ch14_physics, ch6_color_temp
@@ -53,13 +56,25 @@ export interface OrganismLibraryEntry {
     devxScore: number;            // 0–1, developer ergonomics baseline
     tiers: OrganismTier[];        // which organism tiers it covers
     ssrSafe: boolean;
-    typescript: "first-class" | "supported" | "partial";
+    typescript: "first-class" | "supported" | "partial" | "not-needed";
     installCmd: string;
     importExample: string;
     minimalExample: string;
     combinableWith?: string[];    // package names that pair well with this lib
     /**
-     * Scoring boost fields — ALL additive, never exclusionary.
+     * What this library is WRONG for — hard exclusion gate (pre-filter).
+     * Same philosophy as sector forbiddenRanges. Applied BEFORE scoring.
+     */
+    forbiddenFor: {
+        /** WRONG for these design personalities */
+        personalities?: DesignPersonality[];
+        /** WRONG when complexity exceeds this value (0.0–1.0) */
+        complexityAbove?: number;
+        /** WRONG when complexity is below this value (0.0–1.0) */
+        complexityBelow?: number;
+    };
+    /**
+     * Scoring boost fields — ALL additive, applied within the eligible pool.
      * Any of these can be combined; missing them just means no bonus.
      */
     fitsPersonality?: DesignPersonality[];
@@ -95,6 +110,7 @@ export const ORGANISM_LIBRARY_CATALOG: OrganismLibraryEntry[] = [
         importExample: `import { Button, Dialog, TextField } from 'react-aria-components';`,
         minimalExample: `<Button onPress={() => {}}>Click me</Button>`,
         combinableWith: ["@floating-ui/react", "tailwindcss", "@vanilla-extract/css"],
+        forbiddenFor: {},
         fitsPersonality: ["clinical", "corporate", "balanced"],
         fitsEdge: ["sharp", "techno", "chiseled"],
         fitsMotion: ["none", "spring", "step"],
@@ -122,6 +138,7 @@ export const ORGANISM_LIBRARY_CATALOG: OrganismLibraryEntry[] = [
         importExample: `import { Dialog, DatePicker, Select } from '@ark-ui/react';`,
         minimalExample: `<Dialog.Root>\n  <Dialog.Trigger>Open</Dialog.Trigger>\n  <Dialog.Content>Content</Dialog.Content>\n</Dialog.Root>`,
         combinableWith: ["@pandacss/dev", "@radix-ui/react-primitive", "@use-gesture/react"],
+        forbiddenFor: {},
         fitsPersonality: ["balanced", "bold", "expressive"],
         fitsEdge: ["organic", "soft", "hand_drawn"],
         fitsMotion: ["spring", "elastic", "step"],
@@ -149,6 +166,7 @@ export const ORGANISM_LIBRARY_CATALOG: OrganismLibraryEntry[] = [
         importExample: `import { Dialog, Menu, Transition } from '@headlessui/react';`,
         minimalExample: `<Menu>\n  <Menu.Button>Options</Menu.Button>\n  <Menu.Items>\n    <Menu.Item>{({ active }) => <a className={active ? 'bg-blue' : ''}>Edit</a>}</Menu.Item>\n  </Menu.Items>\n</Menu>`,
         combinableWith: ["tailwindcss", "@dnd-kit/core", "react-aria-components"],
+        forbiddenFor: {},
         fitsPersonality: ["balanced", "bold", "expressive"],
         fitsEdge: ["soft", "organic", "sharp"],
         fitsMotion: ["spring", "none"],
@@ -176,6 +194,7 @@ export const ORGANISM_LIBRARY_CATALOG: OrganismLibraryEntry[] = [
         importExample: `import * as Dialog from '@radix-ui/react-dialog';\nimport * as DropdownMenu from '@radix-ui/react-dropdown-menu';`,
         minimalExample: `<Dialog.Root>\n  <Dialog.Trigger asChild><button>Open</button></Dialog.Trigger>\n  <Dialog.Portal>\n    <Dialog.Overlay />\n    <Dialog.Content>...</Dialog.Content>\n  </Dialog.Portal>\n</Dialog.Root>`,
         combinableWith: ["@floating-ui/react", "tailwindcss", "css_modules", "@vanilla-extract/css", "@use-gesture/react"],
+        forbiddenFor: {},
         fitsPersonality: ["clinical", "corporate", "balanced", "bold", "expressive", "disruptive"],
         fitsEdge: ["sharp", "soft", "organic", "techno", "brutalist", "serrated", "hand_drawn", "chiseled"],
         fitsMotion: ["none", "spring", "step", "glitch", "magnetic", "inertia", "elastic", "particle"],
@@ -205,6 +224,7 @@ export const ORGANISM_LIBRARY_CATALOG: OrganismLibraryEntry[] = [
         importExample: `import { useFloating, autoUpdate, offset, flip, shift } from '@floating-ui/react';`,
         minimalExample: `const { refs, floatingStyles } = useFloating({\n  middleware: [offset(10), flip(), shift()],\n  whileElementsMounted: autoUpdate,\n});\n<div ref={refs.setReference}>Trigger</div>\n<div ref={refs.setFloating} style={floatingStyles}>Tooltip</div>`,
         combinableWith: ["react-aria-components", "@radix-ui/react-primitive", "@ark-ui/react", "@headlessui/react", "@chakra-ui/react"],
+        forbiddenFor: {},
         fitsPersonality: ["clinical", "corporate", "balanced", "bold", "expressive", "disruptive"],
         fitsEdge: ["sharp", "soft", "organic", "techno", "brutalist", "serrated", "hand_drawn", "chiseled"],
         fitsMotion: ["none", "spring", "step", "glitch", "magnetic", "inertia", "elastic", "particle"],
@@ -234,6 +254,7 @@ export const ORGANISM_LIBRARY_CATALOG: OrganismLibraryEntry[] = [
         importExample: `import { Theme, Button, Card, Flex } from '@radix-ui/themes';\nimport '@radix-ui/themes/styles.css';`,
         minimalExample: `<Theme accentColor="blue" radius="medium" scaling="100%">\n  <Card><Flex gap="2"><Button>Action</Button></Flex></Card>\n</Theme>`,
         combinableWith: ["@radix-ui/react-primitive", "tailwindcss", "@use-gesture/react", "@tanstack/react-virtual"],
+        forbiddenFor: {},
         fitsPersonality: ["balanced", "bold", "corporate"],
         fitsEdge: ["soft", "sharp", "chiseled"],
         fitsMotion: ["spring", "none", "step"],
@@ -261,6 +282,7 @@ export const ORGANISM_LIBRARY_CATALOG: OrganismLibraryEntry[] = [
         importExample: `import { Button, Modal, TextInput, MantineProvider } from '@mantine/core';`,
         minimalExample: `<MantineProvider theme={{ primaryColor: 'blue' }}>\n  <Button variant="filled">Click</Button>\n  <TextInput label="Name" placeholder="Enter name" />\n</MantineProvider>`,
         combinableWith: ["@mantine/hooks", "@mantine/notifications", "@mantine/dates", "@tanstack/react-virtual", "@dnd-kit/core"],
+        forbiddenFor: {},
         fitsPersonality: ["balanced", "expressive", "bold"],
         fitsEdge: ["soft", "organic", "hand_drawn", "techno"],
         fitsMotion: ["spring", "elastic", "inertia"],
@@ -288,6 +310,7 @@ export const ORGANISM_LIBRARY_CATALOG: OrganismLibraryEntry[] = [
         importExample: `import { Button, Box, Text, ChakraProvider } from '@chakra-ui/react';`,
         minimalExample: `<ChakraProvider>\n  <Box p="4" bg="gray.100"><Text fontSize="xl">Hello</Text></Box>\n</ChakraProvider>`,
         combinableWith: ["@chakra-ui/icons", "@use-gesture/react", "@tanstack/react-virtual", "recharts"],
+        forbiddenFor: {},
         fitsPersonality: ["balanced", "expressive", "bold"],
         fitsEdge: ["soft", "organic", "techno"],
         fitsMotion: ["spring", "elastic", "step"],
@@ -310,11 +333,13 @@ export const ORGANISM_LIBRARY_CATALOG: OrganismLibraryEntry[] = [
         devxScore: 0.87,
         tiers: ["any"],
         ssrSafe: true,
-        typescript: "not-needed" as any,
+        typescript: "not-needed",
         installCmd: "npm i -D daisyui",
         importExample: `// tailwind.config.ts\nplugins: [require('daisyui')],\ndaisyui: { themes: ['light', 'dark'] }`,
         minimalExample: `<button class="btn btn-primary">Click</button>\n<div class="card"><div class="card-body"><h2 class="card-title">Card</h2></div></div>`,
         combinableWith: ["tailwindcss", "@headlessui/react", "@floating-ui/react", "@dnd-kit/core"],
+        // Too playful/limited for high-complexity enterprise applications
+        forbiddenFor: { complexityAbove: 0.80 },
         fitsPersonality: ["bold", "expressive", "disruptive", "balanced"],
         fitsEdge: ["organic", "soft", "hand_drawn", "serrated"],
         fitsMotion: ["none", "step"],
@@ -344,6 +369,8 @@ export const ORGANISM_LIBRARY_CATALOG: OrganismLibraryEntry[] = [
         importExample: `// No import — native HTML with genome CSS variables`,
         minimalExample: `<button\n  role="button"\n  aria-pressed="false"\n  style={{ background: 'var(--color-primary)', borderRadius: 'var(--radius-component)' }}\n>Click</button>`,
         combinableWith: ["@floating-ui/react", "tinykeys", "focus-trap-react", "@tanstack/react-virtual", "@dnd-kit/core"],
+        // Raw HTML+ARIA insufficient infrastructure for high-complexity apps
+        forbiddenFor: { complexityAbove: 0.75 },
         fitsPersonality: ["clinical", "corporate", "disruptive"],
         fitsEdge: ["sharp", "brutalist", "chiseled", "techno"],
         fitsMotion: ["none", "glitch"],
@@ -371,6 +398,8 @@ export interface OrganismGenomeInput {
     adaptation: AdaptationAxis;
     personality: DesignPersonality;
     hasFauna: boolean;
+    /** Used as hard-exclusion gate in forbiddenFor — default 0.5 if not provided */
+    complexity?: number;
 }
 
 export interface OrganismSelection {
@@ -380,10 +409,26 @@ export interface OrganismSelection {
 }
 
 /**
- * Score-ranked selection — chromosome matches add bonuses, nothing is excluded.
- * Same chromosomes always produce the same ranking.
+ * Score-ranked selection within the eligible pool.
+ *
+ * 1. forbiddenFor gates psychologically WRONG libraries (hard exclusion).
+ * 2. Within eligible pool, L1+L2 chromosome bonuses differentiate candidates.
+ * 3. Same chromosomes always produce the same ranking.
  */
 export function selectOrganismLibrary(input: OrganismGenomeInput): OrganismSelection {
+    const complexity = input.complexity ?? 0.5;
+
+    // Hard exclusion gate — same philosophy as sector forbidden hue ranges
+    const eligible = ORGANISM_LIBRARY_CATALOG.filter(lib => {
+        const f = lib.forbiddenFor;
+        if (f.personalities?.includes(input.personality)) return false;
+        if (f.complexityAbove !== undefined && complexity > f.complexityAbove) return false;
+        if (f.complexityBelow !== undefined && complexity < f.complexityBelow) return false;
+        return true;
+    });
+
+    const pool = eligible.length > 0 ? eligible : ORGANISM_LIBRARY_CATALOG;
+
     function score(lib: OrganismLibraryEntry): number {
         let s = lib.devxScore * 50; // 0–50 base from devx quality
 
@@ -401,14 +446,12 @@ export function selectOrganismLibrary(input: OrganismGenomeInput): OrganismSelec
         if (lib.fitsAdaptation?.includes(input.adaptation))     s += 10;
 
         // Tier relevance
-        const hasFaunaBonus = input.hasFauna &&
-            (lib.tiers.includes("fauna") || lib.tiers.includes("any"));
-        if (hasFaunaBonus) s += 5;
+        if (input.hasFauna && (lib.tiers.includes("fauna") || lib.tiers.includes("any"))) s += 5;
 
         return s;
     }
 
-    const ranked = [...ORGANISM_LIBRARY_CATALOG]
+    const ranked = [...pool]
         .map(lib => ({ lib, score: score(lib) }))
         .sort((a, b) => b.score - a.score);
 

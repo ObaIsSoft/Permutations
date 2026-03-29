@@ -1,12 +1,14 @@
 /**
  * CSS Styling System Catalog
  *
- * Chromosome-driven selection — mirrors animation-catalog and state-catalog.
- * Maps genome EdgeStyle, TypeCharge, complexity, and sector character
- * to the most appropriate CSS styling approach.
+ * Chromosome-driven selection — mirrors the sector color system.
  *
- * Selection is deterministic given genome chromosomes — same genome always
- * produces the same recommendation.
+ * Philosophy: forbiddenFor defines what is psychologically WRONG for a styling approach.
+ * The genome hash selects freely from all remaining eligible libraries.
+ * Same approach as sector forbidden hue ranges — no whitelist, only exclusions.
+ *
+ * Most styling libraries are valid for most genomes. Only hard mismatches are blocked
+ * (e.g., runtime CSS-in-JS for trivially simple products, studio tooling for basic apps).
  */
 // ── Catalog ───────────────────────────────────────────────────────────────────
 export const STYLING_LIBRARY_CATALOG = [
@@ -23,10 +25,9 @@ export const STYLING_LIBRARY_CATALOG = [
         installCmd: "# no install required",
         importExample: `/* styles.css */\n.button { background: var(--color-primary); }`,
         minimalExample: `.card {\n  background: var(--color-surface-1);\n  border-radius: var(--radius-component);\n  font-family: var(--font-display);\n}`,
-        complexity: "any",
         ssrSafe: true,
         typescript: "not-needed",
-        fitsPersonality: ["clinical", "corporate"]
+        forbiddenFor: {}, // Valid for every genome — pure CSS is never wrong
     },
     // ── CSS Modules ──────────────────────────────────────────────────────────
     {
@@ -41,10 +42,9 @@ export const STYLING_LIBRARY_CATALOG = [
         installCmd: "# built into Vite and Next.js",
         importExample: `import styles from './Component.module.css';`,
         minimalExample: `/* Component.module.css */\n.card {\n  background: var(--color-surface-1);\n  border-radius: var(--radius-component);\n}\n\n/* Component.tsx */\n<div className={styles.card}>`,
-        complexity: "any",
         ssrSafe: true,
         typescript: "supported",
-        fitsPersonality: ["clinical", "corporate", "balanced"]
+        forbiddenFor: {}, // Valid for every genome
     },
     // ── Tailwind CSS ─────────────────────────────────────────────────────────
     {
@@ -59,11 +59,9 @@ export const STYLING_LIBRARY_CATALOG = [
         installCmd: "npm i -D tailwindcss postcss autoprefixer && npx tailwindcss init -p",
         importExample: `// tailwind.config.ts\ntheme: { extend: { colors: { primary: 'var(--color-primary)' } } }`,
         minimalExample: `<div className="bg-surface-1 rounded-component font-display text-text-primary">`,
-        complexity: "any",
         ssrSafe: true,
         typescript: "first-class",
-        fitsPersonality: ["balanced", "bold", "expressive"],
-        fitsEdge: ["sharp", "soft", "organic"]
+        forbiddenFor: {}, // Valid for every genome
     },
     // ── CSS-in-JS (runtime) ──────────────────────────────────────────────────
     {
@@ -78,10 +76,12 @@ export const STYLING_LIBRARY_CATALOG = [
         installCmd: "npm i styled-components",
         importExample: `import styled from 'styled-components';`,
         minimalExample: `const Card = styled.div\`\n  background: \${p => p.theme.colors.surface1};\n  border-radius: \${p => p.theme.radius.component}px;\n\`;`,
-        complexity: "medium",
         ssrSafe: true,
         typescript: "first-class",
-        fitsPersonality: ["bold", "expressive"]
+        // Runtime CSS-in-JS is overkill for trivially simple products
+        forbiddenFor: {
+            complexityBelow: 0.25,
+        },
     },
     {
         name: "Emotion",
@@ -95,10 +95,12 @@ export const STYLING_LIBRARY_CATALOG = [
         installCmd: "npm i @emotion/react @emotion/styled",
         importExample: `/** @jsxImportSource @emotion/react */\nimport { css } from '@emotion/react';`,
         minimalExample: `<div css={css\`\n  background: var(--color-surface-1);\n  border-radius: var(--radius-component);\n\`}>`,
-        complexity: "medium",
         ssrSafe: true,
         typescript: "first-class",
-        fitsPersonality: ["bold", "expressive", "disruptive"]
+        // Runtime CSS-in-JS is overkill for trivially simple products
+        forbiddenFor: {
+            complexityBelow: 0.25,
+        },
     },
     // ── Zero-runtime CSS-in-JS ────────────────────────────────────────────────
     {
@@ -113,11 +115,12 @@ export const STYLING_LIBRARY_CATALOG = [
         installCmd: "npm i @vanilla-extract/css @vanilla-extract/vite-plugin",
         importExample: `import { style, createTheme } from '@vanilla-extract/css';`,
         minimalExample: `export const card = style({\n  background: vars.color.surface1,\n  borderRadius: vars.radius.component\n});`,
-        complexity: "high",
         ssrSafe: true,
         typescript: "first-class",
-        fitsPersonality: ["clinical", "corporate", "balanced"],
-        fitsCharge: ["geometric", "grotesque", "monospace"]
+        // Build-time setup complexity is wrong for simple/low-complexity products
+        forbiddenFor: {
+            complexityBelow: 0.35,
+        },
     },
     {
         name: "Linaria",
@@ -131,10 +134,12 @@ export const STYLING_LIBRARY_CATALOG = [
         installCmd: "npm i @linaria/core @linaria/react @linaria/vite",
         importExample: `import { css, styled } from '@linaria/core';`,
         minimalExample: `const card = css\`\n  background: var(--color-surface-1);\n  border-radius: var(--radius-component);\n\`;`,
-        complexity: "high",
         ssrSafe: true,
         typescript: "supported",
-        fitsPersonality: ["balanced", "bold"]
+        // Build-time complexity wrong for simple products
+        forbiddenFor: {
+            complexityBelow: 0.35,
+        },
     },
     // ── Component libraries ───────────────────────────────────────────────────
     {
@@ -149,11 +154,9 @@ export const STYLING_LIBRARY_CATALOG = [
         installCmd: "npx shadcn-ui@latest init",
         importExample: `import { Button } from '@/components/ui/button';`,
         minimalExample: `<Button variant="default" className="bg-primary text-primary-foreground">`,
-        complexity: "any",
         ssrSafe: true,
         typescript: "first-class",
-        fitsPersonality: ["balanced", "bold"],
-        fitsEdge: ["sharp", "soft"]
+        forbiddenFor: {}, // Valid for every genome — genome tokens override shadcn styles
     },
     {
         name: "Radix UI (headless)",
@@ -167,10 +170,9 @@ export const STYLING_LIBRARY_CATALOG = [
         installCmd: "npm i @radix-ui/react-dialog @radix-ui/react-dropdown-menu ...",
         importExample: `import * as Dialog from '@radix-ui/react-dialog';`,
         minimalExample: `<Dialog.Root>\n  <Dialog.Trigger>Open</Dialog.Trigger>\n  <Dialog.Content className={styles.dialog}>...</Dialog.Content>\n</Dialog.Root>`,
-        complexity: "any",
         ssrSafe: true,
         typescript: "first-class",
-        fitsPersonality: ["clinical", "corporate", "balanced", "bold", "expressive", "disruptive"]
+        forbiddenFor: {}, // Headless = valid for every genome
     },
     // ── SASS / SCSS ───────────────────────────────────────────────────────────
     {
@@ -185,29 +187,40 @@ export const STYLING_LIBRARY_CATALOG = [
         installCmd: "npm i -D sass",
         importExample: `@use 'tokens' as *;\n.card { background: var(--color-surface-1); }`,
         minimalExample: `.card {\n  background: var(--color-surface-1);\n  border-radius: var(--radius-component);\n\n  &:hover {\n    background: var(--color-surface-2);\n  }\n}`,
-        complexity: "any",
         ssrSafe: true,
         typescript: "not-needed",
-        fitsPersonality: ["clinical", "corporate", "balanced"]
+        forbiddenFor: {}, // Valid for every genome
     }
 ];
 // ── Selector ──────────────────────────────────────────────────────────────────
 /**
- * Select the best-fit styling system for a given personality + edge style.
- * Returns primary recommendation + one alternative.
+ * Select styling library using exclude logic — same philosophy as sector forbidden hue ranges.
+ *
+ * 1. Filter out libraries that are psychologically WRONG for this genome's context.
+ * 2. Sort eligible pool by devxScore descending (quality signal).
+ * 3. Return primary (top by devxScore) and alternative (second by devxScore).
+ *
+ * devxScore acts as a quality-weighted bias within the eligible pool,
+ * analogous to saturationBase biasing within the allowed hue space.
  */
 export function selectStylingLibrary(personality, edgeStyle, complexityScore) {
-    const candidates = STYLING_LIBRARY_CATALOG.filter(lib => {
-        const personalityOk = !lib.fitsPersonality || lib.fitsPersonality.includes(personality);
-        const edgeOk = !lib.fitsEdge || lib.fitsEdge.includes(edgeStyle);
-        const complexityOk = lib.complexity === "any" ||
-            (lib.complexity === "low" && complexityScore <= 0.35) ||
-            (lib.complexity === "medium" && complexityScore > 0.25 && complexityScore <= 0.70) ||
-            (lib.complexity === "high" && complexityScore > 0.55);
-        return personalityOk && edgeOk && complexityOk;
+    const eligible = STYLING_LIBRARY_CATALOG.filter(lib => {
+        const f = lib.forbiddenFor;
+        if (f.personalities?.includes(personality))
+            return false;
+        if (f.edgeStyles?.includes(edgeStyle))
+            return false;
+        if (f.complexityAbove !== undefined && complexityScore > f.complexityAbove)
+            return false;
+        if (f.complexityBelow !== undefined && complexityScore < f.complexityBelow)
+            return false;
+        return true;
     });
-    const sorted = candidates.sort((a, b) => b.devxScore - a.devxScore);
-    const primary = sorted[0] ?? STYLING_LIBRARY_CATALOG[0];
-    const alternative = sorted[1] ?? STYLING_LIBRARY_CATALOG[1];
+    // Fallback: if all excluded (shouldn't happen), use full catalog
+    const pool = eligible.length > 0 ? eligible : STYLING_LIBRARY_CATALOG;
+    // Sort by devxScore — highest quality eligible library wins
+    const sorted = [...pool].sort((a, b) => b.devxScore - a.devxScore);
+    const primary = sorted[0];
+    const alternative = sorted[1] ?? sorted[0];
     return { primary, alternative };
 }

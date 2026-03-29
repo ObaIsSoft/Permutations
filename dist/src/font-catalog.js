@@ -12,8 +12,8 @@
  *   fontshare  — Fontshare (independent catalog, rich semantic tags)
  *   none       — No CDN. Font name is emitted in CSS, user loads it themselves.
  *
- * When a provider's API is unreachable, falls back to hardcoded lists so
- * genome generation never fails.
+ * When a provider's API is unreachable, warmCache() rejects and the server
+ * exits — genome generation requires a live font catalog.
  */
 const FETCH_TIMEOUT_MS = 30_000; // Fontshare returns ~830KB; Google ~500KB
 const TTL_MS = 24 * 60 * 60 * 1000;
@@ -38,16 +38,22 @@ const CHARGE_TAGS = {
     monospace: ["monospace"],
     expressive: ["display"],
 };
-// Used when a provider's API is unreachable or the cache is cold
-const FALLBACK_FONTS = {
-    geometric: ["Space Grotesk", "DM Sans", "Outfit", "Plus Jakarta Sans", "Manrope", "Urbanist", "Barlow"],
-    grotesque: ["Inter", "Public Sans", "IBM Plex Sans", "Karla", "Figtree", "Hanken Grotesk", "Chivo"],
-    humanist: ["Fraunces", "Playfair Display", "Cormorant", "Lora", "Libre Baskerville", "Spectral"],
-    transitional: ["Libre Baskerville", "EB Garamond", "Source Serif 4", "Newsreader", "Literata"],
-    slab_serif: ["Arvo", "Roboto Slab", "Zilla Slab", "Josefin Slab", "BioRhyme"],
-    monospace: ["Space Mono", "JetBrains Mono", "Fira Code", "IBM Plex Mono", "Source Code Pro"],
-    expressive: ["Syne", "Unbounded", "Bungee", "Righteous", "Yeseva One"],
-};
+/**
+ * Fonts excluded from ALL selections — overused to the point of being slop.
+ * Same philosophy as forbidden hue ranges: these aren't wrong for every context,
+ * but they're so ubiquitous that the anti-slop pattern detector would flag them.
+ *
+ * Applied at getFonts() time — removed from live API results.
+ * The genome hash then picks freely from everything that remains.
+ */
+const SLOP_FONTS = new Set([
+    "Inter", // #1 SaaS slop font — anti-slop detector explicitly blocks "Inter + blue gradient"
+    "Roboto", // Google's default — 1B+ uses, instantly generic
+    "Open Sans", // Second most ubiquitous, no character
+    "Lato", // Overused corporate SaaS fallback
+    "Noto Sans", // System default fallback — signals no font decision was made
+    "Noto Serif", // Same issue as Noto Sans
+]);
 // "Sans Serif" → "sans-serif", "SANS_SERIF" → "sans-serif", "Display" → "display"
 const normalizeCategory = (cat) => cat.trim().toLowerCase().replace(/[\s_]+/g, "-").replace(/^-|-$/g, "");
 // "Serif, Display" → ["serif", "display"] — handles Fontshare composite categories
@@ -56,30 +62,37 @@ export class FontCatalogService {
     cache = new Map();
     inflight = new Map();
     /**
-     * Fire-and-forget pre-warm at server startup.
-     * Failures are silent — fallbacks take over.
+     * Pre-warm the font catalog at server startup.
+     * Returns a promise that resolves when all providers are loaded.
+     * Rejects if any provider fails — genome generation requires the catalog.
      */
-    warmCache(providers) {
-        for (const p of providers) {
-            if (p !== "none")
-                this.load(p).catch(() => { });
-        }
+    async warmCache(providers) {
+        const loads = providers
+            .filter(p => p !== "none")
+            .map(p => this.load(p));
+        await Promise.all(loads);
     }
     /**
      * Synchronous lookup — returns cached font names filtered by charge.
-     * Falls back to hardcoded list if the catalog hasn't been fetched yet.
+     * Throws if the catalog hasn't been loaded yet — call warmCache() at startup
+     * and await the returned promises before generating genomes.
      */
     getFonts(charge, provider) {
         // "none" means no CDN — use bunny catalog for name selection
         const src = provider === "none" ? "bunny" : provider;
         const cached = this.cache.get(src);
-        if (!cached || cached.fonts.length === 0)
-            return FALLBACK_FONTS[charge] ?? FALLBACK_FONTS.geometric;
+        if (!cached || cached.fonts.length === 0) {
+            throw new Error(`Font catalog not loaded for provider "${src}" — ensure warmCache() completed before genome generation`);
+        }
         const tags = CHARGE_TAGS[charge] ?? [];
-        const filtered = cached.fonts.filter(f => f.tags.some(t => tags.includes(t)));
-        return filtered.length > 0
-            ? filtered.map(f => f.name)
-            : (FALLBACK_FONTS[charge] ?? FALLBACK_FONTS.geometric);
+        const filtered = cached.fonts
+            .filter(f => f.tags.some(t => tags.includes(t)))
+            .filter(f => !SLOP_FONTS.has(f.name));
+        if (filtered.length === 0) {
+            throw new Error(`No fonts found for charge "${charge}" in provider "${src}" after slop exclusion — ` +
+                `check CHARGE_TAGS mapping and SLOP_FONTS list`);
+        }
+        return filtered.map(f => f.name);
     }
     // ── Private ───────────────────────────────────────────────────────────────
     async load(provider) {
@@ -96,9 +109,8 @@ export class FontCatalogService {
             return fonts;
         })
             .catch(err => {
-            console.warn(`[FontCatalog] ${provider} fetch failed: ${err.message}`);
             this.inflight.delete(provider);
-            return [];
+            throw new Error(`[FontCatalog] ${provider} fetch failed: ${err.message}`);
         });
         this.inflight.set(provider, promise);
         return promise;

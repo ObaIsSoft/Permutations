@@ -1,7 +1,8 @@
 /**
  * Interaction Library Catalog
  *
- * Chromosome-driven scoring — no hard exclusions.
+ * Chromosome-driven selection — forbiddenFor gates psychologically wrong matches,
+ * then L1+L2 chromosome scoring differentiates within the eligible pool.
  * Covers: drag-drop, gestures, virtual scroll, keyboard, focus management.
  *
  * Multiple interaction libraries can and should be combined — this catalog
@@ -30,6 +31,7 @@ export const INTERACTION_LIBRARY_CATALOG = [
         importExample: `import { DndContext, useDraggable, useDroppable, useSortable } from '@dnd-kit/core';`,
         minimalExample: `<DndContext onDragEnd={handleDragEnd}>\n  <SortableContext items={items}>\n    {items.map(id => <SortableItem key={id} id={id} />)}\n  </SortableContext>\n</DndContext>`,
         combinableWith: ["@use-gesture/react", "@tanstack/react-virtual", "@tanstack/react-table", "framer-motion"],
+        forbiddenFor: { physics: ["none"] },
         fitsPersonality: ["balanced", "bold", "expressive", "disruptive"],
         fitsMotion: ["spring", "elastic", "inertia", "magnetic", "particle"],
         fitsSuccession: ["mid", "climax", "post-climax"],
@@ -54,6 +56,7 @@ export const INTERACTION_LIBRARY_CATALOG = [
         importExample: `import { draggable, dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';`,
         minimalExample: `draggable({ element: myElement });\ndropTargetForElements({ element: dropZone, onDrop: ({ source }) => console.log(source.data) });`,
         combinableWith: ["@atlaskit/pragmatic-drag-and-drop-hitbox", "@tanstack/react-virtual"],
+        forbiddenFor: {},
         fitsPersonality: ["clinical", "corporate", "balanced"],
         fitsMotion: ["none", "step", "spring"],
         fitsSuccession: ["early", "mid", "climax", "post-climax"],
@@ -79,6 +82,7 @@ export const INTERACTION_LIBRARY_CATALOG = [
         importExample: `import { useDrag, usePinch, useScroll, useGesture } from '@use-gesture/react';`,
         minimalExample: `const bind = useDrag(({ offset: [x, y] }) => api.start({ x, y }));\n<div {...bind()} style={{ touchAction: 'none' }}>Drag me</div>`,
         combinableWith: ["@react-spring/web", "framer-motion", "@dnd-kit/core", "@floating-ui/react"],
+        forbiddenFor: { physics: ["none", "step"] },
         fitsPersonality: ["bold", "expressive", "disruptive", "balanced"],
         fitsMotion: ["spring", "elastic", "inertia", "magnetic", "particle"],
         fitsSuccession: ["mid", "climax", "post-climax", "disturbed"],
@@ -104,6 +108,7 @@ export const INTERACTION_LIBRARY_CATALOG = [
         importExample: `import { useVirtualizer } from '@tanstack/react-virtual';`,
         minimalExample: `const rowVirtualizer = useVirtualizer({\n  count: rows.length,\n  getScrollElement: () => parentRef.current,\n  estimateSize: () => 35,\n});\n{rowVirtualizer.getVirtualItems().map(row => <div key={row.key}>...</div>)}`,
         combinableWith: ["@tanstack/react-table", "@dnd-kit/core", "recharts", "@nivo/core"],
+        forbiddenFor: {},
         fitsPersonality: ["clinical", "corporate", "balanced", "bold"],
         fitsMotion: ["none", "spring", "step", "inertia"],
         fitsSuccession: ["mid", "climax", "post-climax"],
@@ -128,6 +133,7 @@ export const INTERACTION_LIBRARY_CATALOG = [
         importExample: `import { VList, VGrid } from 'virtua';`,
         minimalExample: `<VList style={{ height: '100%' }}>\n  {items.map(item => <div key={item.id}>{item.name}</div>)}\n</VList>`,
         combinableWith: ["@dnd-kit/core", "recharts"],
+        forbiddenFor: {},
         fitsPersonality: ["clinical", "corporate", "balanced"],
         fitsMotion: ["none", "step", "spring"],
         fitsSuccession: ["pioneer", "early", "mid", "climax"],
@@ -153,6 +159,7 @@ export const INTERACTION_LIBRARY_CATALOG = [
         importExample: `import tinykeys from 'tinykeys';`,
         minimalExample: `tinykeys(window, {\n  '$mod+k': e => { e.preventDefault(); openSearch(); },\n  'g h':   () => navigate('/'),\n  'Shift+?': () => openHelp(),\n});`,
         combinableWith: ["focus-trap-react", "@ark-ui/react", "react-aria-components"],
+        forbiddenFor: {},
         fitsPersonality: ["clinical", "corporate", "balanced", "bold", "expressive", "disruptive"],
         fitsMotion: ["none", "spring", "step", "glitch"],
         fitsSuccession: ["early", "mid", "climax", "post-climax"],
@@ -177,6 +184,7 @@ export const INTERACTION_LIBRARY_CATALOG = [
         importExample: `import hotkeys from 'hotkeys-js';`,
         minimalExample: `hotkeys('ctrl+s, command+s', (e) => { e.preventDefault(); save(); });\nhotkeys('esc', 'modal', () => closeModal());`,
         combinableWith: ["focus-trap-react", "@headlessui/react"],
+        forbiddenFor: {},
         fitsPersonality: ["balanced", "bold", "corporate"],
         fitsMotion: ["none", "step"],
         fitsSuccession: ["mid", "climax"],
@@ -202,6 +210,7 @@ export const INTERACTION_LIBRARY_CATALOG = [
         importExample: `import FocusTrap from 'focus-trap-react';`,
         minimalExample: `<FocusTrap active={isOpen} focusTrapOptions={{ initialFocus: '#first-field' }}>\n  <dialog open={isOpen}>\n    <button id="first-field">Close</button>\n  </dialog>\n</FocusTrap>`,
         combinableWith: ["react-aria-components", "@ark-ui/react", "@radix-ui/react-dialog", "tinykeys"],
+        forbiddenFor: {},
         fitsPersonality: ["clinical", "corporate", "balanced", "bold", "expressive", "disruptive"],
         fitsMotion: ["none", "spring", "step", "glitch", "magnetic", "inertia", "elastic", "particle"],
         fitsSuccession: ["pioneer", "early", "mid", "climax", "post-climax", "disturbed"],
@@ -213,10 +222,25 @@ export const INTERACTION_LIBRARY_CATALOG = [
     },
 ];
 /**
- * Score-ranked selection — returns ALL libraries ranked by chromosome fit.
- * Caller picks as many as needed — no hard cutoff.
+ * Score-ranked selection within the eligible pool.
+ *
+ * 1. forbiddenFor gates psychologically WRONG libraries (hard exclusion).
+ * 2. Within eligible pool, L1+L2 chromosome bonuses differentiate candidates.
  */
 export function selectInteractionLibraries(input) {
+    const complexity = input.complexity ?? 0.5;
+    // Hard exclusion gate
+    const eligible = INTERACTION_LIBRARY_CATALOG.filter(lib => {
+        const f = lib.forbiddenFor;
+        if (f.physics?.includes(input.motionPhysics))
+            return false;
+        if (f.complexityAbove !== undefined && complexity > f.complexityAbove)
+            return false;
+        if (f.complexityBelow !== undefined && complexity < f.complexityBelow)
+            return false;
+        return true;
+    });
+    const pool = eligible.length > 0 ? eligible : INTERACTION_LIBRARY_CATALOG;
     function score(lib) {
         let s = lib.devxScore * 50;
         // L1
@@ -246,7 +270,7 @@ export function selectInteractionLibraries(input) {
             s += 15;
         return s;
     }
-    const ranked = [...INTERACTION_LIBRARY_CATALOG]
+    const ranked = [...pool]
         .map(lib => ({ lib, score: score(lib) }))
         .sort((a, b) => b.score - a.score)
         .map(r => r.lib);

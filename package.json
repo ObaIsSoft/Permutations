@@ -3,13 +3,13 @@
   "version": "1.0.0",
   "description": "Parametric Design Genome MCP Server",
   "type": "module",
-  "main": "dist/server.js",
+  "main": "dist/src/server.js",
   "bin": {
-    "genome": "./dist/server.js"
+    "genome": "./dist/src/server.js"
   },
   "scripts": {
     "build": "tsc",
-    "start": "node --env-file=.env dist/server.js",
+    "start": "node --env-file=.env dist/src/server.js",
     "dev": "tsc --watch",
     "test": "source .env && node tests/run-all.mjs",
     "test:intent": "source .env && node tests/intent-epigenetics.test.mjs",

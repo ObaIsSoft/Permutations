@@ -1,11 +1,11 @@
 # Genome Architecture
-## Three-Layer SHA-256 Genome Chain — v1.0.0
+## Four-Layer SHA-256 Genome Chain — v2.0.0
 
 ---
 
 ## Core Principle
 
-Genome is a **design constitution generator**. It produces three interlocking genomes — design, ecosystem, civilization — each deterministically derived from the previous via SHA-256 hash. The same seed always produces the same three genomes. Different seeds always produce distinct genomes at all three layers.
+Genome is a **design constitution generator**. It produces four interlocking genomes — creator, design, ecosystem, civilization — each deterministically derived from the previous via SHA-256 hash. The same seed always produces the same four genomes. Different seeds always produce distinct genomes at all four layers.
 
 **No vocabulary dependency.** Complexity tier is computed from structural product behavior (what the product *does*), not from keywords in the description.
 
@@ -443,6 +443,63 @@ The CSSGenerator automatically emits both. `.btn-primary` uses `--color-primary-
 
 ---
 
+## Library Selection Philosophy — forbiddenFor Pattern
+
+All library catalogs (animation, icon, chart, organism, interaction, state, styling) use the same **exclude-then-pick** pattern as sector forbidden hue ranges.
+
+### Philosophy
+
+A library with an empty `forbiddenFor` is valid for **every genome**. Only hard mismatches are excluded — visual weight conflicts, architectural mismatches, psychological wrong fits.
+
+```typescript
+// WRONG — whitelist scoring (old pattern, abandoned)
+// Any new EdgeStyle/MotionPhysics value not in fitsWith scores 0.
+// The "best" library is picked by max score — arbitrary for unknown values.
+fitsWith: { edgeStyles: ["sharp", "soft"], physics: ["spring", "ease"] }
+
+// RIGHT — exclusion logic (current pattern)
+// Define only what is psychologically WRONG. Hash picks freely from the rest.
+forbiddenFor: { edgeStyles: ["blob", "hand_drawn"], physics: ["none"] }
+```
+
+### How it works
+
+```typescript
+const eligible = CATALOG.filter(lib => {
+    const f = lib.forbiddenFor;
+    if (f.edgeStyles?.includes(edgeStyle)) return false;   // wrong visual weight
+    if (f.typeCharges?.includes(typeCharge)) return false; // wrong character
+    if (f.sectors?.includes(sector)) return false;         // psychological mismatch
+    return true;  // everything not explicitly forbidden is valid
+});
+
+// Fallback: if somehow all excluded, use full catalog
+const pool = eligible.length > 0 ? eligible : CATALOG;
+return pool[dnaHashByte % pool.length];
+```
+
+### Font Catalog — fail-fast, no fallbacks
+
+`FontCatalogService` fetches live catalogs (Fontshare / Google / Bunny) at server startup.
+
+- `warmCache()` — async, must complete before genome generation. `process.exit(1)` on failure.
+- `getFonts()` — throws if the cache is cold. No hardcoded fallback fonts.
+- SLOP_FONTS — Inter, Roboto, Open Sans, Lato, Noto Sans, Noto Serif — excluded from all selections.
+
+### Catalog summary
+
+| Catalog | Key exclusion axes |
+|---|---|
+| `animation-catalog.ts` | `physics`, `sectors`, `complexityAbove/Below` |
+| `icon-catalog.ts` | `edgeStyles`, `typeCharges`, `sectors` |
+| `chart-catalog.ts` | `complexityBelow` (D3/Visx require high complexity) |
+| `organism-catalog.ts` | `personalities`, `complexityAbove/Below` |
+| `interaction-catalog.ts` | `motionPhysics`, `personalities`, `complexityAbove/Below` |
+| `state-catalog.ts` | `topologies`, `complexityAbove/Below` |
+| `styling-catalog.ts` | `personalities`, `edgeStyles`, `complexityAbove/Below` |
+
+---
+
 ## Complexity Tiers (14 levels)
 
 ### Ecosystem Tiers (0.00–0.80)
@@ -517,30 +574,65 @@ Epistasis rules also enforce cross-chromosome consistency:
 
 ```
 src/
-├── server.ts                    — MCP server, 8 tools
+├── server.ts                          — MCP server, 11 tools
+│
 ├── genome/
-│   ├── sequencer.ts             — L1 DesignGenome sequencer
-│   ├── types.ts                 — DesignGenome types, ContentTraits
-│   ├── sector-profiles.ts       — 23 sector forbidden ranges + weights
-│   ├── complexity-analyzer.ts   — Tier computation (StructuralProps-first)
-│   ├── ecosystem.ts             — EcosystemGenerator (organism naming)
-│   ├── ecosystem-types.ts       — EcosystemGenome + chromosome types
-│   ├── ecosystem-sequencer.ts   — L2 EcosystemGenome sequencer + gravity
-│   ├── civilization.ts          — CivilizationGenerator (architecture)
-│   ├── civilization-types.ts    — CivilizationGenome + chromosome types
-│   ├── civilization-sequencer.ts — L3 CivilizationGenome sequencer + gravity
-│   ├── archetype-biases.ts      — Archetype gravity helpers
-│   └── font-catalog.ts          — Live font catalog service (Fontshare/Google/Bunny)
+│   ├── sequencer.ts                   — L1 DesignGenome sequencer + entropy pool
+│   ├── types.ts                       — DesignGenome types, ContentTraits
+│   ├── sector-profiles.ts             — 23 sector forbidden ranges + weights
+│   ├── complexity-analyzer.ts         — Tier computation (StructuralProps-first)
+│   ├── constraint-solver.ts           — Set-theoretic constraint solver
+│   ├── constraint-solver-v2.ts        — Distance-graph compromise detection
+│   ├── entropy-pool.ts                — HKDF-style entropy expansion (unlimited bytes)
+│   ├── epigenetics.ts                 — Cross-chromosome epistasis rules
+│   ├── ecosystem.ts                   — EcosystemGenerator (organism naming)
+│   ├── ecosystem-types.ts             — EcosystemGenome + chromosome types
+│   ├── ecosystem-sequencer.ts         — L2 EcosystemGenome sequencer + gravity
+│   ├── civilization.ts                — CivilizationGenerator (architecture)
+│   ├── civilization-types.ts          — CivilizationGenome + chromosome types
+│   ├── civilization-sequencer.ts      — L3 CivilizationGenome sequencer + gravity
+│   ├── archetype-biases.ts            — Archetype gravity helpers
+│   ├── archetypes.ts                  — Archetype definitions
+│   ├── copy-patterns.ts               — Copy generation patterns
+│   ├── extractor-url.ts               — URL-based genome extraction (Playwright / fetch)
+│   └── index.ts                       — Public genome API exports
+│
+├── ── Library Catalogs (forbiddenFor pattern) ──
+├── font-catalog.ts                    — Live font catalog service (Fontshare/Google/Bunny)
+├── animation-catalog.ts               — Animation library selection (Framer Motion, GSAP, etc.)
+├── icon-catalog.ts                    — Icon library selection (Lucide, Heroicons, Tabler, etc.)
+├── chart-catalog.ts                   — Chart library selection (D3, Recharts, Visx, etc.)
+├── organism-catalog.ts                — UI component library selection (shadcn, MUI, Radix, etc.)
+├── interaction-catalog.ts             — Interaction library selection (react-spring, motion, etc.)
+├── state-catalog.ts                   — State management selection (Zustand, Jotai, XState, etc.)
+├── styling-catalog.ts                 — CSS styling system selection (Tailwind, CSS Modules, etc.)
+│
 ├── semantic/
-│   └── extractor.ts             — SemanticTraitExtractor + StructuralProps analysis
-├── css/
-│   └── generator.ts             — CSSGenerator — full page stylesheet from genome
-├── svg/
-│   └── generator.ts             — SVG biomarker generation
-├── webgl/
-│   └── generator.ts             — React Three Fiber component specs
-└── validation/
-    └── pattern-detector.ts      — AST-based slop pattern detection
+│   └── extractor.ts                   — SemanticTraitExtractor + StructuralProps analysis
+│
+├── css-generator.ts                   — CSSGenerator — full page stylesheet from genome
+│
+├── generators/
+│   ├── svg-generator.ts               — SVG biomarker generation
+│   ├── webgl-generator.ts             — React Three Fiber component specs
+│   ├── fx-generator.ts                — Visual FX layer generator
+│   ├── design-brief-generator.ts      — Design brief generation
+│   ├── format-generators.ts           — Figma/Style Dictionary export
+│   └── civilization-generators.ts     — Civilization architecture code generation
+│
+├── brief/
+│   └── generator.ts                   — LLM-powered design brief (no fallback)
+│
+├── bridge/
+│   └── persona-to-design.ts           — L0 Creator Persona → L1 genome bridge
+│
+├── creator/
+│   ├── generator.ts                   — L0 CreatorGenome sequencer (16 chromosomes)
+│   └── types.ts                       — CreatorGenome types
+│
+└── constraints/
+    ├── pattern-detector.ts            — AST-based slop pattern detection
+    └── ast-pattern-detector.ts        — AST parser for pattern violations
 ```
 
 ---
@@ -558,13 +650,15 @@ src/
 | Edge diversity | ✅ | effectivePlayfulness floor, sharpCeiling, proportional organicThreshold |
 | Motion diversity | ✅ | 25% hash-driven variance via b(30) — same sector, different seeds, different physics |
 | Dark mode safety | ✅ | darkModeHex at 58–74% lightness on all color paths |
-| forbiddenRanges | ✅ | All 23 sectors converted from hueRange prison to forbidden zone inversion |
-| Live font catalogs | ✅ | Fontshare (~100), Google Fonts (1000+), Bunny (mirrors Google) — 24h cache |
+| forbiddenRanges (color) | ✅ | All 23 sectors converted from hueRange prison to forbidden zone inversion |
+| forbiddenFor (libraries) | ✅ | All 7 catalogs use exclude-then-pick — no whitelists, no fallback lists |
+| Live font catalogs | ✅ | Fontshare (~100), Google Fonts (1000+), Bunny (mirrors Google) — 24h cache, fail-fast |
+| SLOP_FONTS | ✅ | Inter, Roboto, Open Sans, Lato, Noto Sans, Noto Serif excluded from all selections |
 | Anti-slop detection | ✅ | 5 pattern classes, runs automatically on every generate_design_genome |
-| 8-tool surface | ✅ | 14→8 tools, workflow-position descriptions, suggested_next dynamic guide |
+| 11-tool surface | ✅ | Full L0→L1→L2→L3 workflow + extract/format/update/validate tools |
 | 49 tests | ✅ | Determinism, uniqueness, sector-awareness, epistasis, ecosystem-civilization bridge |
 
 ---
 
-*Architecture: Three-layer SHA-256 genome chain — design, ecosystem, civilization*
-*v1.0.0 — March 2026*
+*Architecture: Four-layer SHA-256 genome chain — creator, design, ecosystem, civilization*
+*v2.0.0 — March 2026*
