@@ -251,7 +251,7 @@ export class GenomeSequencer {
         const ch23_content_depth = getForced('ch23_content_depth', {
             level: this.selectContentDepth(traits, primaryProfile),
             estimatedSections: this.estimateSections(traits),
-            hasHero: true,
+            hasHero,
             hasFeatures: traits.informationDensity > 0.4 || traits.conversionFocus > 0.3,
             hasCTA: traits.conversionFocus > 0.5,
             hasFAQ: traits.informationDensity > 0.6,
@@ -1045,7 +1045,8 @@ export class GenomeSequencer {
                 charge = this.pool.selectUniform(5, allCharges); // FIX 2: uniform selection
             }
         }
-        const provider = options?.fontProvider || "bunny";
+        const provider = options?.fontProvider ||
+            this.selectFromHash(b(6), ["bunny", "google", "fontshare", "bunny"]);
         const fontData = this.selectDisplayFont(b(5), charge, provider);
         // Tracking — hash-driven across full range when traits don't dominate
         const tracking = traits.informationDensity > 0.7
@@ -1090,7 +1091,8 @@ export class GenomeSequencer {
         else if (traits.informationDensity > 0.7) {
             charge = "grotesque"; // Dense content: high-legibility grotesque
         }
-        const provider = options?.fontProvider || "bunny";
+        const provider = options?.fontProvider ||
+            this.selectFromHash(b(8), ["bunny", "google", "fontshare", "bunny"]);
         const fontData = this.selectBodyFont(b(7), charge, provider);
         return {
             family: fontData.family,

@@ -78,9 +78,6 @@ export class CSSGenerator {
         }
         
         parts.push(this.generateBaseStyles(genome, indent, newline));
-        parts.push(this.generatePageSectionStyles(genome, indent, newline));
-        parts.push(this.generateHeroStyles(genome, indent, newline));
-        parts.push(this.generateTrustSignalStyles(genome, indent, newline));
         parts.push(this.generateMotionStyles(genome, indent, newline));
         parts.push(this.generateChoreographyStyles(genome, indent, newline));
         parts.push(this.generateIconographyStyles(genome, indent, newline));
@@ -96,7 +93,26 @@ export class CSSGenerator {
 
         return parts.join(newline + newline);
     }
-    
+
+    /**
+     * Returns optional scaffold CSS for common UI patterns (navigation, hero variants,
+     * trust signals, features, FAQ, CTA, footer). This is REFERENCE ONLY — do not
+     * treat as required sections. Use, ignore, or replace based on your structure choices.
+     */
+    generateScaffoldCSS(genome: DesignGenome, options: CSSGenerationOptions = {}): string {
+        const { format = "expanded" } = options;
+        const indent = format === "expanded" ? "  " : "";
+        const newline = format === "expanded" ? "\n" : "";
+        this.hashCache = crypto.createHash("sha256").update(genome.dnaHash).digest("hex");
+        this.seedCache = genome.dnaHash;
+        const parts: string[] = [];
+        parts.push(`/* SCAFFOLD CSS — optional reference patterns. These classes are not required.\n   Use what fits your structure. Ignore the rest. */`);
+        parts.push(this.generatePageSectionStyles(genome, indent, newline));
+        parts.push(this.generateHeroStyles(genome, indent, newline));
+        parts.push(this.generateTrustSignalStyles(genome, indent, newline));
+        return parts.join(newline + newline);
+    }
+
     private generateReset(indent: string, newline: string): string {
         return `/* Genome CSS Reset */
 *, *::before, *::after {

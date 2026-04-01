@@ -690,8 +690,8 @@ Return your response using EXACTLY these section headers (no extra text before #
 ## THESIS
 [2-4 sentences. What kind of organism is this design? Not what tokens it has — what is its essential character? What creative philosophy emerges from THIS specific chromosome combination? Be concrete and evocative.]
 
-## MANDATES
-[Bullet list starting with -. What MUST this design implement, given these chromosomes? Be specific — reference the chromosome values. Not generic advice.]
+## DESIGN PRINCIPLES
+[Bullet list starting with -. What visual, typographic, and motion constraints does this chromosome combination impose? Be specific — reference the chromosome values. Focus on HOW things look and feel, not WHAT sections or pages to build. Not generic advice.]
 
 ## ANTI-PATTERNS
 [Bullet list starting with -. What approaches would betray this genome? What would feel wrong for this specific organism? Reference chromosome tensions where relevant.]
@@ -730,7 +730,7 @@ ${eg ? `
              .filter(Boolean);
 
         const thesis        = extract('THESIS');
-        const mandatesRaw   = extract('MANDATES');
+        const mandatesRaw   = extract('DESIGN PRINCIPLES');
         const antiRaw       = extract('ANTI-PATTERNS');
         const l1            = extract('L1 IMPLEMENTATION');
         const l2            = eg ? extract('L2 COMPONENT PHILOSOPHY') : undefined;

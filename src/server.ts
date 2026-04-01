@@ -537,8 +537,11 @@ class DesignGenomeServer {
                     inputSchema: {
                         type: "object",
                         properties: {
-                            genome: { type: "object", description: "The design genome from generate_design_genome" },
-                            css: { type: "string", description: "CSS code to validate" }
+                            genome: { type: "object", description: "The design genome from generate_design_genome (must include selectedLibraries field)" },
+                            css: { type: "string", description: "Your implemented CSS" },
+                            html: { type: "string", description: "Your implemented HTML (optional but recommended for library and font detection)" },
+                            packageJson: { type: "string", description: "Contents of your package.json as a string — used to verify genome-selected libraries are installed" },
+                            ecosystemOutput: { type: "object", description: "The full output from generate_ecosystem (optional) — used to validate L2 library adherence (organism, interaction, chart, animation)" }
                         },
                         required: ["genome", "css"]
                     }
@@ -876,6 +879,7 @@ class DesignGenomeServer {
                                 metaphorPrimary: personaInfluence.metaphorPrimary,
                             } : undefined
                         });
+                        const scaffoldCSS = this.cssGen.generateScaffoldCSS(genome, { format: "expanded" });
                         const webglComponents = this.webglGen.generateR3F(genome);
                         const fxAtmosphere = this.fxGen.generateCSSClass(genome);
 
@@ -903,7 +907,7 @@ class DesignGenomeServer {
 
                         // Chromosome-driven state management selection
                         // Uses ch30_state topology + complexity score
-                        const stateTopology = (genome.chromosomes as any).ch30_state?.topology ?? "local";
+                        const stateTopology = genome.chromosomes.ch30_state_topology?.topology ?? "local";
                         const stateLibrarySelection = selectStateLibrary(
                             stateTopology,
                             complexityResult.finalComplexity,
@@ -1127,6 +1131,19 @@ class DesignGenomeServer {
                             }
                         ];
 
+                        // Embed selected library packages into genome so validate_design
+                        // can check actual usage without recomputing selections.
+                        (genome as any).selectedLibraries = {
+                            icon: iconLibrary.reactPackage ?? iconLibrary.package ?? null,
+                            animation: animationLibrary.reactPackage ?? animationLibrary.package ?? null,
+                            state: stateLibrarySelection.primary.package ?? null,
+                            styling: stylingLibrarySelection.primary.package ?? null,
+                            font_display_provider: genome.chromosomes.ch3_type_display?.provider ?? null,
+                            font_body_provider: genome.chromosomes.ch4_type_body?.provider ?? null,
+                            font_display_import: genome.chromosomes.ch3_type_display?.importUrl ?? null,
+                            font_body_import: genome.chromosomes.ch4_type_body?.importUrl ?? null,
+                        };
+
                         return {
                             content: [{
                                 type: "text",
@@ -1135,6 +1152,8 @@ class DesignGenomeServer {
                                     tier,
                                     finalComplexity,
                                     css,
+                                    scaffold_css: scaffoldCSS,
+                                    scaffold_css_note: "OPTIONAL — reference CSS for common patterns (nav, hero variants, trust, features, FAQ, CTA, footer). Use what fits your structure. Ignore the rest. Your page structure is your decision.",
                                     layout_contract,
                                     // L0 CREATOR DNA — The generative foundation
                                     // Simulated designer who interprets the intent through their unique worldview
@@ -1232,6 +1251,10 @@ class DesignGenomeServer {
                                             description: stateLibrarySelection.alternative.description,
                                         },
                                         topology: stateTopology,
+                                        routing_pattern: genome.chromosomes.ch31_routing_pattern?.pattern ?? "single_page",
+                                        guarded_routes: genome.chromosomes.ch31_routing_pattern?.guardedRoutes ?? 0,
+                                        token_inheritance: genome.chromosomes.ch32_token_inheritance?.inheritance ?? "flat",
+                                        theme_layers: genome.chromosomes.ch32_token_inheritance?.themeLayers ?? 1,
                                     },
                                     styling_system: {
                                         primary: {
@@ -1253,6 +1276,14 @@ class DesignGenomeServer {
                                         },
                                         personality: personalityProxy,
                                         edge_style: edgeStyle,
+                                    },
+                                    personalization: {
+                                        approach: genome.chromosomes.ch24_personalization?.approach ?? "static",
+                                        dynamic_content: genome.chromosomes.ch24_personalization?.dynamicContent ?? false,
+                                        user_segmentation: genome.chromosomes.ch24_personalization?.userSegmentation ?? false,
+                                        segment_count: genome.chromosomes.ch24_personalization?.segmentCount ?? 2,
+                                        ab_testing_ready: genome.chromosomes.ch24_personalization?.abTestingReady ?? false,
+                                        _note: "ch24 derived — implement dynamic content, segmentation, or A/B branching if approach !== 'static'",
                                     },
                                     patternReport,
                                     patternViolations: patternViolations.filter(v => v.severity === "error"),
@@ -1294,6 +1325,68 @@ class DesignGenomeServer {
                         
                         const utilizationReport = tracker.getReport();
 
+                        // ── CSS variable adherence check ─────────────────────────
+                        // Detect hardcoded hex/rgb/hsl values that should be var(--*) references
+                        const cssVarViolations: string[] = [];
+                        const hardcodedColorPattern = /#[0-9a-fA-F]{3,8}\b|rgba?\(\s*\d+|hsla?\(\s*\d+/g;
+                        const cssSource = (args.css || '') + (args.html || '');
+                        const hardcodedMatches = cssSource.match(hardcodedColorPattern) || [];
+                        // Allow hardcoded values only inside :root / @layer tokens definitions
+                        const tokenBlock = cssSource.match(/:root\s*\{[^}]*\}|@layer\s+tokens[^}]*\}/g)?.join('') || '';
+                        const outsideTokens = hardcodedMatches.filter((m: string) => !tokenBlock.includes(m));
+                        if (outsideTokens.length > 0) {
+                            cssVarViolations.push(`${outsideTokens.length} hardcoded color value(s) found outside token definitions: ${[...new Set(outsideTokens)].slice(0, 5).join(', ')}. Use var(--color-*) instead.`);
+                        }
+
+                        // ── Font loading check ────────────────────────────────────
+                        const fontViolations: string[] = [];
+                        const genomeFonts = [
+                            { name: args.genome.chromosomes?.ch3_type_display?.fontFamily, role: 'display', importUrl: (args.genome as any).selectedLibraries?.font_display_import },
+                            { name: args.genome.chromosomes?.ch4_type_body?.fontFamily,    role: 'body',    importUrl: (args.genome as any).selectedLibraries?.font_body_import },
+                        ].filter(f => f.name) as { name: string; role: string; importUrl: string | null }[];
+
+                        for (const font of genomeFonts) {
+                            const fontLower = font.name.toLowerCase().replace(/\s+/g, '');
+                            const srcLower = cssSource.toLowerCase().replace(/\s+/g, '');
+                            const hasRef = srcLower.includes(fontLower) || (font.importUrl && srcLower.includes(font.importUrl.toLowerCase().replace(/\s+/g, '')));
+                            if (!hasRef) {
+                                const hint = font.importUrl ? ` Expected import: ${font.importUrl}` : '';
+                                fontViolations.push(`${font.role} font "${font.name}" not loaded. Add @import or <link> for this font.${hint}`);
+                            }
+                        }
+
+                        // ── Library adherence check ───────────────────────────────
+                        // Verify the genome-selected libraries are actually referenced
+                        // in package.json, imports, or HTML script tags.
+                        const libraryViolations: string[] = [];
+                        const selectedLibs = (args.genome as any).selectedLibraries as Record<string, string | null> | undefined;
+                        const fullSource = (args.css || '') + (args.html || '') + (args.packageJson || '');
+                        const sourceNorm = fullSource.replace(/\s+/g, ' ');
+
+                        if (selectedLibs) {
+                            for (const [role, pkg] of Object.entries(selectedLibs)) {
+                                if (!pkg) continue;
+                                const pkgShort = (pkg as string).replace(/^@[^/]+\//, '');
+                                const found = sourceNorm.includes(pkg as string) || sourceNorm.includes(pkgShort);
+                                if (!found) {
+                                    libraryViolations.push(`L1 ${role} library "${pkg}" not found in source. Install it and use it — do not substitute with an ad-hoc alternative.`);
+                                }
+                            }
+                        }
+
+                        // L2 ecosystem libraries (organism, interaction, chart, animation)
+                        const ecoLibs = (args.ecosystemOutput as any)?.selectedLibraries as Record<string, string | null> | undefined;
+                        if (ecoLibs) {
+                            for (const [role, pkg] of Object.entries(ecoLibs)) {
+                                if (!pkg) continue;
+                                const pkgShort = (pkg as string).replace(/^@[^/]+\//, '');
+                                const found = sourceNorm.includes(pkg as string) || sourceNorm.includes(pkgShort);
+                                if (!found) {
+                                    libraryViolations.push(`L2 ${role} library "${pkg}" not found in source. Install it and use it — do not substitute with an ad-hoc alternative.`);
+                                }
+                            }
+                        }
+
                         // Pattern/slop detection
                         const violations = this.patternDetector.detectInGenome(
                             args.genome,
@@ -1306,7 +1399,10 @@ class DesignGenomeServer {
 
                         const report = this.patternDetector.generateReport(violations);
                         const patternValid = violations.filter(v => v.severity === "error").length === 0;
-                        const overallValid = patternValid && structureValidation.valid && utilizationReport.utilizationRate >= 30; // Minimum threshold
+                        const tokenAdherent = cssVarViolations.length === 0;
+                        const fontsLoaded = fontViolations.length === 0;
+                        const librariesUsed = libraryViolations.length === 0;
+                        const overallValid = patternValid && structureValidation.valid && tokenAdherent && fontsLoaded && librariesUsed && utilizationReport.utilizationRate >= 30;
 
                         return {
                             content: [{
@@ -1314,6 +1410,20 @@ class DesignGenomeServer {
                                 text: JSON.stringify({
                                     valid: overallValid,
                                     pattern_valid: patternValid,
+                                    token_adherence: {
+                                        valid: tokenAdherent,
+                                        violations: cssVarViolations,
+                                    },
+                                    font_loading: {
+                                        valid: fontsLoaded,
+                                        violations: fontViolations,
+                                        required_fonts: genomeFonts.map(f => ({ name: f.name, role: f.role, import_url: f.importUrl })),
+                                    },
+                                    library_adherence: {
+                                        valid: librariesUsed,
+                                        violations: libraryViolations,
+                                        expected: selectedLibs ?? {},
+                                    },
                                     structure_valid: structureValidation.valid,
                                     structure_warnings: structureValidation.warnings,
                                     structure_errors: structureValidation.errors,
@@ -1338,9 +1448,12 @@ class DesignGenomeServer {
                                         must_fix_before_ship: [
                                             ...(structureValidation.errors.length > 0 ? ['Fix genome structure errors'] : []),
                                             ...(patternValid ? [] : ['Fix pattern violations (gradients on text, bootstrap shadows, etc.)']),
+                                            ...(!tokenAdherent ? cssVarViolations : []),
+                                            ...(!fontsLoaded ? fontViolations : []),
+                                            ...(!librariesUsed ? libraryViolations : []),
                                             ...(utilizationReport.utilizationRate < 30 ? ['Increase chromosome utilization above 30%'] : [])
                                         ],
-                                        blockers_count: (structureValidation.errors.length) + (patternValid ? 0 : 1) + (utilizationReport.utilizationRate < 30 ? 1 : 0)
+                                        blockers_count: (structureValidation.errors.length) + (patternValid ? 0 : 1) + (tokenAdherent ? 0 : 1) + (fontsLoaded ? 0 : 1) + (librariesUsed ? 0 : 1) + (utilizationReport.utilizationRate < 30 ? 1 : 0)
                                     }
                                 }, null, 2)
                             }]
@@ -1612,6 +1725,12 @@ class DesignGenomeServer {
                                     biome: ecoBiome,
                                     biomeDescription: ecoBiomeDesc,
                                     css,
+                                    selectedLibraries: {
+                                        animation: ecoAnimationLibrary.reactPackage ?? ecoAnimationLibrary.package ?? null,
+                                        organism:  organismSelection.primary.package ?? null,
+                                        interaction: interactionSelection.primary.package ?? null,
+                                        charts: chartSelection.chartsRecommended ? (chartSelection.primary.package ?? null) : null,
+                                    },
                                     libraries: {
                                         animation: {
                                             name:          ecoAnimationLibrary.name,
@@ -1649,7 +1768,7 @@ class DesignGenomeServer {
                                             : `Add complexity (dashboard, 3D, real-time keywords) or increase counts to reach threshold ${ecosystem.civilizationThreshold}`,
                                         componentHierarchy: "Fauna contain Flora contain Microbial — use relationships.containment for composition",
                                         implementation: "Each organism is a component spec. Implement from its prop contract and colorTreatment — the agent writes the actual code.",
-                                        mandate: "You MUST build organisms in hierarchy order: microbial (atoms) → flora (composites) → fauna (complex). Check relationships.containment for composition patterns."
+                                        componentHierarchyGuide: "Composition depth: microbial (atoms) → flora (composites) → fauna (complex). Check relationships.containment — fauna contain flora contain microbial. This is component composition depth, not page structure."
                                     },
                                     chromosome_utilization: {
                                         layer: "L2_Ecosystem",
@@ -1661,7 +1780,7 @@ class DesignGenomeServer {
                                             acc[ch] = l2Utilization.used.includes(ch) ? "✓ USED" : "⚠ VERIFY USAGE";
                                             return acc;
                                         }, {} as Record<string, string>),
-                                        enforcement: "Build organisms: microbial → flora → fauna. Use containment relationships. All 12 chromosomes must inform your component architecture."
+                                        guide: "Apply all 12 L2 chromosomes to your component architecture. Containment depth: microbial inside flora inside fauna."
                                     }
                                 }, null, 2)
                             }]
@@ -1772,15 +1891,12 @@ class DesignGenomeServer {
 
                             // Generate file structure for easy consumption
                             fileStructure = {
+                                _note: "Component list derived from genome. File paths and project structure are your decision.",
                                 components: componentList.map((c: any) => ({
                                     name: c.name,
-                                    file: `components/${c.name}.tsx`,
                                     category: c.category,
                                     variants: c.spec?.variants || c.variants
-                                })),
-                                styles: ["styles/tokens.css", "styles/genome.css"],
-                                lib: ["lib/animations.ts", "lib/interactions.ts"],
-                                config: ["tailwind.config.js"]
+                                }))
                             };
                         }
 
@@ -2383,40 +2499,36 @@ class DesignGenomeServer {
         const sp = ch.ch22_social_proof ?? {};
         const hero = ch.ch19_hero_type ?? {};
 
-        const sections: string[] = [];
-        if (cd.hasHero !== false)         sections.push("hero");
-        if (ts.approach)                  sections.push("trust_grid");
-        if (sp.type)                      sections.push("social_proof");
-        if (cd.hasFeatures !== false)     sections.push("features");
-        if (cd.hasFAQ)                    sections.push("faq");
-        if (cd.hasTestimonials)           sections.push("testimonials");
-        if (cd.hasCTA !== false)          sections.push("cta");
-        sections.push("footer");
-
         return {
-            _note: "Implement each section from scratch using design brief constraints. Do not treat this as HTML boilerplate to fill in — it is a structural spec that your implementation must interpret.",
-            hero: {
-                type: hero.type ?? "default",
-                layout: hero.variant ?? "centered",
-            },
-            navigation: {
+            _note: "These are genome-derived design constraints — NOT a page blueprint. Page structure, section selection, and layout order are YOUR decision as the implementer. Apply these constraints to whatever structure fits the intent. Avoid defaulting to hero → features → CTA — that pattern is slop.",
+            hero_constraints: hero.hasHero
+                ? {
+                    present: true,
+                    type: hero.type ?? "default",
+                    layout: hero.variant ?? "centered",
+                    constraint: "If you include a focal entry point, it must use this hero type and layout variant — not a generic centered headline + CTA."
+                }
+                : {
+                    present: false,
+                    constraint: "This genome has no hero. Do not default to the hero → features → CTA SaaS template. Find a structural pattern that fits the intent."
+                },
+            navigation_constraints: {
                 type: ia.navigationType ?? "header",
-                footer: ia.footerType ?? "minimal",
+                footer: ia.footerType ?? null,
+                constraint: "Navigation character derived from genome — the form it takes in your implementation is your decision."
             },
-            sections,
-            trust: {
-                approach: ts.approach ?? null,
-                prominence: ts.prominence ?? null,
-                layout: ts.layoutVariant ?? null,
-            },
-            social_proof: {
-                type: sp.type ?? null,
-                layout: sp.layout ?? null,
-            },
-            content: {
-                depth: cd.level ?? null,
-                estimated_sections: cd.estimatedSections ?? sections.length,
+            content_signals: {
+                _note: "Signals about content character — not a list of required sections.",
                 information_architecture: ia.pattern ?? null,
+                content_depth: cd.level ?? null,
+                trust_approach: ts.approach ?? null,
+                trust_prominence: ts.prominence ?? null,
+                trust_layout: ts.layoutVariant ?? null,
+                social_proof_form: sp.type ?? null,
+                social_proof_layout: sp.layout ?? null,
+                conversion_oriented: cd.hasCTA ?? false,
+                faq_warranted: cd.hasFAQ ?? false,
+                testimonials_warranted: cd.hasTestimonials ?? false,
             },
             implementation_tier: complexity >= 0.81
                 ? {

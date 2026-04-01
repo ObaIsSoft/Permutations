@@ -385,7 +385,7 @@ export class GenomeSequencer {
         const ch23_content_depth: DesignGenome['chromosomes']['ch23_content_depth'] = getForced('ch23_content_depth', {
             level: this.selectContentDepth(traits, primaryProfile),
             estimatedSections: this.estimateSections(traits),
-            hasHero: true,
+            hasHero,
             hasFeatures: traits.informationDensity > 0.4 || traits.conversionFocus > 0.3,
             hasCTA: traits.conversionFocus > 0.5,
             hasFAQ: traits.informationDensity > 0.6,
@@ -1212,7 +1212,8 @@ export class GenomeSequencer {
             }
         }
 
-        const provider = options?.fontProvider || "bunny";
+        const provider: FontProvider = options?.fontProvider ||
+            this.selectFromHash(b(6), ["bunny", "google", "fontshare", "bunny"] as FontProvider[]);
         const fontData = this.selectDisplayFont(b(5), charge, provider);
 
         // Tracking — hash-driven across full range when traits don't dominate
@@ -1259,7 +1260,8 @@ export class GenomeSequencer {
             charge = "grotesque";          // Dense content: high-legibility grotesque
         }
 
-        const provider = options?.fontProvider || "bunny";
+        const provider: FontProvider = options?.fontProvider ||
+            this.selectFromHash(b(8), ["bunny", "google", "fontshare", "bunny"] as FontProvider[]);
         const fontData = this.selectBodyFont(b(7), charge, provider);
 
         return {
