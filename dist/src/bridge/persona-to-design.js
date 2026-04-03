@@ -28,7 +28,7 @@ export class PersonaDesignBridge {
         // Step 2: Calculate persona influence on design parameters
         const influence = this.calculateInfluence(persona, brief);
         // Step 3: Generate L1 genome with persona-influenced traits + direct chromosome expression
-        const genome = await this.generateInfluencedGenome(intent, influence, persona.genome);
+        const genome = await this.generateInfluencedGenome(intent, influence, persona);
         return { genome, brief, influence };
     }
     /**
@@ -77,9 +77,15 @@ export class PersonaDesignBridge {
      * 2. Chromosome expression — directly sets character-defining chromosome values
      *    so the same intent through different personas produces genuinely different designs.
      */
-    async generateInfluencedGenome(intent, influence, personaGenome) {
-        // Extract traits from intent
-        const traits = await this.extractor.extractTraits(intent.description);
+    async generateInfluencedGenome(intent, influence, persona) {
+        // Extract traits from intent — persona context shapes the LLM's analysis
+        const analysis = await this.extractor.analyze(intent.description, undefined, {
+            biography: persona.biography.origin,
+            instincts: persona.instincts.visual_language,
+            worldview: persona.worldview.design_philosophy,
+            creativeBehavior: persona.creative_behavior.chaos_tolerance > 0.5 ? "experimental" : "systematic",
+        });
+        const traits = analysis.traits;
         // Apply persona influence to traits
         const influencedTraits = {
             informationDensity: this.clamp(traits.informationDensity + influence.densityMod),
@@ -115,7 +121,7 @@ export class PersonaDesignBridge {
         // Pass 2: directly express persona latent vectors onto chromosomes
         // This makes same-intent + different-persona produce genuinely distinct designs,
         // not just slight color/density variations.
-        this.applyPersonaToChromosomes(genome, personaGenome);
+        this.applyPersonaToChromosomes(genome, persona);
         return genome;
     }
     /**
@@ -123,7 +129,8 @@ export class PersonaDesignBridge {
      * These are strong, opinionated overrides — the persona's worldview
      * physically reshapes the design character, not just nudges it.
      */
-    applyPersonaToChromosomes(genome, g) {
+    applyPersonaToChromosomes(genome, persona) {
+        const g = persona.genome;
         const ch = genome.chromosomes;
         // ── Motion physics (ch8) ────────────────────────────────────────
         // c11_chaos_tolerance: ordered (0) → step/none; chaotic (1) → glitch/elastic

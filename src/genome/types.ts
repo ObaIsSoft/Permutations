@@ -5,6 +5,35 @@
  * hero types, trust signals, and brand integration.
  */
 
+export {
+    LayoutPattern,
+    StructuralCategory,
+    NavRequirement,
+    HeroProminence,
+    InteractionModel,
+    ContentFlowStrategy,
+    DensityDistribution,
+    ResponsiveStrategy,
+    ComponentFramework,
+    CompositionStyle,
+    PropComplexity,
+    AnimationScope,
+} from "./composition-types.js";
+import type {
+    LayoutPattern,
+    StructuralCategory,
+    NavRequirement,
+    HeroProminence,
+    InteractionModel,
+    ContentFlowStrategy,
+    DensityDistribution,
+    ResponsiveStrategy,
+    ComponentFramework,
+    CompositionStyle,
+    PropComplexity,
+    AnimationScope,
+} from "./composition-types.js";
+
 // ============================================================================
 // SECTOR DEFINITIONS
 // ============================================================================
@@ -1488,6 +1517,50 @@ export interface DesignGenome {
         ch32_token_inheritance: {
             inheritance: TokenInheritance;
             themeLayers: number;     // 1–4: stacked theme depth
+        };
+
+        // ── Composition Chromosomes (33–34) ─────────────────────────────────
+        // Algorithmic page structure selection from established library patterns.
+        // NOT finite enums — these drive selection from structural-pattern-catalog.ts
+        // which contains 30,000+ patterns from Relume, Tailwind UI, Magic UI,
+        // Aceternity, NavNav, Mobbin, Refero, Pageflows, etc.
+
+        ch33_composition_strategy: {
+            /** Overall page structure approach — drives layout pattern selection */
+            layoutPattern: LayoutPattern;
+            /** How many sections this page has (2–14) */
+            sectionCount: number;
+            /** Which section categories are included */
+            sectionTypes: StructuralCategory[];
+            /** Navigation requirement — drives nav pattern selection */
+            navRequirement: NavRequirement;
+            /** Hero prominence — drives hero pattern selection */
+            heroProminence: HeroProminence;
+            /** How users interact with the page */
+            interactionModel: InteractionModel;
+            /** How content flows through the page */
+            contentFlow: ContentFlowStrategy;
+            /** How density distributes across the page */
+            densityDistribution: DensityDistribution;
+            /** How layout adapts on mobile */
+            responsiveBehavior: ResponsiveStrategy;
+        };
+
+        ch34_component_topology: {
+            /** Primary framework for component generation */
+            primaryFramework: ComponentFramework;
+            /** How many components per section (0.0–1.0) */
+            componentDensity: number;
+            /** Nesting depth (1–5 levels) */
+            nestingDepth: number;
+            /** How components are composed */
+            compositionStyle: CompositionStyle;
+            /** How many state boundaries exist */
+            stateBoundaries: number;
+            /** Complexity of component props */
+            propComplexity: PropComplexity;
+            /** Scope of animations within components */
+            animationScope: AnimationScope;
         };
     };
 

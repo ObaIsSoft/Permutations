@@ -708,6 +708,29 @@ class DesignGenomeServer {
                     }
                 },
                 {
+                    name: "generate_page_composition",
+                    description: "STEP 3 — Generate complete page structure from genome. Detects page context from intent, selects structural patterns from established libraries (Relume, Tailwind UI, Magic UI, Aceternity, Mobbin, etc.), and composes a full page specification with genome-derived component props. Returns layout, navigation, hero, sections, footer, selected libraries, CSS variables, and animation config. Use this when you need the structural blueprint before generating React or HTML output.",
+                    inputSchema: {
+                        type: "object",
+                        properties: {
+                            genome: {
+                                type: "object",
+                                description: "Complete design genome from generate_design_genome (required)"
+                            },
+                            intent: {
+                                type: "string",
+                                description: "Design intent describing what the page is (e.g., 'shoe ecommerce store', 'fintech dashboard', 'creative portfolio')"
+                            },
+                            outputFormat: {
+                                type: "string",
+                                enum: ["spec", "react", "html"],
+                                description: "Output format: spec = composition JSON, react = React JSX + CSS, html = vanilla HTML/CSS/JS files (default: spec)"
+                            }
+                        },
+                        required: ["genome", "intent"]
+                    }
+                },
+                {
                     name: "extract_genome_from_url",
                     description: "ALTERNATIVE ENTRY — Call BEFORE generate_design_genome when you have a reference site. Returns a flat style snapshot (colors, fonts, spacing, animation) — NOT a chromosome genome. Pass the output as project_context into generate_design_genome to influence the generated genome. Do NOT pass this output directly to generate_design_brief, generate_ecosystem, or generate_civilization — those require a chromosome genome from generate_design_genome.",
                     inputSchema: {
@@ -2202,6 +2225,11 @@ class DesignGenomeServer {
                                             always: true,
                                         },
                                         {
+                                            tool: "generate_page_composition",
+                                            reason: "Generate the structural blueprint — layout, sections, components, libraries. Call before writing any HTML/CSS/JS.",
+                                            when: "building a page or screen",
+                                        },
+                                        {
                                             tool: "generate_ecosystem",
                                             reason: "Build a component library architecture — biome, energy, symbiosis patterns. Call when building a full design system.",
                                             when: "building multiple components or a full UI library",
@@ -2210,6 +2238,133 @@ class DesignGenomeServer {
                                             tool: "validate_design",
                                             reason: "Run before shipping any CSS or HTML. Validates genome against accessibility, contrast, and motion constraints.",
                                             always: true,
+                                        },
+                                    ],
+                                }, null, 2)
+                            }]
+                        };
+                    }
+
+                    case "generate_page_composition": {
+                        if (!args.genome) {
+                            throw new McpError(ErrorCode.InvalidParams, "generate_page_composition: Missing genome object");
+                        }
+                        if (!args.intent) {
+                            throw new McpError(ErrorCode.InvalidParams, "generate_page_composition: Missing intent. Describe what the page is (e.g., 'shoe ecommerce store', 'fintech dashboard').");
+                        }
+
+                        validateGenome(args.genome, "generate_page_composition");
+
+                        const { composePage } = await import("./genome/context-composer.js");
+                        const spec = await composePage(args.genome, args.intent);
+
+                        const outputFormat = args.outputFormat ?? "spec";
+
+                        if (outputFormat === "react") {
+                            const { ReactGenerator } = await import("./generators/react-generator.js");
+                            const generator = new ReactGenerator();
+                            const output = await generator.generate(spec);
+
+                            return {
+                                content: [{
+                                    type: "text",
+                                    text: JSON.stringify({
+                                        type: "react_output",
+                                        pages: output.pages,
+                                        styles: output.styles,
+                                        config: output.config,
+                                        selectedLibraries: spec.selectedLibraries,
+                                        compositionRationale: spec.compositionRationale,
+                                        context: {
+                                            contentType: spec.context.contentType,
+                                            purpose: spec.context.purpose,
+                                            audience: spec.context.audience,
+                                            complexity: spec.context.complexity,
+                                        },
+                                        suggested_next: [
+                                            { action: "write_files", instruction: "Write the generated pages, styles, and config files to your project." },
+                                            { action: "install_deps", instruction: `Run: npm install ${Object.values(spec.selectedLibraries).map((l: any) => l.package).filter((p: string) => p !== "none").join(" ")}` },
+                                        ],
+                                    }, null, 2)
+                                }]
+                            };
+                        }
+
+                        if (outputFormat === "html") {
+                            const { HTMLGenerator } = await import("./generators/html-generator.js");
+                            const generator = new HTMLGenerator();
+                            const output = await generator.generate(spec);
+
+                            return {
+                                content: [{
+                                    type: "text",
+                                    text: JSON.stringify({
+                                        type: "html_output",
+                                        files: output.files,
+                                        selectedLibraries: spec.selectedLibraries,
+                                        compositionRationale: spec.compositionRationale,
+                                        context: {
+                                            contentType: spec.context.contentType,
+                                            purpose: spec.context.purpose,
+                                            audience: spec.context.audience,
+                                            complexity: spec.context.complexity,
+                                        },
+                                        suggested_next: [
+                                            { action: "write_files", instruction: "Write index.html, styles.css, app.js, and manifest.json to your project." },
+                                        ],
+                                    }, null, 2)
+                                }]
+                            };
+                        }
+
+                        // Default: spec output
+                        return {
+                            content: [{
+                                type: "text",
+                                text: JSON.stringify({
+                                    type: "composition_spec",
+                                    layout: spec.layout,
+                                    navigation: spec.navigation,
+                                    hero: spec.hero,
+                                    sections: spec.sections.map(s => ({
+                                        type: s.type,
+                                        pattern: s.pattern ? { name: s.pattern.name, source: s.pattern.source, description: s.pattern.description } : null,
+                                        props: s.props,
+                                        childrenCount: s.children.length,
+                                    })),
+                                    footer: spec.footer,
+                                    sidebar: spec.sidebar,
+                                    cta: spec.cta,
+                                    selectedLibraries: spec.selectedLibraries,
+                                    cssVariables: spec.cssVariables,
+                                    animationConfig: spec.animationConfig,
+                                    compositionRationale: spec.compositionRationale,
+                                    context: {
+                                        contentType: spec.context.contentType,
+                                        purpose: spec.context.purpose,
+                                        audience: spec.context.audience,
+                                        complexity: spec.context.complexity,
+                                        requiredSections: spec.context.requiredSections,
+                                        optionalSections: spec.context.optionalSections,
+                                        forbiddenSections: spec.context.forbiddenSections,
+                                    },
+                                    suggested_next: [
+                                        {
+                                            tool: "generate_page_composition",
+                                            args: { outputFormat: "react" },
+                                            reason: "Generate actual React JSX components from this composition spec.",
+                                            when: "you need React code output",
+                                        },
+                                        {
+                                            tool: "generate_page_composition",
+                                            args: { outputFormat: "html" },
+                                            reason: "Generate vanilla HTML/CSS/JS files from this composition spec.",
+                                            when: "you need static HTML output",
+                                        },
+                                        {
+                                            action: "write_file",
+                                            file: "COMPOSITION.md",
+                                            instruction: "Write this composition spec to a file for reference during implementation.",
                                         },
                                     ],
                                 }, null, 2)

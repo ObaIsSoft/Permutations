@@ -546,28 +546,23 @@ function cosmologyGravity(eco) {
 }
 // ── Biased selection ────────────────────────────────────────────────────────
 /**
- * Weighted probability pick — gravity is the preferred TARGET INDEX (not an offset).
- * Weight distribution: target = 4×, target ± 1 = 2×, all others = 1×.
- * This gives ~30% pull toward the ecologically coherent choice while preserving
- * broad hash-driven diversity.
+ * Deterministic selection — gravity is the preferred TARGET INDEX.
+ * 75% of the time: use the gravity target directly (ecological coherence).
+ * 25% of the time: use hash byte for diversity (adjacent option).
+ * Same seed → same output always. No probability distributions.
  */
-function biasedPick(options, rawByte, gravity) {
+function deterministicPick(options, rawByte, gravity) {
     const len = options.length;
     const target = ((Math.round(gravity) % len) + len) % len;
-    const cumulative = [];
-    let total = 0;
-    for (let i = 0; i < len; i++) {
-        const d = Math.min(Math.abs(i - target), len - Math.abs(i - target));
-        const w = d === 0 ? 4 : d === 1 ? 2 : 1;
-        total += w;
-        cumulative.push(total);
+    if (rawByte < 192) {
+        // 75%: gravity target — ecologically coherent
+        return options[target];
     }
-    const pos = Math.floor((rawByte / 256) * total);
-    for (let i = 0; i < len; i++) {
-        if (pos < cumulative[i])
-            return options[i];
+    else {
+        // 25%: hash-driven diversity — pick adjacent option
+        const adjacent = ((target + (rawByte % 3) - 1) % len + len) % len;
+        return options[adjacent];
     }
-    return options[len - 1];
 }
 function norm(byte) {
     return byte / 255;
@@ -578,9 +573,9 @@ export function sequenceCivilizationGenome(ecosystemGenome) {
     const b = Buffer.from(hash, "hex");
     const eco = ecosystemGenome;
     // Sequence class values first so derived sub-fields can reference them
-    const archetypeClass = biasedPick(ARCHETYPES, b[0], archetypeGravity(eco));
-    const technologyClass = biasedPick(TECHNOLOGY_CLASSES, b[6], technologyGravity(eco));
-    const cultureEmphasis = biasedPick(CULTURE_EMPHASES, b[8], cultureGravity(eco));
+    const archetypeClass = deterministicPick(ARCHETYPES, b[0], archetypeGravity(eco));
+    const technologyClass = deterministicPick(TECHNOLOGY_CLASSES, b[6], technologyGravity(eco));
+    const cultureEmphasis = deterministicPick(CULTURE_EMPHASES, b[8], cultureGravity(eco));
     const chromosomes = {
         // bytes[0,1] — archetype
         civ_ch1_archetype: {
@@ -590,12 +585,12 @@ export function sequenceCivilizationGenome(ecosystemGenome) {
         },
         // bytes[2,3] — governance
         civ_ch2_governance: {
-            model: biasedPick(GOVERNANCE_MODELS, b[2], governanceGravity(eco)),
+            model: deterministicPick(GOVERNANCE_MODELS, b[2], governanceGravity(eco)),
             rigidity: norm(b[3]),
         },
         // bytes[4,5] — economics
         civ_ch3_economics: {
-            model: biasedPick(ECONOMIC_MODELS, b[4], economicsGravity(eco)),
+            model: deterministicPick(ECONOMIC_MODELS, b[4], economicsGravity(eco)),
             pressure: norm(b[5]),
         },
         // bytes[6,7] — technology
@@ -612,22 +607,22 @@ export function sequenceCivilizationGenome(ecosystemGenome) {
         },
         // bytes[10,11] — resilience
         civ_ch6_resilience: {
-            pattern: biasedPick(RESILIENCE_PATTERNS, b[10], resilienceGravity(eco)),
+            pattern: deterministicPick(RESILIENCE_PATTERNS, b[10], resilienceGravity(eco)),
             depth: norm(b[11]),
         },
         // bytes[12,13] — knowledge
         civ_ch7_knowledge: {
-            model: biasedPick(KNOWLEDGE_MODELS, b[12], knowledgeGravity(eco)),
+            model: deterministicPick(KNOWLEDGE_MODELS, b[12], knowledgeGravity(eco)),
             entropy: norm(b[13]),
         },
         // bytes[14,15] — expansion
         civ_ch8_expansion: {
-            mode: biasedPick(EXPANSION_MODES, b[14], expansionGravity(eco)),
+            mode: deterministicPick(EXPANSION_MODES, b[14], expansionGravity(eco)),
             velocity: norm(b[15]),
         },
         // bytes[16,17] — age
         civ_ch9_age: {
-            class: biasedPick(CIVILIZATION_AGES, b[16], ageGravity(eco)),
+            class: deterministicPick(CIVILIZATION_AGES, b[16], ageGravity(eco)),
             stability: norm(b[17]),
         },
         // bytes[18,19] — fragility
@@ -637,32 +632,32 @@ export function sequenceCivilizationGenome(ecosystemGenome) {
         },
         // bytes[20,21] — topology
         civ_ch11_topology: {
-            shape: biasedPick(TOPOLOGY_SHAPES, b[20], topologyGravity(eco)),
+            shape: deterministicPick(TOPOLOGY_SHAPES, b[20], topologyGravity(eco)),
             density: norm(b[21]),
         },
         // bytes[22,23] — cosmology
         civ_ch12_cosmology: {
-            belief: biasedPick(COSMOLOGY_BELIEFS, b[22], cosmologyGravity(eco)),
+            belief: deterministicPick(COSMOLOGY_BELIEFS, b[22], cosmologyGravity(eco)),
             conviction: norm(b[23]),
         },
         // bytes[24,25] — memory
         civ_ch13_memory: {
-            model: biasedPick(MEMORY_MODELS, b[24], 0),
+            model: deterministicPick(MEMORY_MODELS, b[24], 0),
             persistence: norm(b[25]),
         },
         // bytes[26,27] — interface
         civ_ch14_interface: {
-            mode: biasedPick(INTERFACE_MODES, b[26], 0),
+            mode: deterministicPick(INTERFACE_MODES, b[26], 0),
             responsiveness: norm(b[27]),
         },
         // bytes[28,29] — evolution
         civ_ch15_evolution: {
-            strategy: biasedPick(EVOLUTION_STRATEGIES, b[28], 0),
+            strategy: deterministicPick(EVOLUTION_STRATEGIES, b[28], 0),
             rate: norm(b[29]),
         },
         // bytes[30,31] — communication
         civ_ch16_communication: {
-            protocol: biasedPick(COMMUNICATION_PROTOCOLS, b[30], 0),
+            protocol: deterministicPick(COMMUNICATION_PROTOCOLS, b[30], 0),
             bandwidth: norm(b[31]),
         },
     };
