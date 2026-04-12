@@ -51,3 +51,4 @@ tsconfig.tsbuildinfo
 
 # Local dev config (may contain API keys)
 inspector-config.json
+settings.json

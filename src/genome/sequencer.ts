@@ -56,6 +56,7 @@ import { EpigeneticData } from "./epigenetics.js";
 import { fontCatalog } from "../font-catalog.js";
 import { ARCHETYPES, detectArchetype, FunctionalArchetype } from "./archetypes.js";
 import { GenomeConstraintSolver, SolverResult } from "./constraint-solver.js";
+import { solveWithSetTheory } from "./constraint-solver-v2.js";
 import {
     getSectorProfile,
     isValidSector,
@@ -157,14 +158,23 @@ export class GenomeSequencer {
             }
         };
 
-        // Apply constraint solver
+        // Step 1: V1 priority-based solver — resolves conflicts by trait importance
         const solver = new GenomeConstraintSolver();
         const result = solver.solve(genome);
 
-        // Add generation rationale
-        genome.generation.rationale = result.rationale;
+        // Step 2: V2 set-theoretic solver — refines remaining values via set intersection,
+        // ensuring all active traits agree on the final chromosome values.
+        const v2result = solveWithSetTheory(result.genome);
 
-        return result.genome;
+        // Merge rationale from both passes
+        genome.generation.rationale = [
+            ...result.rationale,
+            ...(v2result.compromises.length > 0
+                ? v2result.compromises.map(c => `[set-theoretic] ${c.property}: ${c.requested} → ${c.actual} (${c.reason})`)
+                : []),
+        ];
+
+        return v2result.genome;
     }
 
     /**

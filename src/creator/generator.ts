@@ -6,36 +6,30 @@
  * Not categorical - pure continuous values for infinite diversity.
  */
 
-import { 
-  CreatorGenome, 
-  LatentVector, 
-  DistributionCurve, 
-  GraphTraversal 
+import * as crypto from 'crypto';
+import { EntropyPool } from '../genome/entropy-pool.js';
+import {
+  CreatorGenome,
+  LatentVector,
+  DistributionCurve,
+  GraphTraversal
 } from './types.js';
 
 /**
- * Seeded random number generator (Mulberry32)
- * Deterministic from seed - same seed = same genome
+ * SHA-256 / EntropyPool-backed random number generator
+ * Deterministic from seed via HKDF-style expansion — preserves SHA-256 chain
  */
-class SeededRandom {
-  private state: number;
+class SHA256Random {
+  private pool: EntropyPool;
+  private index: number = 0;
 
   constructor(seed: string) {
-    // Hash seed to initial state
-    let h = 1779033703 ^ seed.length;
-    for (let i = 0; i < seed.length; i++) {
-      h = Math.imul(h ^ seed.charCodeAt(i), 3432918353);
-      h = h << 13 | h >>> 19;
-    }
-    this.state = h;
+    this.pool = new EntropyPool(seed);
   }
 
   // Returns float in [0, 1)
   next(): number {
-    let t = this.state += 0x6D2B79F5;
-    t = Math.imul(t ^ t >>> 15, t | 1);
-    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    return this.pool.getFloat(this.index++);
   }
 
   // Returns float in [min, max)
@@ -48,9 +42,9 @@ class SeededRandom {
     return this.range(-1, 1);
   }
 
-  // Gaussian distribution (Box-Muller)
+  // Gaussian distribution (Box-Muller) — guards against log(0)
   gaussian(mean: number = 0, stdDev: number = 1): number {
-    const u1 = this.next();
+    const u1 = Math.max(1 / 512, this.next());
     const u2 = this.next();
     const z0 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
     return z0 * stdDev + mean;
@@ -95,7 +89,7 @@ export interface ExtractedStyleSnapshot {
  * Generate Creator Genome from seed
  */
 export function generateCreatorGenome(seed: string): CreatorGenome {
-  const rng = new SeededRandom(seed);
+  const rng = new SHA256Random(seed);
 
   return {
     // c0: Cultural vector (3D) - geographic/cultural latent position
@@ -148,7 +142,7 @@ export function generateCreatorGenome(seed: string): CreatorGenome {
 
     // Metadata
     seed,
-    dna_hash: computeDNAHash(seed, rng),
+    dna_hash: computeDNAHash(seed),
     generation_timestamp: Date.now(),
   };
 }
@@ -157,7 +151,7 @@ export function generateCreatorGenome(seed: string): CreatorGenome {
  * Generate temporal nostalgia distribution
  * Creates weighted nostalgia across decades 1900-2030
  */
-function generateTemporalNostalgia(rng: SeededRandom): DistributionCurve {
+function generateTemporalNostalgia(rng: SHA256Random): DistributionCurve {
   const numPeaks = Math.floor(rng.range(1, 4)); // 1-3 nostalgia peaks
   const points: { position: number; weight: number }[] = [];
 
@@ -184,7 +178,7 @@ function generateTemporalNostalgia(rng: SeededRandom): DistributionCurve {
 /**
  * Generate obsession traversal parameters
  */
-function generateObsessionTraversal(rng: SeededRandom): GraphTraversal {
+function generateObsessionTraversal(rng: SHA256Random): GraphTraversal {
   return {
     origin_domain: rng.signed(), // Latent coordinate for starting domain
     depth: rng.range(0.2, 0.9),  // How deep into rabbit holes
@@ -196,7 +190,7 @@ function generateObsessionTraversal(rng: SeededRandom): GraphTraversal {
 /**
  * Generate sensory priority weights
  */
-function generateSensoryWeights(rng: SeededRandom): DistributionCurve {
+function generateSensoryWeights(rng: SHA256Random): DistributionCurve {
   const senses = ['visual', 'tactile', 'auditory', 'spatial', 'kinesthetic'];
   
   // Generate random weights
@@ -216,33 +210,22 @@ function generateSensoryWeights(rng: SeededRandom): DistributionCurve {
 }
 
 /**
- * Compute DNA hash for traceability
+ * Compute DNA hash for traceability — fully deterministic via SHA-256
  */
-function computeDNAHash(seed: string, rng: SeededRandom): string {
-  // Use the RNG state to create a hash
-  // This ensures the hash reflects the actual generated values
-  const hashInput = `${seed}:${rng.next()}:${rng.next()}:${Date.now()}`;
-  
-  // Simple hash function (in production, use crypto)
-  let hash = 0;
-  for (let i = 0; i < hashInput.length; i++) {
-    const char = hashInput.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
-  }
-  
-  return `CREATOR_${Math.abs(hash).toString(16).toUpperCase()}`;
+function computeDNAHash(seed: string): string {
+  const hash = crypto.createHash('sha256').update(`CREATOR_L0:${seed}`).digest('hex');
+  return `CREATOR_${hash.slice(0, 16).toUpperCase()}`;
 }
 
 /**
  * Mutate an existing genome with controlled chaos
  */
 export function mutateGenome(
-  genome: CreatorGenome, 
+  genome: CreatorGenome,
   mutationSeed: string,
   intensity: number = 0.3
 ): CreatorGenome {
-  const rng = new SeededRandom(mutationSeed);
+  const rng = new SHA256Random(mutationSeed);
   
   const mutateVector = (vec: LatentVector): LatentVector => {
     return vec.map(v => {
@@ -272,7 +255,7 @@ export function mutateGenome(
     c12_cross_pollination: mutateScalar(genome.c12_cross_pollination),
     c15_coherence_style: mutateScalar(genome.c15_coherence_style),
     seed: `${genome.seed}:MUTATED:${mutationSeed}`,
-    dna_hash: computeDNAHash(`${genome.seed}:MUTATED:${mutationSeed}`, rng),
+    dna_hash: computeDNAHash(`${genome.seed}:MUTATED:${mutationSeed}`),
     generation_timestamp: Date.now(),
   };
 }
@@ -282,10 +265,10 @@ export function mutateGenome(
  * Inherits visual traits while maintaining unique persona DNA
  */
 export function generateCreatorGenomeFromSnapshot(
-  seed: string, 
+  seed: string,
   snapshot: ExtractedStyleSnapshot
 ): CreatorGenome {
-  const rng = new SeededRandom(seed);
+  const rng = new SHA256Random(seed);
   
   // Base genome from seed
   const base = generateCreatorGenome(seed);
@@ -364,7 +347,7 @@ export function crossoverGenomes(
   parentB: CreatorGenome,
   offspringSeed: string
 ): CreatorGenome {
-  const rng = new SeededRandom(offspringSeed);
+  const rng = new SHA256Random(offspringSeed);
 
   const blendVectors = (a: LatentVector, b: LatentVector): LatentVector => {
     const t = rng.range(0.3, 0.7); // Don't go too extreme
@@ -401,7 +384,7 @@ export function crossoverGenomes(
     c14_sensory_weights: selectParent(parentA.c14_sensory_weights, parentB.c14_sensory_weights),
     c15_coherence_style: blendScalars(parentA.c15_coherence_style, parentB.c15_coherence_style),
     seed: `${parentA.seed}:CROSS:${parentB.seed}:${offspringSeed}`,
-    dna_hash: computeDNAHash(`${parentA.seed}:CROSS:${parentB.seed}:${offspringSeed}`, rng),
+    dna_hash: computeDNAHash(`${parentA.seed}:CROSS:${parentB.seed}:${offspringSeed}`),
     generation_timestamp: Date.now(),
   };
 }

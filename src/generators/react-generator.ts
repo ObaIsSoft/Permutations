@@ -44,6 +44,8 @@ function gv(genome: DesignGenome) {
     const base = rhythm.baseSpacing ?? 16;
     const isDark = temp.isDark || false;
     const surfaceBase = temp.surfaceStack?.[0] || "#ffffff";
+    const primaryHue = Math.round(colors.hue ?? 210);
+    const primaryLight = Math.round((colors.lightness ?? 0.5) * 100);
 
     return {
         primary: colors.hex || "#3b82f6",
@@ -98,6 +100,16 @@ function gv(genome: DesignGenome) {
         faq: copy.faq,
         fontImportUrl: typography.importUrl,
         bodyFontImportUrl: bodyFont.importUrl,
+        primaryHue, primarySat: Math.round((colors.saturation ?? 0.6) * 100), primaryLight,
+        onPrimary: primaryLight < 55 ? 'hsl(0, 0%, 97%)' : `hsl(${primaryHue}, 20%, 8%)`,
+        colorSurfaceDark: `hsl(${primaryHue}, 12%, 8%)`,
+        colorSurfaceDarkBorder: `hsla(0, 0%, 100%, 0.1)`,
+        colorSurfaceDarkHover: `hsla(0, 0%, 100%, 0.08)`,
+        colorTextOnDark: `hsl(0, 0%, 96%)`,
+        colorTextOnDarkMuted: `hsla(0, 0%, 96%, 0.5)`,
+        colorOverlay: `hsla(${primaryHue}, 20%, 5%, 0.5)`,
+        colorOverlayLight: `hsla(${primaryHue}, 20%, 5%, 0.4)`,
+        colorOverlaySubtle: `hsla(${primaryHue}, 20%, 5%, 0.1)`,
         isDark,
         motionPhysics: motion.physics ?? "none",
         enterDirection: motion.enterDirection ?? "up",
@@ -178,11 +190,13 @@ ${pageContent}  );
         const indent = "    ";
         let tree = "";
 
-        // Page wrapper with page transition
+        // Page wrapper with page transition + ch33 composition data attributes
+        const navType = navigation?.type ?? "none";
+        const compAttrs = `data-flow="${layout.flow}" data-density="${layout.density}" data-nav="${navType}" data-responsive="${layout.responsive}"`;
         if (animConfig.preset.fmType !== "none") {
-            tree += `${indent}<motion.div className="page-layout layout-${layout.type}" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: ${animConfig.duration * 0.75} }}>\n`;
+            tree += `${indent}<motion.div className="page-layout layout-${layout.type}" ${compAttrs} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: ${animConfig.duration * 0.75} }}>\n`;
         } else {
-            tree += `${indent}<div className="page-layout layout-${layout.type}">\n`;
+            tree += `${indent}<div className="page-layout layout-${layout.type}" ${compAttrs}>\n`;
         }
 
         // Navigation
@@ -458,6 +472,12 @@ export function ${component.name}({ ${component.props.filter((p: any) => !p.geno
   --color-text: ${v.text};
   --color-text-muted: ${v.textMuted};
   --color-border: ${v.border};
+  --color-primary-h: ${v.primaryHue}; --color-primary-s: ${v.primarySat}%; --color-primary-l: ${v.primaryLight}%;
+  --color-on-primary: ${v.onPrimary};
+  --color-surface-dark: ${v.colorSurfaceDark}; --color-surface-dark-border: ${v.colorSurfaceDarkBorder}; --color-surface-dark-hover: ${v.colorSurfaceDarkHover};
+  --color-text-on-dark: ${v.colorTextOnDark}; --color-text-on-dark-muted: ${v.colorTextOnDarkMuted};
+  --color-overlay: ${v.colorOverlay}; --color-overlay-light: ${v.colorOverlayLight}; --color-overlay-subtle: ${v.colorOverlaySubtle};
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08); --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12); --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.15); --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.2);
   --font-display: ${v.fontDisplay};
   --font-body: ${v.fontBody};
   --font-mono: ${v.fontMono};
@@ -486,8 +506,24 @@ export function ${component.name}({ ${component.props.filter((p: any) => !p.geno
   --font-size-4xl: ${v.fontSize4xl}px;
   --line-height: ${v.lineHeight};
   --line-height-tight: ${v.lineHeightTight};
+  --composition-flow: ${spec.layout.flow}; --composition-density: ${spec.layout.density};
+  --composition-nav: ${spec.navigation?.type ?? "none"}; --composition-responsive: ${spec.layout.responsive};
+  --sidebar-width: ${spec.sidebar?.width ?? "280px"};
 ${adaptiveVarLines.join("\n")}
+${Object.entries(spec.cssVariables).map(([name, val]) => `  ${name}: ${val};`).join("\n")}
 }
+
+/* ── Composition-Strategy Layout Rules (ch33) ──────────────────────────── */
+[data-nav="sidebar_persistent"] .page-layout,
+[data-nav="sidebar_collapsible"] .page-layout { display: grid; grid-template-columns: var(--sidebar-width) 1fr; }
+[data-density="content_dense"] .section { padding: var(--spacing-lg) var(--spacing-xl); }
+[data-density="maximal"] .section { padding: var(--spacing-md) var(--spacing-lg); }
+[data-density="hero_dense"] .hero { padding: 0; min-height: 100vh; }
+[data-flow="data_driven"] .hero { display: none; }
+[data-flow="data_driven"] .main-content { padding-top: var(--spacing-md); }
+[data-flow="action_first"] .hero { order: -1; }
+[data-flow="discovery"] .section { scroll-snap-align: start; }
+[data-responsive="stack"] .grid { grid-template-columns: 1fr; }
 
 /* ── Reset ─────────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -515,7 +551,16 @@ ul, ol { list-style: none; }
 
 /* ── Page Layout ───────────────────────────────────────────────────────── */
 .page-layout { display: flex; flex-direction: column; min-height: 100vh; }
-.main-content { flex: 1; }
+.main-content { flex: 1; display: flex; flex-direction: column; }
+.main-content > * { order: 10; }
+.hero { order: 5; }
+.navigation { order: 0; }
+.footer { order: 99; }
+/* ch33 contentFlow order overrides */
+[data-flow="data_driven"] .hero { order: 99; display: none; }
+[data-flow="action_first"] .hero { order: 0; }
+[data-flow="hero_first"] .hero { order: 0; }
+[data-flow="social_first"] .hero { order: 1; }
 
 /* ── Responsive ────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
