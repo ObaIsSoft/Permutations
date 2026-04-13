@@ -8,6 +8,10 @@
  */
 import { COMPONENT_LIBRARY_CATALOG, generateComponentCode } from "../genome/component-catalog.js";
 import { getAnimationConfig, generateCSSKeyframes, generateFramerMotionWrapper } from "../genome/animation-engine.js";
+import { generateTypographyOutput } from "./typography-engine.js";
+import { generateCursorOutput } from "./cursor-engine.js";
+import { generateScrollOutput } from "./scroll-engine.js";
+import { generateTransitionOutput } from "./transition-engine.js";
 // ── Genome Value Helpers ─────────────────────────────────────────────────────
 function gv(genome) {
     const ch = genome.chromosomes;
@@ -530,6 +534,14 @@ ${Array.from(patternStyles).join("\n\n")}
 
 /* ── Genome Animations ────────────────────────────────────────────────── */
 ${animationCSS}
+
+${generateTypographyOutput(spec.genome).css}
+
+${generateCursorOutput(spec.genome).css}
+
+${generateScrollOutput(spec.genome).css}
+
+${generateTransitionOutput(spec.genome).css}
 `,
         };
     }

@@ -10,6 +10,14 @@
 import type { PageCompositionSpec, SectionSpec, LibrarySelection } from "../genome/context-composer.js";
 import type { DesignGenome } from "../genome/types.js";
 import { getAnimationConfig, generateCSSKeyframes } from "../genome/animation-engine.js";
+import { getSectionVariationAttrs, attrsToString } from "./variation-engine.js";
+import { getSectionRhythmAttrs, getRhythmMotifElement } from "./rhythm-engine.js";
+import { renderStarHero } from "./star-engine.js";
+import { generateTypographyOutput } from "./typography-engine.js";
+import { generateCursorOutput } from "./cursor-engine.js";
+import { generateScrollOutput } from "./scroll-engine.js";
+import { generatePreloaderOutput } from "./preloader-engine.js";
+import { generateTransitionOutput } from "./transition-engine.js";
 
 export interface HTMLOutput {
     html: string;
@@ -145,19 +153,28 @@ export class HTMLGenerator {
         this.genome = spec.genome;
         const v = gv(spec.genome);
         const animConfig = getAnimationConfig(spec.genome);
+
+        // Phase D engine outputs — computed once, threaded through
+        const typographyOut = generateTypographyOutput(spec.genome);
+        const cursorOut = generateCursorOutput(spec.genome);
+        const scrollOut = generateScrollOutput(spec.genome);
+        const preloaderOut = generatePreloaderOutput(spec.genome);
+        const transitionOut = generateTransitionOutput(spec.genome);
+
         return {
-            html: this.generateHTML(v, animConfig),
-            css: this.generateCSS(v, animConfig),
-            js: this.generateJS(v, animConfig),
+            html: this.generateHTML(v, animConfig, preloaderOut.html, cursorOut.html),
+            css: this.generateCSS(v, animConfig, typographyOut.css, cursorOut.css, scrollOut.css, transitionOut.css),
+            js: this.generateJS(v, animConfig, typographyOut.js, cursorOut.js, scrollOut.js, preloaderOut.js, transitionOut.js),
             files: this.generateFiles(v, animConfig),
         };
     }
 
-    private generateHTML(v: ReturnType<typeof gv>, animConfig: ReturnType<typeof getAnimationConfig>): string {
-        const { layout, navigation, hero, sections, footer, sidebar } = this.spec;
+    private generateHTML(v: ReturnType<typeof gv>, animConfig: ReturnType<typeof getAnimationConfig>, preloaderHTML: string = "", cursorHTML: string = ""): string {
         const fontLinks = this.generateFontLinks(v);
         const bodyContent = this.renderBody(v, animConfig);
         const pageClass = animConfig.preset.fmType !== "none" ? ' class="animate-genome-page"' : "";
+        const preloader = preloaderHTML ? `\n${preloaderHTML}` : "";
+        const cursor = cursorHTML ? `\n${cursorHTML}` : "";
         return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -169,8 +186,8 @@ export class HTMLGenerator {
 ${fontLinks}
   <link rel="stylesheet" href="styles.css">
 </head>
-<body${pageClass}>
-${bodyContent}
+<body${pageClass}>${preloader}
+${bodyContent}${cursor}
   <script src="app.js" defer></script>
 </body>
 </html>`;
@@ -187,12 +204,17 @@ ${bodyContent}
         else if (navigation) html += this.renderNavFallback(navigation, v, animConfig, indent + "  ", 0);
         html += `${indent}  <main class="main-content">\n`;
         if (sidebar?.pattern?.blueprint) html += this.renderBlueprint(sidebar.pattern.blueprint, v, animConfig, indent + "    ", 0, this.resolveAdaptiveProps(sidebar.pattern));
-        if (hero?.pattern?.blueprint) html += this.renderBlueprint(hero.pattern.blueprint, v, animConfig, indent + "    ", 0, this.resolveAdaptiveProps(hero.pattern));
+        if (hero?.pattern?.blueprint) {
+            html += this.renderBlueprint(hero.pattern.blueprint, v, animConfig, indent + "    ", 0, this.resolveAdaptiveProps(hero.pattern));
+        } else {
+            const starResult = renderStarHero(this.genome, v, indent + "    ");
+            html += starResult.html + "\n";
+        }
         for (let i = 0; i < sections.length; i++) {
             const section = sections[i];
             const delay = i * animConfig.staggerInterval;
             if (section.pattern?.blueprint) html += this.renderBlueprint(section.pattern.blueprint, v, animConfig, indent + "    ", delay, this.resolveAdaptiveProps(section.pattern));
-            else html += this.renderSectionFallback(section, v, animConfig, indent + "    ", delay);
+            else html += this.renderSectionFallback(section, v, animConfig, indent + "    ", delay, i);
         }
         html += `${indent}  </main>\n`;
         if (footer?.pattern?.blueprint) html += this.renderBlueprint(footer.pattern.blueprint, v, animConfig, indent + "  ", sections.length * animConfig.staggerInterval, this.resolveAdaptiveProps(footer.pattern));
@@ -241,9 +263,15 @@ ${bodyContent}
         return `${indent}<nav class="navigation nav-${nav.type}" role="navigation" aria-label="Main navigation"${animClass}>\n${indent}  <div class="nav-container">\n${indent}    <a href="/" class="nav-logo" aria-label="Home"><span class="logo-text">${v.companyName || ""}</span></a>\n${indent}    <div class="nav-items">\n${items}\n${indent}    </div>\n${indent}    <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false"><span class="hamburger"></span></button>\n${indent}  </div>\n${indent}</nav>\n`;
     }
 
-    private renderSectionFallback(section: SectionSpec, v: ReturnType<typeof gv>, animConfig: ReturnType<typeof getAnimationConfig>, indent: string, delay: number): string {
-        const animClass = animConfig.preset.fmType !== "none" ? ` class="animate-genome-scroll" style="animation-delay: ${delay}ms"` : "";
-        return `${indent}<section class="section section-${section.type}"${animClass}>\n${indent}  <div class="section-container">\n${indent}    <!-- ${section.type} section -->\n${indent}  </div>\n${indent}</section>\n`;
+    private renderSectionFallback(section: SectionSpec, v: ReturnType<typeof gv>, animConfig: ReturnType<typeof getAnimationConfig>, indent: string, delay: number, sectionIndex: number = 0): string {
+        const variationAttrs = getSectionVariationAttrs(this.genome, sectionIndex);
+        const rhythmAttrs = getSectionRhythmAttrs(this.genome);
+        const motifEl = getRhythmMotifElement(rhythmAttrs["data-rhythm"], indent + "  ");
+        const extraAttrs = attrsToString({ ...variationAttrs, ...rhythmAttrs });
+        const animAttr = animConfig.preset.fmType !== "none"
+            ? ` class="animate-genome-scroll" style="animation-delay: ${delay}ms"`
+            : "";
+        return `${indent}<section class="section section-${section.type}"${extraAttrs}${animAttr}>\n${motifEl}${indent}  <div class="section-container">\n${indent}    <!-- ${section.type} section -->\n${indent}  </div>\n${indent}</section>\n`;
     }
 
     private generateFontLinks(v: ReturnType<typeof gv>): string {
@@ -311,7 +339,7 @@ ${bodyContent}
         return result;
     }
 
-    private generateCSS(v: ReturnType<typeof gv>, animConfig: ReturnType<typeof getAnimationConfig>): string {
+    private generateCSS(v: ReturnType<typeof gv>, animConfig: ReturnType<typeof getAnimationConfig>, typographyCSS: string = "", cursorCSS: string = "", scrollCSS: string = "", transitionCSS: string = ""): string {
         const allPatterns = [this.spec.layout.pattern, this.spec.navigation?.pattern, this.spec.hero?.pattern, this.spec.footer?.pattern, this.spec.sidebar?.pattern, ...this.spec.sections.map(s => s.pattern)].filter(Boolean);
 
         // Resolve all adaptive CSS vars from patterns into :root
@@ -427,10 +455,12 @@ ${Array.from(patternStyles).join("\n\n")}
 
 /* ── Genome Animations ────────────────────────────────────────────────── */
 ${animationCSS}
-`;
+
+${typographyCSS ? typographyCSS + "\n" : ""}${cursorCSS ? cursorCSS + "\n" : ""}${scrollCSS ? scrollCSS + "\n" : ""}${transitionCSS ? transitionCSS + "\n" : ""}`.trimEnd() + "\n";
     }
 
-    private generateJS(v: ReturnType<typeof gv>, animConfig: ReturnType<typeof getAnimationConfig>): string {
+    private generateJS(v: ReturnType<typeof gv>, animConfig: ReturnType<typeof getAnimationConfig>, typographyJS: string = "", cursorJS: string = "", scrollJS: string = "", preloaderJS: string = "", transitionJS: string = ""): string {
+        const phaseDJS = [typographyJS, cursorJS, scrollJS, preloaderJS, transitionJS].filter(Boolean).join("\n");
         return `/**
  * Genome-generated application JavaScript
  */
@@ -488,6 +518,7 @@ ${animationCSS}
 
   document.addEventListener('DOMContentLoaded', () => { initScrollAnimations(); initMobileNav(); initSmoothScroll(); initCounters(); console.log('[Genome] Page loaded | Physics: ${v.motionPhysics} | Choreography: ${v.choreographyStyle}'); });
 })();
+${phaseDJS}
 `;
     }
 

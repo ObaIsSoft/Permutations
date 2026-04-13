@@ -11,6 +11,10 @@ import type { PageCompositionSpec, SectionSpec, ComponentSpec, LibrarySelection 
 import type { DesignGenome } from "../genome/types.js";
 import { COMPONENT_LIBRARY_CATALOG, generateComponentCode } from "../genome/component-catalog.js";
 import { getAnimationConfig, generateCSSKeyframes, generateFramerMotionWrapper } from "../genome/animation-engine.js";
+import { generateTypographyOutput } from "./typography-engine.js";
+import { generateCursorOutput } from "./cursor-engine.js";
+import { generateScrollOutput } from "./scroll-engine.js";
+import { generateTransitionOutput } from "./transition-engine.js";
 
 export interface ReactOutput {
     pages: PageFile[];
@@ -585,6 +589,14 @@ ${Array.from(patternStyles).join("\n\n")}
 
 /* ── Genome Animations ────────────────────────────────────────────────── */
 ${animationCSS}
+
+${generateTypographyOutput(spec.genome).css}
+
+${generateCursorOutput(spec.genome).css}
+
+${generateScrollOutput(spec.genome).css}
+
+${generateTransitionOutput(spec.genome).css}
 `,
         };
     }
