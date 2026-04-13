@@ -83,7 +83,10 @@ export class FontCatalogService {
         const cached = this.cache.get(src);
         if (!cached || cached.fonts.length === 0) {
             // Lazy init: trigger load in background so next call may succeed
-            this.load(src).catch(() => { });
+            this.load(src).catch(err => {
+                // Log but don't re-throw so caller gets the proper error message below
+                console.warn(`[FontCatalog] Background load failed for ${src}:`, err);
+            });
             throw new Error(`Font catalog not loaded for provider "${src}" — call await fontCatalog.warmCache() before genome generation (load initiated)`);
         }
         const tags = CHARGE_TAGS[charge] ?? [];

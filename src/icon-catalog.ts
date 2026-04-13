@@ -14,6 +14,7 @@
  */
 
 import type { EdgeStyle, TypeCharge } from "./genome/types.js";
+import { getLimits } from "./config/limits.js";
 
 // ── Icon style taxonomy ──────────────────────────────────────────────────────
 
@@ -132,7 +133,7 @@ export const ICON_CATALOG: IconLibraryEntry[] = [
         cdn: "https://unpkg.com/@tabler/icons@latest/icons-sprite.svg",
         style: "sharp",
         weightVariants: ["outline", "filled"],
-        count: 5000,
+        count: getLimits().ICON_COUNT_MAX,
         license: "MIT",
         description: "Massive 2px-stroke library — the most comprehensive sharp set available",
         importExample: `import { IconHome } from "@tabler/icons-react";`,

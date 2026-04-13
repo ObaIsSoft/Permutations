@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import sharp from 'sharp';
+import { getLimits } from '../config/limits.js';
 // pdf-parse is imported dynamically inside parseAssets to avoid startup crashes due to missing test files in the library itself.
 
 export interface EpigeneticData {
@@ -50,8 +51,9 @@ export class EpigeneticParser {
         }
 
         if (contextSegments.length > 0) {
-            // Take the first 5000 chars to avoid blowing up the LLM token limit
-            data.brandContext = contextSegments.join(" | ").slice(0, 5000);
+            // Take the first CONTEXT_MAX_CHARS to avoid blowing up the LLM token limit
+            const limits = getLimits();
+            data.brandContext = contextSegments.join(" | ").slice(0, limits.CONTEXT_MAX_CHARS);
         }
 
         return data;

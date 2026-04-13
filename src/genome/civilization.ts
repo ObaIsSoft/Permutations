@@ -3,6 +3,7 @@ import { ComplexityAnalyzer, ComplexityAnalysis } from "./complexity-analyzer.js
 import { EcosystemGenome } from "./ecosystem-types.js";
 import { CivilizationGenome } from "./civilization-types.js";
 import { sequenceCivilizationGenome } from "./civilization-sequencer.js";
+import { getLimits } from '../config/limits.js';
 
 // ── Civilization genome → architecture mappings ──────────────────────────────
 
@@ -694,7 +695,7 @@ export class CivilizationGenerator {
             props: [
                 { name: 'message',  type: 'string',                                required: true },
                 { name: 'type',     type: '"info" | "success" | "warning" | "error"', required: false, default: '"info"' },
-                { name: 'duration', type: 'number',                                required: false, default: 5000 }
+                { name: 'duration', type: 'number',                                required: false, default: getLimits().DEFAULT_ANIMATION_DURATION_MS }
             ],
             variants: ['info', 'success', 'warning', 'error'],
             accessibility: { role: 'alert', ariaProps: ['aria-live', 'aria-atomic'], keyboard: ['Escape'] }

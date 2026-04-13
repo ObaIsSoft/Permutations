@@ -12,6 +12,7 @@
  * on a brutalist layout, or a heavy bold icon on a hand-drawn organic design,
  * are psychologically wrong. Only those conflicts are blocked.
  */
+import { getLimits } from "./config/limits.js";
 export const ICON_CATALOG = [
     // ── Thin / Elegant ────────────────────────────────────────────────────────
     {
@@ -90,7 +91,7 @@ export const ICON_CATALOG = [
         cdn: "https://unpkg.com/@tabler/icons@latest/icons-sprite.svg",
         style: "sharp",
         weightVariants: ["outline", "filled"],
-        count: 5000,
+        count: getLimits().ICON_COUNT_MAX,
         license: "MIT",
         description: "Massive 2px-stroke library — the most comprehensive sharp set available",
         importExample: `import { IconHome } from "@tabler/icons-react";`,

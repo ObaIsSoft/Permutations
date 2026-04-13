@@ -4,6 +4,7 @@ import { writeFile, unlink } from "fs/promises";
 import { tmpdir } from "os";
 import { join } from "path";
 import * as crypto from "crypto";
+import { getLimits } from '../config/limits.js';
 
 // Simple logger
 const logger = {
@@ -113,7 +114,8 @@ export class URLGenomeExtractor {
             try {
                 await this.initBrowser();
                 const page = await this.browser!.newPage();
-                await page.goto(url, { waitUntil: "networkidle", timeout: 30000 });
+                const limits = getLimits();
+                await page.goto(url, { waitUntil: "networkidle", timeout: limits.URL_FETCH_TIMEOUT_MS });
                 await page.waitForTimeout(2000);
                 
                 const allCSS = await this.extractAllCSS(page);
@@ -184,7 +186,8 @@ export class URLGenomeExtractor {
         }
         
         try {
-            await this.execCommand(pythonCmd, ["-c", "import scrapy"], { timeout: 5000 });
+            const limits = getLimits();
+            await this.execCommand(pythonCmd, ["-c", "import scrapy"], { timeout: limits.URL_QUICK_TIMEOUT_MS });
         } catch {
             throw new Error("Scrapy not installed. Run: pip install scrapy");
         }
@@ -266,9 +269,10 @@ process.start()
     }
 
     private async findPython(): Promise<string | null> {
+        const limits = getLimits();
         for (const cmd of ["python3", "python"]) {
             try {
-                await this.execCommand(cmd, ["--version"], { timeout: 5000 });
+                await this.execCommand(cmd, ["--version"], { timeout: limits.URL_QUICK_TIMEOUT_MS });
                 return cmd;
             } catch {
                 continue;
@@ -350,6 +354,7 @@ process.start()
     }
 
     private buildGenome(url: string, allCSS: string, computedStyles: ComputedStyle[]): ExtractedGenome {
+        const limits = getLimits();
         const colors = this.analyzeColors(allCSS, computedStyles);
         const typography = this.analyzeTypography(allCSS, computedStyles);
         const layout = this.analyzeLayout(allCSS, computedStyles);
@@ -366,7 +371,7 @@ process.start()
             typography,
             layout,
             animation,
-            rawCSS: allCSS.slice(0, 50000),
+            rawCSS: allCSS.slice(0, limits.URL_CONTENT_MAX_CHARS),
             computedStyles: computedStyles.slice(0, 100),
             extractedAt: new Date().toISOString(),
         };
