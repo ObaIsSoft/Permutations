@@ -18,6 +18,7 @@
  */
 import { seedRemainingPatterns } from "./pattern-seeds.js";
 import { PATTERN_FETCHERS } from "./pattern-fetchers.js";
+import { logger } from "../logger.js";
 // ── Pattern Registry ────────────────────────────────────────────────────────
 export class PatternRegistry {
     patterns = new Map();
@@ -60,8 +61,6 @@ export class PatternRegistry {
                         this.addPattern(pattern);
                     }
                 }).catch(err => {
-                    // eslint-disable-next-line @typescript-eslint/no-var-requires
-                    const { logger } = require('../logger.js');
                     logger.warn(`Failed to fetch patterns`, 'PatternRegistry', { source: source.name, error: err });
                 }));
             }
@@ -231,8 +230,6 @@ export class PatternComposer {
         return value ?? "";
     }
     validateComposition(sections) {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const { logger } = require('../logger.js');
         for (const section of sections) {
             const rules = section.compositionRules;
             if (rules.maxChildren > 0 && section.children.length > rules.maxChildren) {

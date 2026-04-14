@@ -1,3 +1,4 @@
+import { logger } from "../logger.js";
 export interface PatternViolation {
     type: "visual" | "structural" | "semantic";
     pattern: string;
@@ -328,12 +329,7 @@ export class PatternDetector {
 
     detect(css: string, html?: string): PatternViolation[] {
         // Guard against huge inputs (ReDoS protection) - truncates with warning
-        // Import logger once at the top of the function
-        // (dynamic import not needed, use static import if possible)
-        // If logger must be dynamic, wrap in async and refactor API
-        // Here, fallback to static import
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const { logger } = require('../logger.js');
+        // Import logger once at the top of the file
         if (css.length > PatternDetector.MAX_INPUT_SIZE) {
             logger.warn(`CSS input too large, truncating`, 'PatternDetector', { input: css.length, max: PatternDetector.MAX_INPUT_SIZE });
             css = css.substring(0, PatternDetector.MAX_INPUT_SIZE);

@@ -1,3 +1,4 @@
+import { logger } from "../logger.js";
 /** Returns true if the character at matchIndex is inside a CSS block whose opening
  *  @-rule or selector header matches blockHeaderRegex. Walks backwards from matchIndex,
  *  counting braces to find the enclosing block, then tests the 200 chars preceding the '{'. */
@@ -298,12 +299,7 @@ export class PatternDetector {
     static MAX_INPUT_SIZE = parseInt(process.env.GENOME_MAX_PATTERN_INPUT_BYTES || "1048576", 10);
     detect(css, html) {
         // Guard against huge inputs (ReDoS protection) - truncates with warning
-        // Import logger once at the top of the function
-        // (dynamic import not needed, use static import if possible)
-        // If logger must be dynamic, wrap in async and refactor API
-        // Here, fallback to static import
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const { logger } = require('../logger.js');
+        // Import logger once at the top of the file
         if (css.length > PatternDetector.MAX_INPUT_SIZE) {
             logger.warn(`CSS input too large, truncating`, 'PatternDetector', { input: css.length, max: PatternDetector.MAX_INPUT_SIZE });
             css = css.substring(0, PatternDetector.MAX_INPUT_SIZE);

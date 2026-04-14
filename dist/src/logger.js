@@ -25,7 +25,7 @@ class Logger {
             context,
             data,
         };
-        console.debug(this.formatEntry(entry));
+        console.error(this.formatEntry(entry));
     }
     info(message, context, data) {
         const entry = {
@@ -35,7 +35,7 @@ class Logger {
             context,
             data,
         };
-        console.info(this.formatEntry(entry));
+        console.error(this.formatEntry(entry));
     }
     warn(message, context, data) {
         const entry = {
@@ -45,7 +45,7 @@ class Logger {
             context,
             data,
         };
-        console.warn(this.formatEntry(entry));
+        console.error(this.formatEntry(entry));
     }
     error(message, context, error) {
         const entry = {

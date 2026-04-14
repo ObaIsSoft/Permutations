@@ -36,7 +36,7 @@ class Logger {
             context,
             data,
         };
-        console.debug(this.formatEntry(entry));
+        console.error(this.formatEntry(entry));
     }
 
     info(message: string, context?: string, data?: unknown): void {
@@ -47,7 +47,7 @@ class Logger {
             context,
             data,
         };
-        console.info(this.formatEntry(entry));
+        console.error(this.formatEntry(entry));
     }
 
     warn(message: string, context?: string, data?: unknown): void {
@@ -58,7 +58,7 @@ class Logger {
             context,
             data,
         };
-        console.warn(this.formatEntry(entry));
+        console.error(this.formatEntry(entry));
     }
 
     error(message: string, context?: string, error?: Error | unknown): void {
