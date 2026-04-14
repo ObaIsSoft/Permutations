@@ -480,6 +480,8 @@ export interface GenerationOptions {
     contentWeight?: number;              // Override content analysis influence
     enable3D?: boolean;                  // Global 3D toggle (default: context-appropriate)
     fontProvider?: FontProvider;         // "bunny" | "google" | "fontshare" | "none" (default: "bunny")
+    complexity?: number;                 // 0.0-1.0 derived from intent
+    tier?: string;                       // Tier name based on complexity
     copyIntelligence?: {                 // LLM-extracted copy guidance
         industryTerminology: string[];
         emotionalRegister: "clinical" | "professional" | "conversational" | "playful" | "luxury" | "urgent";

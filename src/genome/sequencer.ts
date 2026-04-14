@@ -3206,3 +3206,19 @@ export class GenomeSequencer {
         });
     }
 }
+
+/**
+ * Get tier name from complexity score 
+ */
+export function getTierName(complexity: number): string {
+    if (complexity >= 0.99) return "singularity";
+    if (complexity >= 0.97) return "network";
+    if (complexity >= 0.95) return "empire";
+    if (complexity >= 0.92) return "nation_state";
+    if (complexity >= 0.87) return "city_state";
+    if (complexity >= 0.81) return "tribal";
+    if (complexity >= 0.74) return "fauna";
+    if (complexity >= 0.65) return "flora";
+    return "microbial";
+}
+

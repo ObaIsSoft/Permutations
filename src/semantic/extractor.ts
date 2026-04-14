@@ -3,7 +3,8 @@ import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { ContentTraits } from "../genome/types.js";
-import * as crypto from "crypto";
+// import * as crypto from "crypto";
+
 
 type LLMProvider = "groq" | "openai" | "anthropic" | "gemini" | "openrouter" | "hf-inference";
 
@@ -32,16 +33,31 @@ function safeJSONParse<T>(json: string, context: string): T {
 }
 
 function createLLMClient(provider: LLMProvider, apiKey: string): LLMClient {
+    console.error(`[EXTRACTOR] Initializing LLM client for provider: ${provider}`);
+
     switch (provider) {
         case "groq": {
             const c = new Groq({ apiKey });
             return {
                 async chatJSON<T>(p: string, opts: ChatJSONOpts) {
-                    const r = await c.chat.completions.create({ model: opts.model, messages: [{ role: "user", content: p }], response_format: { type: "json_object" }, temperature: opts.temperature });
-                    return safeJSONParse<T>(r.choices[0].message.content || "{}", "groq");
+                    if (!opts) throw new Error("chatJSON called without options");
+                    const r = await c.chat.completions.create({ 
+                        model: opts.model || "llama-3.3-70b-versatile", 
+                        messages: [{ role: "user", content: p }], 
+                        response_format: { type: "json_object" }, 
+                        temperature: opts.temperature ?? 0.2 
+                    });
+                    return safeJSONParse<T>(r.choices[0]?.message?.content || "{}", "groq");
+
                 },
                 async chatText(p: string, opts: ChatTextOpts) {
-                    const r = await c.chat.completions.create({ model: opts.model, messages: [{ role: "user", content: p }], temperature: opts.temperature, max_tokens: opts.maxTokens });
+                    if (!opts) throw new Error("chatText called without options");
+                    const r = await c.chat.completions.create({ 
+                        model: opts.model || "llama-3.3-70b-versatile", 
+                        messages: [{ role: "user", content: p }], 
+                        temperature: opts.temperature ?? 0.7, 
+                        max_tokens: opts.maxTokens || 4096 
+                    });
                     return r.choices[0].message.content || "";
                 },
             };
@@ -50,11 +66,24 @@ function createLLMClient(provider: LLMProvider, apiKey: string): LLMClient {
             const c = new OpenAI({ apiKey });
             return {
                 async chatJSON<T>(p: string, opts: ChatJSONOpts) {
-                    const r = await c.chat.completions.create({ model: opts.model, messages: [{ role: "user", content: p }], response_format: { type: "json_object" }, temperature: opts.temperature });
-                    return safeJSONParse<T>(r.choices[0].message.content || "{}", "openai");
+                    if (!opts) throw new Error("chatJSON called without options");
+                    const r = await c.chat.completions.create({ 
+                        model: opts.model || "gpt-4o", 
+                        messages: [{ role: "user", content: p }], 
+                        response_format: { type: "json_object" }, 
+                        temperature: opts.temperature ?? 0.2 
+                    });
+                    return safeJSONParse<T>(r.choices[0]?.message?.content || "{}", "openai");
+
                 },
                 async chatText(p: string, opts: ChatTextOpts) {
-                    const r = await c.chat.completions.create({ model: opts.model, messages: [{ role: "user", content: p }], temperature: opts.temperature, max_tokens: opts.maxTokens });
+                    if (!opts) throw new Error("chatText called without options");
+                    const r = await c.chat.completions.create({ 
+                        model: opts.model || "gpt-4o", 
+                        messages: [{ role: "user", content: p }], 
+                        temperature: opts.temperature ?? 0.7, 
+                        max_tokens: opts.maxTokens || 4096 
+                    });
                     return r.choices[0].message.content || "";
                 },
             };
@@ -63,7 +92,12 @@ function createLLMClient(provider: LLMProvider, apiKey: string): LLMClient {
             const c = new Anthropic({ apiKey });
             return {
                 async chatJSON<T>(p: string, opts: ChatJSONOpts) {
-                    const r = await c.messages.create({ model: opts.model, max_tokens: opts.maxTokens || 4096, messages: [{ role: "user", content: p }] });
+                    if (!opts) throw new Error("chatJSON called without options");
+                    const r = await c.messages.create({ 
+                        model: opts.model || "claude-3-7-sonnet-latest", 
+                        max_tokens: opts.maxTokens || 4096, 
+                        messages: [{ role: "user", content: p }] 
+                    });
                     const t = r.content[0];
                     if (t.type !== "text") throw new Error("Unexpected response type");
                     const m = t.text.match(/\{[\s\S]*\}/);
@@ -71,7 +105,12 @@ function createLLMClient(provider: LLMProvider, apiKey: string): LLMClient {
                     return safeJSONParse<T>(m[0], "anthropic");
                 },
                 async chatText(p: string, opts: ChatTextOpts) {
-                    const r = await c.messages.create({ model: opts.model, max_tokens: opts.maxTokens, messages: [{ role: "user", content: p }] });
+                    if (!opts) throw new Error("chatText called without options");
+                    const r = await c.messages.create({ 
+                        model: opts.model || "claude-3-7-sonnet-latest", 
+                        max_tokens: opts.maxTokens || 4096, 
+                        messages: [{ role: "user", content: p }] 
+                    });
                     const t = r.content[0];
                     if (t.type !== "text") throw new Error("Unexpected response type");
                     return t.text;
@@ -79,17 +118,30 @@ function createLLMClient(provider: LLMProvider, apiKey: string): LLMClient {
             };
         }
         case "gemini": {
-            const gm = new GoogleGenerativeAI(apiKey).getGenerativeModel({ model: "gemini-2.0-flash" });
+            const genAI = new GoogleGenerativeAI(apiKey);
             return {
                 async chatJSON<T>(_p: string, opts: ChatJSONOpts) {
-                    const r = await gm.generateContent({ contents: [{ role: "user", parts: [{ text: _p }] }], generationConfig: { temperature: opts.temperature, responseMimeType: "application/json" } });
+                    if (!opts) throw new Error("chatJSON called without options");
+                    const gm = genAI.getGenerativeModel({ model: opts.model || "gemini-2.0-flash" });
+                    const r = await gm.generateContent({ 
+                        contents: [{ role: "user", parts: [{ text: _p }] }], 
+                        generationConfig: { 
+                            temperature: opts.temperature ?? 0.2, 
+                            responseMimeType: "application/json" 
+                        } 
+                    });
                     const t = r.response.text();
                     const j = t.match(/\{[\s\S]*\}/);
                     if (!j) throw new Error("No JSON in response");
                     return safeJSONParse<T>(j[0], "gemini");
                 },
                 async chatText(p: string, opts: ChatTextOpts) {
-                    const r = await gm.generateContent({ contents: [{ role: "user", parts: [{ text: p }] }], generationConfig: { temperature: opts.temperature } });
+                    if (!opts) throw new Error("chatText called without options");
+                    const gm = genAI.getGenerativeModel({ model: opts.model || "gemini-2.0-flash" });
+                    const r = await gm.generateContent({ 
+                        contents: [{ role: "user", parts: [{ text: p }] }], 
+                        generationConfig: { temperature: opts.temperature ?? 0.7 } 
+                    });
                     return r.response.text();
                 },
             };
@@ -98,12 +150,26 @@ function createLLMClient(provider: LLMProvider, apiKey: string): LLMClient {
             const c = new OpenAI({ apiKey, baseURL: "https://openrouter.ai/api/v1" });
             return {
                 async chatJSON<T>(p: string, opts: ChatJSONOpts) {
-                    const r = await c.chat.completions.create({ model: opts.model, messages: [{ role: "user", content: p }], response_format: { type: "json_object" }, temperature: opts.temperature });
-                    return safeJSONParse<T>(r.choices[0].message.content || "{}", "openrouter");
+                    if (!opts) throw new Error("chatJSON called without options");
+                    const r = await c.chat.completions.create({ 
+                        model: opts.model || "meta-llama/llama-3-70b-instruct", 
+                        messages: [{ role: "user", content: p }], 
+                        response_format: { type: "json_object" }, 
+                        temperature: opts.temperature ?? 0.2 
+                    });
+                    return safeJSONParse<T>(r.choices[0]?.message?.content || "{}", "openrouter");
+
                 },
                 async chatText(p: string, opts: ChatTextOpts) {
-                    const r = await c.chat.completions.create({ model: opts.model, messages: [{ role: "user", content: p }], temperature: opts.temperature, max_tokens: opts.maxTokens });
-                    return r.choices[0].message.content || "";
+                    if (!opts) throw new Error("chatText called without options");
+                    const r = await c.chat.completions.create({ 
+                        model: opts.model || "meta-llama/llama-3-70b-instruct", 
+                        messages: [{ role: "user", content: p }], 
+                        temperature: opts.temperature ?? 0.7, 
+                        max_tokens: opts.maxTokens || 4096 
+                    });
+                    return r.choices[0]?.message?.content || "";
+
                 },
             };
         }
@@ -111,15 +177,31 @@ function createLLMClient(provider: LLMProvider, apiKey: string): LLMClient {
             const c = new OpenAI({ apiKey, baseURL: "https://router.huggingface.co/together/v1" });
             return {
                 async chatJSON<T>(p: string, opts: ChatJSONOpts) {
-                    const r = await c.chat.completions.create({ model: opts.model, messages: [{ role: "user", content: p }], response_format: { type: "json_object" }, temperature: opts.temperature });
-                    return safeJSONParse<T>(r.choices[0].message.content || "{}", "hf-inference");
+                    if (!opts) throw new Error("chatJSON called without options");
+                    const r = await c.chat.completions.create({ 
+                        model: opts.model || "meta-llama/Llama-3.3-70B-Instruct", 
+                        messages: [{ role: "user", content: p }], 
+                        response_format: { type: "json_object" }, 
+                        temperature: opts.temperature ?? 0.2 
+                    });
+                    return safeJSONParse<T>(r.choices[0]?.message?.content || "{}", "hf-inference");
+
                 },
                 async chatText(p: string, opts: ChatTextOpts) {
-                    const r = await c.chat.completions.create({ model: opts.model, messages: [{ role: "user", content: p }], temperature: opts.temperature, max_tokens: opts.maxTokens });
-                    return r.choices[0].message.content || "";
+                    if (!opts) throw new Error("chatText called without options");
+                    const r = await c.chat.completions.create({ 
+                        model: opts.model || "meta-llama/Llama-3.3-70B-Instruct", 
+                        messages: [{ role: "user", content: p }], 
+                        temperature: opts.temperature ?? 0.7, 
+                        max_tokens: opts.maxTokens || 4096 
+                    });
+                    return r.choices[0]?.message?.content || "";
+
                 },
             };
         }
+        default:
+            throw new Error(`Unsupported LLM provider: ${provider}`);
     }
 }
 
@@ -287,43 +369,52 @@ export class SemanticTraitExtractor {
     private apiKeyMissing: boolean = false;
     private client: LLMClient;
     private provider: LLMProvider;
+    private availableProviders: Array<{ provider: LLMProvider; key: string }> = [];
+    private currentProviderIndex: number = 0;
 
     constructor(apiKey?: string, provider?: LLMProvider) {
-        const groqKey = process.env.GROQ_API_KEY;
-        const openaiKey = process.env.OPENAI_API_KEY;
-        const anthropicKey = process.env.ANTHROPIC_API_KEY;
-        const geminiKey = process.env.GEMINI_API_KEY;
-        const openrouterKey = process.env.OPENROUTER_API_KEY;
-        const hfKey = process.env.HUGGINGFACE_API_KEY;
+        // Build inventory of all potential providers
+        const keys: Record<LLMProvider, string | undefined> = {
+            groq: process.env.GROQ_API_KEY,
+            openai: process.env.OPENAI_API_KEY,
+            anthropic: process.env.ANTHROPIC_API_KEY,
+            gemini: process.env.GEMINI_API_KEY,
+            openrouter: process.env.OPENROUTER_API_KEY,
+            "hf-inference": process.env.HUGGINGFACE_API_KEY
+        };
 
-        if (provider) {
-            this.provider = provider;
-        } else if (groqKey) {
-            this.provider = "groq";
-        } else if (openaiKey) {
-            this.provider = "openai";
-        } else if (anthropicKey) {
-            this.provider = "anthropic";
-        } else if (geminiKey) {
-            this.provider = "gemini";
-        } else if (openrouterKey) {
-            this.provider = "openrouter";
-        } else if (hfKey) {
-            this.provider = "hf-inference";
+        // If a specific key/provider was forced in constructor, use only that one
+        if (apiKey && provider) {
+            this.availableProviders = [{ provider, key: apiKey }];
         } else {
-            this.provider = "groq";
+            // Otherwise, collect all available keys in order of preference
+            const order: LLMProvider[] = ["groq", "openai", "anthropic", "gemini", "openrouter", "hf-inference"];
+            for (const p of order) {
+                if (keys[p]) {
+                    this.availableProviders.push({ provider: p, key: keys[p]! });
+                }
+            }
         }
 
-        const key = apiKey || groqKey || openaiKey || anthropicKey || geminiKey || openrouterKey || hfKey;
-
-        if (!key) {
+        if (this.availableProviders.length === 0) {
             throw new Error(
-                "No LLM API key configured. Set one of: GROQ_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY, or HUGGINGFACE_API_KEY."
+                "No LLM API keys configured. Set at least one of: GROQ_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY, or HUGGINGFACE_API_KEY."
             );
         }
 
-        this.client = createLLMClient(this.provider, key);
+        // Initialize with default or forced provider
+        const initial = provider ? this.availableProviders.find(p => p.provider === provider) : null;
+        if (initial) {
+            this.currentProviderIndex = this.availableProviders.indexOf(initial);
+        } else {
+            this.currentProviderIndex = 0;
+        }
+
+        const active = this.availableProviders[this.currentProviderIndex];
+        this.provider = active.provider;
+        this.client = createLLMClient(active.provider, active.key);
     }
+
 
     /**
      * Static startup check — call this at server boot to fail fast if no LLM key exists.
@@ -352,125 +443,144 @@ export class SemanticTraitExtractor {
         creativeBehavior: string;
     }): Promise<DesignAnalysis> {
         const prompt = this.buildPrompt(intent, projectContext, personaContext);
-        let lastError: Error | null = null;
-
-        for (let attempt = 1; attempt <= LLM_MAX_RETRIES; attempt++) {
-            try {
-                const result = await this.withTimeout(
-                    this.callProvider(prompt),
-                    LLM_TIMEOUT_MS
-                );
-                const s = result.structural ?? {};
-                const toBool = (v: unknown) => v === true || v === 'true' || v === 1;
-                return {
-                    structural: {
-                        realtimeState:          toBool(s.realtimeState),
-                        entityCount:            Math.max(1, Math.min(30, Math.round(Number(s.entityCount) || 1))),
-                        sensitiveData:          toBool(s.sensitiveData),
-                        multiRole:              toBool(s.multiRole),
-                        financialTransactions:  toBool(s.financialTransactions),
-                        complexWorkflows:       toBool(s.complexWorkflows),
-                        deepNavigation:         toBool(s.deepNavigation),
-                        externalIntegrations:   toBool(s.externalIntegrations),
-                        screenCount:            Math.max(1, Math.min(50, Math.round(Number(s.screenCount) || 1))),
-                        primarySurface: (
-                            ['data','content','media','transaction','balanced'].includes(s.primarySurface as string)
-                                ? s.primarySurface as StructuralProps['primarySurface']
-                                : 'balanced'
-                        ),
-                    },
-                    traits: {
-                        informationDensity: this.clamp(result.traits?.informationDensity ?? 0.5),
-                        temporalUrgency: this.clamp(result.traits?.temporalUrgency ?? 0.5),
-                        emotionalTemperature: this.clamp(result.traits?.emotionalTemperature ?? 0.5),
-                        playfulness: this.clamp(result.traits?.playfulness ?? 0.5),
-                        spatialDependency: this.clamp(result.traits?.spatialDependency ?? 0.5),
-                        trustRequirement: this.clamp(result.traits?.trustRequirement ?? 0.5),
-                        visualEmphasis: this.clamp(result.traits?.visualEmphasis ?? 0.5),
-                        conversionFocus: this.clamp(result.traits?.conversionFocus ?? 0.5),
-                    },
-                    sector: {
-                        primary: result.sector?.primary || "technology",
-                        subSector: result.sector?.subSector || "technology_general",
-                        confidence: this.clamp(result.sector?.confidence ?? 0.5),
-                    },
-                    archetype: {
-                        type: result.archetype?.type || "landing",
-                        confidence: this.clamp(result.archetype?.confidence ?? 0.5),
-                    },
-                    copyIntelligence: {
-                        industryTerminology: result.copyIntelligence?.industryTerminology || [],
-                        emotionalRegister: (
-                            typeof result.copyIntelligence?.emotionalRegister === 'string' &&
-                            ["clinical","professional","conversational","playful","luxury","urgent"].includes(result.copyIntelligence.emotionalRegister)
-                        )
-                            ? result.copyIntelligence.emotionalRegister as ('clinical' | 'professional' | 'conversational' | 'playful' | 'luxury' | 'urgent')
-                            : "professional",
-                        formalityLevel: this.clamp(result.copyIntelligence?.formalityLevel ?? 0.5),
-                        ctaAggression: this.clamp(result.copyIntelligence?.ctaAggression ?? 0.5),
-                        headlineStyle: (
-                            typeof result.copyIntelligence?.headlineStyle === 'string' &&
-                            ["benefit_forward","curiosity_gap","social_proof","how_to","direct"].includes(result.copyIntelligence.headlineStyle)
-                        )
-                            ? result.copyIntelligence.headlineStyle as ('benefit_forward' | 'curiosity_gap' | 'social_proof' | 'how_to' | 'direct')
-                            : "benefit_forward",
-                        vocabularyComplexity: (
-                            typeof result.copyIntelligence?.vocabularyComplexity === 'string' &&
-                            ["simple","moderate","technical","specialized"].includes(result.copyIntelligence.vocabularyComplexity)
-                        )
-                            ? result.copyIntelligence.vocabularyComplexity as ('simple' | 'moderate' | 'technical' | 'specialized')
-                            : "moderate",
-                        sentenceStructure: (
-                            typeof result.copyIntelligence?.sentenceStructure === 'string' &&
-                            ["balanced","short_punchy","complex_periodic"].includes(result.copyIntelligence.sentenceStructure)
-                        )
-                            ? result.copyIntelligence.sentenceStructure as ('balanced' | 'short_punchy' | 'complex_periodic')
-                            : "balanced",
-                        emojiUsage: result.copyIntelligence?.emojiUsage ?? false,
-                        contractionUsage: result.copyIntelligence?.contractionUsage ?? true,
-                    },
-                    // Copy content generated from intent — no fallbacks, empty = not rendered
-                    copy: {
-                        headline:                 result.copy?.headline                 ?? "",
-                        subheadline:              result.copy?.subheadline              ?? "",
-                        cta:                      result.copy?.cta                      ?? "",
-                        tagline:                  result.copy?.tagline                  ?? "",
-                        companyName:              result.copy?.companyName              ?? "",
-                        features:                 result.copy?.features                 ?? [],
-                        stats:                    result.copy?.stats                    ?? [],
-                        testimonial:              result.copy?.testimonial              ?? "",
-                        authorName:               result.copy?.authorName               ?? "",
-                        authorTitle:              result.copy?.authorTitle              ?? "",
-                        ctaSecondary:             result.copy?.ctaSecondary             ?? "",
-                        sectionTitleTestimonials: result.copy?.sectionTitleTestimonials ?? "",
-                        sectionTitleFeatures:     result.copy?.sectionTitleFeatures     ?? "",
-                        sectionTitleFAQ:          result.copy?.sectionTitleFAQ          ?? "",
-                        faq:                      result.copy?.faq                      ?? [],
-                        footerProductTitle:       result.copy?.footerProductTitle       ?? "",
-                        footerCompanyTitle:       result.copy?.footerCompanyTitle       ?? "",
-                        footerNavProduct:         result.copy?.footerNavProduct         ?? [],
-                        footerNavCompany:         result.copy?.footerNavCompany         ?? [],
-                    },
-                };
-            } catch (e: any) {
-                lastError = e;
-                if (attempt < LLM_MAX_RETRIES) {
-                    // Deterministic backoff using hash of attempt number
-                    const hash = crypto.createHash("sha256").update(`retry_${attempt}_${Date.now()}`).digest("hex");
-                    const jitter = (parseInt(hash.slice(0, 2), 16) / 255) * 500; // 0-500ms
-                    const baseDelay = 500 * Math.pow(2, attempt - 1);
-                    const delay = baseDelay + jitter;
-                    await new Promise(r => setTimeout(r, delay));
-                }
-            }
-        }
-
-        throw new Error(
-            `LLM extraction failed after ${LLM_MAX_RETRIES} attempts. ` +
-            `Provider: ${this.provider}. ` +
-            `Last error: ${lastError?.message || "Unknown error"}. ` +
-            `Set a valid API key (GROQ_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY, or HUGGINGFACE_API_KEY).`
+        
+        const result = await this.executeWithFallback(
+            () => this.callProvider(prompt),
+            "analyze"
         );
+
+        const s = result.structural ?? {};
+        const toBool = (v: unknown) => v === true || v === 'true' || v === 1;
+        
+        return {
+            structural: {
+                realtimeState:          toBool(s.realtimeState),
+                entityCount:            Math.max(1, Math.min(30, Math.round(Number(s.entityCount) || 1))),
+                sensitiveData:          toBool(s.sensitiveData),
+                multiRole:              toBool(s.multiRole),
+                financialTransactions:  toBool(s.financialTransactions),
+                complexWorkflows:       toBool(s.complexWorkflows),
+                deepNavigation:         toBool(s.deepNavigation),
+                externalIntegrations:   toBool(s.externalIntegrations),
+                screenCount:            Math.max(1, Math.min(50, Math.round(Number(s.screenCount) || 1))),
+                primarySurface: (
+                    ['data','content','media','transaction','balanced'].includes(s.primarySurface as string)
+                        ? s.primarySurface as StructuralProps['primarySurface']
+                        : 'balanced'
+                ),
+            },
+            traits: {
+                informationDensity: this.clamp(result.traits?.informationDensity ?? 0.5),
+                temporalUrgency: this.clamp(result.traits?.temporalUrgency ?? 0.5),
+                emotionalTemperature: this.clamp(result.traits?.emotionalTemperature ?? 0.5),
+                playfulness: this.clamp(result.traits?.playfulness ?? 0.5),
+                spatialDependency: this.clamp(result.traits?.spatialDependency ?? 0.5),
+                trustRequirement: this.clamp(result.traits?.trustRequirement ?? 0.5),
+                visualEmphasis: this.clamp(result.traits?.visualEmphasis ?? 0.5),
+                conversionFocus: this.clamp(result.traits?.conversionFocus ?? 0.5),
+            },
+            sector: {
+                primary: result.sector?.primary || "technology",
+                subSector: result.sector?.subSector || "technology_general",
+                confidence: this.clamp(result.sector?.confidence ?? 0.5),
+            },
+            archetype: {
+                type: result.archetype?.type || "landing",
+                confidence: this.clamp(result.archetype?.confidence ?? 0.5),
+            },
+            copyIntelligence: {
+                industryTerminology: result.copyIntelligence?.industryTerminology || [],
+                emotionalRegister: (
+                    typeof result.copyIntelligence?.emotionalRegister === 'string' &&
+                    ["clinical","professional","conversational","playful","luxury","urgent"].includes(result.copyIntelligence.emotionalRegister)
+                )
+                    ? result.copyIntelligence.emotionalRegister as ('clinical' | 'professional' | 'conversational' | 'playful' | 'luxury' | 'urgent')
+                    : "professional",
+                formalityLevel: this.clamp(result.copyIntelligence?.formalityLevel ?? 0.5),
+                ctaAggression: this.clamp(result.copyIntelligence?.ctaAggression ?? 0.5),
+                headlineStyle: (
+                    typeof result.copyIntelligence?.headlineStyle === 'string' &&
+                    ["benefit_forward","curiosity_gap","social_proof","how_to","direct"].includes(result.copyIntelligence.headlineStyle)
+                )
+                    ? result.copyIntelligence.headlineStyle as ('benefit_forward' | 'curiosity_gap' | 'social_proof' | 'how_to' | 'direct')
+                    : "benefit_forward",
+                vocabularyComplexity: (
+                    typeof result.copyIntelligence?.vocabularyComplexity === 'string' &&
+                    ["simple","moderate","technical","specialized"].includes(result.copyIntelligence.vocabularyComplexity)
+                )
+                    ? result.copyIntelligence.vocabularyComplexity as ('simple' | 'moderate' | 'technical' | 'specialized')
+                    : "moderate",
+                sentenceStructure: (
+                    typeof result.copyIntelligence?.sentenceStructure === 'string' &&
+                    ["balanced","short_punchy","complex_periodic"].includes(result.copyIntelligence.sentenceStructure)
+                )
+                    ? result.copyIntelligence.sentenceStructure as ('balanced' | 'short_punchy' | 'complex_periodic')
+                    : "balanced",
+                emojiUsage: result.copyIntelligence?.emojiUsage ?? false,
+                contractionUsage: result.copyIntelligence?.contractionUsage ?? true,
+            },
+            copy: {
+                headline:                 result.copy?.headline                 ?? "",
+                subheadline:              result.copy?.subheadline              ?? "",
+                cta:                      result.copy?.cta                      ?? "",
+                tagline:                  result.copy?.tagline                  ?? "",
+                companyName:              result.copy?.companyName              ?? "",
+                features:                 result.copy?.features                 ?? [],
+                stats:                    result.copy?.stats                    ?? [],
+                testimonial:              result.copy?.testimonial              ?? "",
+                authorName:               result.copy?.authorName               ?? "",
+                authorTitle:              result.copy?.authorTitle              ?? "",
+                ctaSecondary:             result.copy?.ctaSecondary             ?? "",
+                sectionTitleTestimonials: result.copy?.sectionTitleTestimonials ?? "",
+                sectionTitleFeatures:     result.copy?.sectionTitleFeatures     ?? "",
+                sectionTitleFAQ:          result.copy?.sectionTitleFAQ          ?? "",
+                faq:                      result.copy?.faq                      ?? [],
+                footerProductTitle:       result.copy?.footerProductTitle       ?? "",
+                footerCompanyTitle:       result.copy?.footerCompanyTitle       ?? "",
+                footerNavProduct:         result.copy?.footerNavProduct         ?? [],
+                footerNavCompany:         result.copy?.footerNavCompany         ?? [],
+            },
+        };
+    }
+
+
+    /**
+     * Calculate structural complexity score (0.0 - 1.0)
+     */
+    calculateComplexity(structural: StructuralProps): number {
+        const weights = {
+            realtimeState: 0.15,
+            entityCount: 0.1,
+            sensitiveData: 0.15,
+            multiRole: 0.1,
+            financialTransactions: 0.15,
+            complexWorkflows: 0.15,
+            deepNavigation: 0.1,
+            externalIntegrations: 0.1,
+        };
+
+        let score = 0;
+        if (structural.realtimeState) score += weights.realtimeState;
+        score += Math.min(10, (structural.entityCount || 0)) * 0.01; // max 0.1
+        if (structural.sensitiveData) score += weights.sensitiveData;
+        if (structural.multiRole) score += weights.multiRole;
+        if (structural.financialTransactions) score += weights.financialTransactions;
+        if (structural.complexWorkflows) score += weights.complexWorkflows;
+        if (structural.deepNavigation) score += weights.deepNavigation;
+        if (structural.externalIntegrations) score += weights.externalIntegrations;
+
+        // Screen count factor
+        score += Math.min(50, structural.screenCount || 0) * 0.002; // max 0.1
+
+        return Math.min(1, score);
+    }
+
+    /**
+     * Legacy wrapper for backward compatibility or simpler calls
+     */
+    async extractTraits(intent: string, projectContext?: string): Promise<ContentTraits> {
+        const analysis = await this.analyze(intent, projectContext);
+        return analysis.traits;
     }
 
     /**
@@ -491,12 +601,6 @@ export class SemanticTraitExtractor {
         flora:     Array<{ name: string; purpose: string }>;
         fauna:     Array<{ name: string; purpose: string }>;
     }> {
-        if (this.apiKeyMissing) {
-            throw new Error(
-                `LLM API key missing. Provider: ${this.provider}. ` +
-                `Set GROQ_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY, or HUGGINGFACE_API_KEY.`
-            );
-        }
         if ((counts.microbial + counts.flora + counts.fauna) === 0) {
             return { microbial: [], flora: [], fauna: [] };
         }
@@ -526,23 +630,32 @@ Rules:
 - Exactly ${counts.microbial} microbial, ${counts.flora} flora, ${counts.fauna} fauna entries`;
 
         try {
-            const result = await this.withTimeout(
-                this.callOrganismsProvider(prompt),
-                LLM_TIMEOUT_MS
+            const result = await this.executeWithFallback(
+                () => this.callOrganismsProvider(prompt),
+                "analyzeOrganisms"
             );
+            
+            // Robust filtering to prevent "Cannot read properties of undefined (reading 'name')"
+            const filterValid = (arr: any) => (arr || [])
+                .filter((item: any) => item && typeof item === 'object' && typeof item.name === 'string' && item.name.length > 0)
+                .map((item: any) => ({
+                    name: item.name,
+                    purpose: item.purpose || ""
+                }));
+
             return {
-                microbial: (result.microbial || []).slice(0, counts.microbial),
-                flora:     (result.flora     || []).slice(0, counts.flora),
-                fauna:     (result.fauna     || []).slice(0, counts.fauna),
+                microbial: filterValid(result.microbial).slice(0, counts.microbial),
+                flora:     filterValid(result.flora).slice(0, counts.flora),
+                fauna:     filterValid(result.fauna).slice(0, counts.fauna),
             };
         } catch (e) {
             throw new Error(
-                `Organism naming failed: ${e instanceof Error ? e.message : String(e)}. ` +
-                `Provider: ${this.provider}. Intent: "${intent.slice(0, 100)}${intent.length > 100 ? '...' : ''}". ` +
-                `Counts: microbial=${counts.microbial}, flora=${counts.flora}, fauna=${counts.fauna}`
+                `Organism naming failed after all failsafe attempts: ${e instanceof Error ? e.message : String(e)}. ` +
+                `Intent: "${intent.slice(0, 100)}${intent.length > 100 ? '...' : ''}".`
             );
         }
     }
+
 
     /** Dispatch to providers for organism naming — larger token budget than trait extraction */
     private async callOrganismsProvider(prompt: string): Promise<{
@@ -552,19 +665,19 @@ Rules:
     }> {
         const models: Record<LLMProvider, string> = {
             groq: "llama-3.3-70b-versatile",
-            openai: "gpt-4.1",
+            openai: "gpt-4o",
             anthropic: "claude-3-7-sonnet-latest",
             gemini: "gemini-2.0-flash",
-            openrouter: "meta-llama/llama-3-70b-instruct",
+            openrouter: "meta-llama/llama-3.3-70b-instruct",
             "hf-inference": "meta-llama/Llama-3.3-70B-Instruct",
         };
         return this.client.chatJSON(prompt, { model: models[this.provider], temperature: 0.4, maxTokens: 2048 });
     }
 
+
     /**
      * Names UI components for a civilization tier — product-specific, archetype-flavored.
      * Same pattern as analyzeOrganisms but for application-level components at civilization tiers.
-     * Falls back gracefully (returns empty array) if LLM unavailable.
      */
     async analyzeCivilizationComponents(
         intent: string,
@@ -573,12 +686,6 @@ Rules:
         archetypeContext: string,
         count: number
     ): Promise<Array<{ name: string; purpose: string }>> {
-        if (this.apiKeyMissing) {
-            throw new Error(
-                `LLM API key missing. Provider: ${this.provider}. ` +
-                `Set GROQ_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY, or HUGGINGFACE_API_KEY.`
-            );
-        }
         if (count === 0) return [];
 
         const prompt = `You are naming UI components for a ${sector} product.
@@ -601,19 +708,19 @@ Rules:
 - Exactly ${count} entries`;
 
         try {
-            const result = await this.withTimeout(
-                this.callCivilizationComponentsProvider(prompt),
-                LLM_TIMEOUT_MS
+            const result = await this.executeWithFallback(
+                () => this.callCivilizationComponentsProvider(prompt),
+                "analyzeCivilizationComponents"
             );
             return (result.components || []).slice(0, count);
         } catch (e) {
             throw new Error(
-                `Civilization component naming failed: ${e instanceof Error ? e.message : String(e)}. ` +
-                `Provider: ${this.provider}. Intent: "${intent.slice(0, 100)}${intent.length > 100 ? '...' : ''}". ` +
+                `Civilization component naming failed after failover: ${e instanceof Error ? e.message : String(e)}. ` +
                 `Tier: ${tier}, Count: ${count}`
             );
         }
     }
+
 
     /** Dispatch to providers for civilization component naming */
     private async callCivilizationComponentsProvider(prompt: string): Promise<{
@@ -621,49 +728,106 @@ Rules:
     }> {
         const models: Record<LLMProvider, string> = {
             groq: "llama-3.3-70b-versatile",
-            openai: "gpt-4.1",
+            openai: "gpt-4o",
             anthropic: "claude-3-7-sonnet-latest",
             gemini: "gemini-2.0-flash",
-            openrouter: "meta-llama/llama-3-70b-instruct",
+            openrouter: "meta-llama/llama-3.3-70b-instruct",
             "hf-inference": "meta-llama/Llama-3.3-70B-Instruct",
         };
         return this.client.chatJSON(prompt, { model: models[this.provider], temperature: 0.4, maxTokens: 2048 });
     }
 
+
+
     /**
      * Free-form text LLM call — used by design brief synthesis and other philosophy generators.
-     * Returns raw text (not JSON). Retries with backoff.
+     * Returns raw text (not JSON). Automatically fails over to alternatives.
      */
-    async callText(prompt: string): Promise<string> {
-        let lastError: Error | null = null;
-        for (let attempt = 1; attempt <= LLM_MAX_RETRIES; attempt++) {
-            try {
-                return await this.withTimeout(this.callTextProvider(prompt), LLM_TIMEOUT_MS);
-            } catch (e: any) {
-                lastError = e;
-                if (attempt < LLM_MAX_RETRIES) {
-                    const hash = crypto.createHash("sha256").update(`retry_${attempt}_${Date.now()}`).digest("hex");
-                    const jitter = (parseInt(hash.slice(0, 2), 16) / 255) * 500;
-                    await new Promise(r => setTimeout(r, 500 * Math.pow(2, attempt - 1) + jitter));
-                }
-            }
-        }
-        throw new Error(`LLM text call failed after ${LLM_MAX_RETRIES} attempts. Last error: ${lastError?.message}`);
+    public async callText(prompt: string): Promise<string> {
+        return this.executeWithFallback(
+            () => this.callTextProvider(prompt),
+            "callText"
+        );
     }
 
     private async callTextProvider(prompt: string): Promise<string> {
         const models: Record<LLMProvider, string> = {
             groq: "llama-3.3-70b-versatile",
-            openai: "gpt-4.1",
+            openai: "gpt-4o",
             anthropic: "claude-3-7-sonnet-latest",
             gemini: "gemini-2.0-flash",
-            openrouter: "meta-llama/llama-3-70b-instruct",
+            openrouter: "meta-llama/llama-3.3-70b-instruct",
             "hf-inference": "meta-llama/Llama-3.3-70B-Instruct",
         };
         return this.client.chatText(prompt, { model: models[this.provider], temperature: 0.7, maxTokens: 4096 });
     }
 
+
+    /**
+     * Executes a task with automatic failover to alternative LLM providers.
+     * Handles rate limits (429), timeouts, and internal server errors.
+     */
+    private async executeWithFallback<T>(
+        task: (client: LLMClient, provider: LLMProvider) => Promise<T>,
+        context: string
+    ): Promise<T> {
+        let lastError: Error | null = null;
+        
+        // We allow retries up to the number of available providers
+        const maxAttempts = Math.max(LLM_MAX_RETRIES, this.availableProviders.length);
+
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                return await this.withTimeout(
+                    task(this.client, this.provider),
+                    LLM_TIMEOUT_MS
+                );
+            } catch (error) {
+                lastError = error as Error;
+                const msg = lastError.message || "";
+                const status = (error as any).status || (error as any).statusCode || 0;
+                
+                // Determine if we should switch providers or retry
+                const isRateLimit = msg.includes("429") || msg.toLowerCase().includes("rate limit") || status === 429;
+                const isTimeout = msg.toLowerCase().includes("timeout") || msg.toLowerCase().includes("deadline") || status === 408;
+                const isOverloaded = msg.includes("503") || msg.includes("500") || msg.toLowerCase().includes("overloaded") || status === 503 || status === 500;
+                const isAuthError = msg.includes("401") || msg.includes("403") || msg.toLowerCase().includes("unauthorized") || status === 401 || status === 403;
+
+                console.error(`[EXTRACTOR] Error with ${this.provider}: ${msg.substring(0, 150)}${msg.length > 150 ? '...' : ''} (Status: ${status})`);
+
+                if (attempt < maxAttempts) {
+                    // Failover logic: if we have multiple providers, ALWAYS try the next one on ANY error
+                    if (this.availableProviders.length > 1) {
+                        this.currentProviderIndex = (this.currentProviderIndex + 1) % this.availableProviders.length;
+                        const next = this.availableProviders[this.currentProviderIndex];
+                        this.provider = next.provider;
+                        this.client = createLLMClient(next.provider, next.key);
+                        
+                        console.error(`[EXTRACTOR] Failover: Switching to ${this.provider} (Attempt ${attempt + 1}/${maxAttempts})`);
+                        
+                        // Backoff/Jitter: Longer for rate limits/overloads, shorter for auth/config errors
+                        const delay = (isRateLimit || isOverloaded || isTimeout)
+                            ? Math.min(1000 * Math.pow(2, attempt) + Math.random() * 1000, 10000)
+                            : 200 + Math.random() * 300;
+                        
+                        await new Promise(r => setTimeout(r, delay));
+                        continue;
+                    } else {
+                        // Single provider: standard exponential backoff
+                        const delay = Math.min(Math.pow(2, attempt) * 1000 + Math.random() * 1000, 10000);
+                        console.error(`[EXTRACTOR] Retry: Retrying ${this.provider} in ${Math.round(delay)}ms...`);
+                        await new Promise(r => setTimeout(r, delay));
+                        continue;
+                    }
+                }
+            }
+        }
+
+        throw new Error(`LLM call ${context} failed after ${maxAttempts} attempts across ${this.availableProviders.length} providers. Last error: ${lastError?.message}`);
+    }
+
     /** Race a promise against a timeout */
+
     private withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
         const timeout = new Promise<never>((_, reject) =>
             setTimeout(() => reject(new Error(`LLM request timed out after ${ms}ms`)), ms)
@@ -675,14 +839,15 @@ Rules:
     private callProvider(prompt: string): Promise<LLMResponse> {
         const models: Record<LLMProvider, string> = {
             groq: "llama-3.3-70b-versatile",
-            openai: "gpt-4.1",
+            openai: "gpt-4o",
             anthropic: "claude-3-7-sonnet-latest",
             gemini: "gemini-2.0-flash",
-            openrouter: "meta-llama/llama-3-70b-versatile",
+            openrouter: "meta-llama/llama-3.3-70b-instruct",
             "hf-inference": "meta-llama/Llama-3.3-70B-Instruct",
         };
         return this.client.chatJSON(prompt, { model: models[this.provider], temperature: 0.2 });
     }
+
 
     private buildPrompt(intent: string, projectContext?: string, personaContext?: {
         biography: string;

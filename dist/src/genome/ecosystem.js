@@ -68,7 +68,7 @@ export class EcosystemGenerator {
         const habitabilityScore = this.calculateHabitability(traits);
         const counts = this.calculateOrganismCounts(productComplexity, genome, options);
         // Generate organisms from the shared environment.
-        // LLM-supplied names and purposes are required.
+        // LLM-supplied names and purposes are required for product-specific context.
         const defs = options?.organismsDefinition;
         if (!defs) {
             throw new Error("organismsDefinition is required. Call extractor.analyzeOrganisms() to get product-specific component names.");
@@ -249,8 +249,10 @@ export class EcosystemGenerator {
         const baseEntropy = genome.chromosomes.ch12_signature.entropy;
         const mutationRate = eco.chromosomes.eco_ch11_mutation.rate;
         for (let i = 0; i < Math.min(count, definitions.length); i++) {
-            const mutation = this.generateMutation(genome, i);
             const def = definitions[i];
+            if (!def || !def.name)
+                continue; // Defensive: skip invalid definitions
+            const mutation = this.generateMutation(genome, i);
             organisms.push({
                 id: `M-${i}-${def.name}`,
                 name: def.name,
@@ -293,8 +295,10 @@ export class EcosystemGenerator {
         const trophicCascade = eco.chromosomes.eco_ch4_trophic.cascade;
         const mutationRate = eco.chromosomes.eco_ch11_mutation.rate;
         for (let i = 0; i < Math.min(count, definitions.length); i++) {
-            const mutation = this.generateMutation(genome, i + 100);
             const def = definitions[i];
+            if (!def || !def.name)
+                continue; // Defensive: skip invalid definitions
+            const mutation = this.generateMutation(genome, i + 100);
             const preyCount = Math.min(4, Math.floor(mutationRate * 4 * (1 + trophicCascade)) + 1);
             const prey = [];
             for (let p = 0; p < preyCount && p < microbial.length; p++) {
@@ -341,8 +345,10 @@ export class EcosystemGenerator {
         const trophicCascade = eco.chromosomes.eco_ch4_trophic.cascade;
         const energyFlux = eco.chromosomes.eco_ch2_energy.flux;
         for (let i = 0; i < Math.min(count, definitions.length); i++) {
-            const mutation = this.generateMutation(genome, i + 200);
             const def = definitions[i];
+            if (!def || !def.name)
+                continue; // Defensive: skip invalid definitions
+            const mutation = this.generateMutation(genome, i + 200);
             const preyCount = Math.min(5, Math.floor(energyFlux * 5 * (1 + trophicCascade)) + 2);
             const prey = [];
             for (let p = 0; p < preyCount && p < flora.length; p++) {

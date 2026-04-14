@@ -29,7 +29,7 @@ export class PersonaDesignBridge {
         const influence = this.calculateInfluence(persona, brief);
         // Step 3: Generate L1 genome with persona-influenced traits + direct chromosome expression
         const genome = await this.generateInfluencedGenome(intent, influence, persona);
-        return { genome, brief, influence };
+        return { persona, genome, brief, influence };
     }
     /**
      * Calculate how persona traits influence design parameters
@@ -413,7 +413,6 @@ export async function generateDesignVariations(intent, personaCount = 3) {
         const persona = await generatePersona(creatorGenome);
         const result = await bridge.generateDesignThroughPersona(persona, intent);
         variations.push({
-            persona,
             ...result,
         });
     }

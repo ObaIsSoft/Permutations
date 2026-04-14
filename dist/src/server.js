@@ -5,16 +5,19 @@ import { createRequire } from "module";
 // Load package.json for version (avoids hardcoded version drift)
 const require = createRequire(import.meta.url);
 const PACKAGE_VERSION = require("../../package.json").version;
-// Load .env if present (no dotenv dep — pure Node.js)
-// Does NOT override vars already set in the environment, so shell vars win.
+// Robust .env loading
+import "dotenv/config";
+// Also manual fallback just in case dotenv/config doesn't catch it in some environments
 try {
-    const envFile = path.join(path.dirname(new URL(import.meta.url).pathname), "../.env");
+    const rootDir = process.cwd();
+    const envFile = path.join(rootDir, ".env");
     if (fsSync.existsSync(envFile)) {
         const lines = fsSync.readFileSync(envFile, "utf-8").split("\n");
         for (const line of lines) {
             const m = line.match(/^\s*([^#=\s][^=]*?)\s*=\s*(.*)\s*$/);
-            if (m && !process.env[m[1]])
-                process.env[m[1]] = m[2];
+            if (m && m[1] && !process.env[m[1]]) {
+                process.env[m[1]] = m[2].trim().replace(/^["']|["']$/g, "");
+            }
         }
     }
 }
@@ -858,15 +861,32 @@ class DesignGenomeServer {
                         const layout_contract = this.buildLayoutContract(genome, finalComplexity, tier);
                         let ecosystemOutput;
                         let civilizationOutput;
-                        // SHA-256 hash chain — each layer derived from the previous layer's output
-                        const genomeEcoHash = ecoHashFromGenomeHash(genome.dnaHash);
-                        const genomeCivHash = civHashFromEcoHash(genomeEcoHash);
-                        // Ecosystem always runs — organism counts scale from 0 (abiotic) to max (endotherm_fauna)
-                        // FIX 7: Pass existingGenome to maintain hash chain continuity
+                        // 7. Ecosystem-first civilization pipeline
+                        //
+                        // Thresholds:
+                        //   < 0.11  abiotic           — HTML/CSS only, organism counts are zero
+                        //   0.11–0.80 ecosystem tiers — organisms scale from prokaryotic to endotherm_fauna
+                        //   0.81+  civilization tiers — emerges FROM ecosystem (tribal → singularity)
+                        //
+                        // FIX 7: Fetch organismsDefinition before calling generator to resolve complexity errors
                         {
+                            const genomeEcoHash = ecoHashFromGenomeHash(genome.dnaHash);
+                            const genomeCivHash = civHashFromEcoHash(genomeEcoHash);
+                            const estimatedCounts = {
+                                microbial: finalComplexity < 0.11 ? 0 : Math.min(16, Math.floor(2 + ((finalComplexity - 0.11) / 0.69) * 14)),
+                                flora: finalComplexity < 0.34 ? 0 : Math.min(12, Math.floor(((finalComplexity - 0.34) / 0.46) * 12)),
+                                fauna: finalComplexity < 0.57 ? 0 : Math.min(10, Math.floor(((finalComplexity - 0.57) / 0.23) * 10)),
+                            };
+                            const ecoTierKeyGen = ecosystemTierKey(finalComplexity < 0.81 ? finalComplexity : 0.79);
+                            const ecoBiomeOptionsGen = ECOSYSTEM_BIOMES[ecoTierKeyGen] ?? ['balanced'];
+                            const ecoBiomeGen = ecoBiomeOptionsGen[hashByte(genomeEcoHash, 0, ecoBiomeOptionsGen.length)];
+                            const ecoBiomeDescGen = BIOME_CONTEXT[ecoBiomeGen] ?? ecoBiomeGen;
+                            const ecoBiomeContextGen = `${ecoBiomeGen} — ${ecoBiomeDescGen}`;
+                            const organismsDefinition = await this.extractor.analyzeOrganisms(args.intent, detectedSector, estimatedCounts, ecoBiomeContextGen);
                             const eco = ecosystemGenerator.generate(seed, traits, {
                                 primarySector: detectedSector,
-                                existingGenome: genome
+                                existingGenome: genome,
+                                organismsDefinition
                             });
                             const allOrganisms = [
                                 ...eco.organisms.microbial,
@@ -910,7 +930,7 @@ class DesignGenomeServer {
                                 })),
                                 evolution: eco.evolution,
                                 civilizationReady: eco.civilizationReady,
-                                civilizationGap: parseFloat(Math.max(0, 0.81 - eco.evolution.complexity).toFixed(3))
+                                civilizationGap: parseFloat(Math.max(0, 0.81 - (eco.evolution?.complexity || 0)).toFixed(3))
                             };
                             ecosystemOutput = ecoOut;
                             // Civilization emerges from ecosystem when complexity crosses tribal (0.81)
@@ -1399,7 +1419,7 @@ class DesignGenomeServer {
                                 id: o.id,
                                 name: o.name,
                                 variants: o.spec.variants,
-                                props: o.spec.props.map(p => p.name),
+                                props: (o.spec.props || []).map(p => p?.name).filter(Boolean),
                                 containedBy: o.relationships.predator,
                                 colorTreatment: o.characteristics.colorTreatment
                             })),
@@ -1407,7 +1427,7 @@ class DesignGenomeServer {
                                 id: o.id,
                                 name: o.name,
                                 variants: o.spec.variants,
-                                props: o.spec.props.map(p => p.name),
+                                props: (o.spec.props || []).map(p => p?.name).filter(Boolean),
                                 contains: o.relationships.prey,
                                 containedBy: o.relationships.predator,
                                 motionStyle: o.characteristics.motionStyle
@@ -1416,7 +1436,7 @@ class DesignGenomeServer {
                                 id: o.id,
                                 name: o.name,
                                 variants: o.spec.variants,
-                                props: o.spec.props.map(p => p.name),
+                                props: (o.spec.props || []).map(p => p?.name).filter(Boolean),
                                 contains: o.relationships.prey,
                                 complexity: o.adaptation.entropy
                             }))
@@ -1458,6 +1478,7 @@ class DesignGenomeServer {
                             complexity: ecosystem.evolution.complexity,
                             dnaHashByte: parseInt(ecoBiomeHash.slice(4, 6), 16),
                         });
+                        // Debug: Library selections
                         const organismSelection = selectOrganismLibrary({
                             edgeStyle: genomeChromosomes.ch7_edge.style,
                             motionPhysics: genomeChromosomes.ch8_motion.physics,
@@ -1496,6 +1517,18 @@ class DesignGenomeServer {
                             personality: ecoChromosomes.eco_ch12_expressiveness.personality,
                             hasFauna,
                         });
+                        // Debug: Library selections
+                        try {
+                            fsSync.writeFileSync('debug_selections.json', JSON.stringify({
+                                ecoAnimationLibrary: ecoAnimationLibrary ? { name: ecoAnimationLibrary.name } : null,
+                                organismSelection: organismSelection ? { primary: organismSelection.primary?.name, alternative: organismSelection.alternative?.name } : null,
+                                interactionSelection: interactionSelection ? { primary: interactionSelection.primary?.name, alternative: interactionSelection.alternative?.name } : null,
+                                chartSelection: chartSelection ? { primary: chartSelection.primary?.name, alternative: chartSelection.alternative?.name } : null
+                            }, null, 2));
+                        }
+                        catch (e) {
+                            console.error("Failed to write debug_selections.json", e);
+                        }
                         const ecosystemReportLines = [
                             `# Ecosystem Report`,
                             ``,
@@ -1505,8 +1538,8 @@ class DesignGenomeServer {
                             `| Intent | ${args.intent} |`,
                             `| Seed | \`${args.seed}\` |`,
                             `| Sector | **${ecoSector}** |`,
-                            `| Complexity | ${ecosystem.evolution.complexity.toFixed(3)} |`,
-                            `| Civilization ready | ${ecosystem.civilizationReady ? "Yes — call generate_civilization" : `No — gap: ${(ecosystem.civilizationThreshold - ecosystem.evolution.complexity).toFixed(3)}`} |`,
+                            `| Complexity | ${(ecosystem.evolution.complexity || 0).toFixed(3)} |`,
+                            `| Civilization ready | ${ecosystem.civilizationReady ? "Yes — call generate_civilization" : `No — gap: ${(ecosystem.civilizationThreshold - (ecosystem.evolution.complexity || 0)).toFixed(3)}`} |`,
                             ``,
                             `## Ecosystem Character`,
                             `**Biome:** ${ecoBiome} — *${ecoBiomeDesc}*`,
@@ -1514,13 +1547,31 @@ class DesignGenomeServer {
                             `## Organism Hierarchy`,
                             ``,
                             `### Microbial (atomic components) — ${ecosystem.organisms.microbial.length}`,
-                            ...ecosystem.organisms.microbial.map(o => `- **${o.name}** (${o.id}) — ${o.purpose || `color: ${o.characteristics.colorTreatment}`}`),
+                            ...ecosystem.organisms.microbial.filter(Boolean).map(o => {
+                                const name = o?.name ?? 'unknown';
+                                const id = o?.id ?? 'no-id';
+                                const purpose = o?.purpose;
+                                const colorTreatment = o?.characteristics?.colorTreatment ?? 'none';
+                                return `- **${name}** (${id}) — ${purpose || `color: ${colorTreatment}`}`;
+                            }),
                             ``,
                             `### Flora (composite components) — ${ecosystem.organisms.flora.length}`,
-                            ...ecosystem.organisms.flora.map(o => `- **${o.name}** (${o.id}) — ${o.purpose || `motion: ${o.characteristics.motionStyle}`}`),
+                            ...ecosystem.organisms.flora.filter(Boolean).map(o => {
+                                const name = o?.name ?? 'unknown';
+                                const id = o?.id ?? 'no-id';
+                                const purpose = o?.purpose;
+                                const motionStyle = o?.characteristics?.motionStyle ?? 'none';
+                                return `- **${name}** (${id}) — ${purpose || `motion: ${motionStyle}`}`;
+                            }),
                             ``,
                             `### Fauna (complex components) — ${ecosystem.organisms.fauna.length}`,
-                            ...ecosystem.organisms.fauna.map(o => `- **${o.name}** (${o.id}) — ${o.purpose || `entropy: ${o.adaptation.entropy.toFixed(2)}`}`),
+                            ...ecosystem.organisms.fauna.filter(Boolean).map(o => {
+                                const name = o?.name ?? 'unknown';
+                                const id = o?.id ?? 'no-id';
+                                const purpose = o?.purpose;
+                                const entropy = (o?.adaptation?.entropy ?? 0).toFixed(2);
+                                return `- **${name}** (${id}) — ${purpose || `entropy: ${entropy}`}`;
+                            }),
                             ``,
                             `## Containment Map`,
                             ...ecosystem.relationships.filter((r) => r.type === "containment").slice(0, 10).map((r) => `- **${r.organisms[0]}** → contains → **${r.organisms[1]}** (pattern: ${r.pattern})`),
@@ -1575,40 +1626,40 @@ class DesignGenomeServer {
                                         biomeDescription: ecoBiomeDesc,
                                         css,
                                         selectedLibraries: {
-                                            animation: ecoAnimationLibrary.reactPackage ?? ecoAnimationLibrary.package ?? null,
-                                            organism: organismSelection.primary.package ?? null,
-                                            interaction: interactionSelection.primary.package ?? null,
-                                            charts: chartSelection.chartsRecommended ? (chartSelection.primary.package ?? null) : null,
+                                            animation: ecoAnimationLibrary?.reactPackage ?? ecoAnimationLibrary?.package ?? null,
+                                            organism: organismSelection?.primary?.package ?? null,
+                                            interaction: interactionSelection?.primary?.package ?? null,
+                                            charts: (chartSelection?.chartsRecommended && chartSelection?.primary) ? (chartSelection.primary.package ?? null) : null,
                                         },
                                         libraries: {
                                             animation: {
-                                                name: ecoAnimationLibrary.name,
-                                                package: ecoAnimationLibrary.reactPackage ?? ecoAnimationLibrary.package,
-                                                style: ecoAnimationLibrary.style,
-                                                bundle_size: ecoAnimationLibrary.bundleSize,
-                                                license: ecoAnimationLibrary.license,
-                                                description: ecoAnimationLibrary.description,
-                                                choreography: ecoAnimationLibrary.choreography,
-                                                import_example: ecoAnimationLibrary.importExample,
-                                                usage_example: ecoAnimationLibrary.usageExample,
-                                                cdn: ecoAnimationLibrary.cdn,
+                                                name: ecoAnimationLibrary?.name ?? 'unknown',
+                                                package: ecoAnimationLibrary?.reactPackage ?? ecoAnimationLibrary?.package ?? 'unknown',
+                                                style: ecoAnimationLibrary?.style ?? 'none',
+                                                bundle_size: ecoAnimationLibrary?.bundleSize ?? '0kb',
+                                                license: ecoAnimationLibrary?.license ?? 'MIT',
+                                                description: ecoAnimationLibrary?.description ?? '',
+                                                choreography: ecoAnimationLibrary?.choreography ?? 'none',
+                                                import_example: ecoAnimationLibrary?.importExample ?? '',
+                                                usage_example: ecoAnimationLibrary?.usageExample ?? '',
+                                                cdn: ecoAnimationLibrary?.cdn ?? '',
                                                 note: formatAnimationLibraryNote(ecoAnimationLibrary),
                                             },
                                             organism: {
-                                                primary: { name: organismSelection.primary.name, package: organismSelection.primary.package, philosophy: organismSelection.primary.philosophy, installCmd: organismSelection.primary.installCmd, importExample: organismSelection.primary.importExample, combinableWith: organismSelection.primary.combinableWith },
-                                                alternative: { name: organismSelection.alternative.name, package: organismSelection.alternative.package, philosophy: organismSelection.alternative.philosophy, installCmd: organismSelection.alternative.installCmd, importExample: organismSelection.alternative.importExample, combinableWith: organismSelection.alternative.combinableWith },
-                                                also_consider: organismSelection.also_consider.map(l => ({ name: l.name, package: l.package, philosophy: l.philosophy })),
+                                                primary: organismSelection?.primary ? { name: organismSelection.primary.name, package: organismSelection.primary.package, philosophy: organismSelection.primary.philosophy, installCmd: organismSelection.primary.installCmd, importExample: organismSelection.primary.importExample, combinableWith: organismSelection.primary.combinableWith } : null,
+                                                alternative: organismSelection?.alternative ? { name: organismSelection.alternative.name, package: organismSelection.alternative.package, philosophy: organismSelection.alternative.philosophy, installCmd: organismSelection.alternative.installCmd, importExample: organismSelection.alternative.importExample, combinableWith: organismSelection.alternative.combinableWith } : null,
+                                                also_consider: (organismSelection?.also_consider || []).map(l => ({ name: l?.name, package: l?.package, philosophy: l?.philosophy })),
                                             },
                                             interaction: {
-                                                primary: { name: interactionSelection.primary.name, package: interactionSelection.primary.package, domain: interactionSelection.primary.domain, installCmd: interactionSelection.primary.installCmd, importExample: interactionSelection.primary.importExample, combinableWith: interactionSelection.primary.combinableWith },
-                                                alternative: { name: interactionSelection.alternative.name, package: interactionSelection.alternative.package, domain: interactionSelection.alternative.domain, installCmd: interactionSelection.alternative.installCmd, importExample: interactionSelection.alternative.importExample, combinableWith: interactionSelection.alternative.combinableWith },
-                                                coverage: interactionSelection.coverage,
-                                                all_ranked: interactionSelection.ranked.map(l => ({ name: l.name, package: l.package, domain: l.domain })),
+                                                primary: interactionSelection?.primary ? { name: interactionSelection.primary.name, package: interactionSelection.primary.package, domain: interactionSelection.primary.domain, installCmd: interactionSelection.primary.installCmd, importExample: interactionSelection.primary.importExample, combinableWith: interactionSelection.primary.combinableWith } : null,
+                                                alternative: interactionSelection?.alternative ? { name: interactionSelection.alternative.name, package: interactionSelection.alternative.package, domain: interactionSelection.alternative.domain, installCmd: interactionSelection.alternative.installCmd, importExample: interactionSelection.alternative.importExample, combinableWith: interactionSelection.alternative.combinableWith } : null,
+                                                coverage: interactionSelection?.coverage || "none",
+                                                all_ranked: (interactionSelection?.ranked || []).map(l => ({ name: l?.name, package: l?.package, domain: l?.domain })),
                                             },
-                                            charts: chartSelection.chartsRecommended ? {
+                                            charts: (chartSelection?.chartsRecommended && chartSelection?.primary) ? {
                                                 primary: { name: chartSelection.primary.name, package: chartSelection.primary.package, approach: chartSelection.primary.approach, families: chartSelection.primary.families, installCmd: chartSelection.primary.installCmd, importExample: chartSelection.primary.importExample },
-                                                alternative: { name: chartSelection.alternative.name, package: chartSelection.alternative.package, approach: chartSelection.alternative.approach, families: chartSelection.alternative.families, installCmd: chartSelection.alternative.installCmd, importExample: chartSelection.alternative.importExample },
-                                                also_consider: chartSelection.also_consider.map(l => ({ name: l.name, package: l.package, approach: l.approach, families: l.families })),
+                                                alternative: chartSelection.alternative ? { name: chartSelection.alternative.name, package: chartSelection.alternative.package, approach: chartSelection.alternative.approach, families: chartSelection.alternative.families, installCmd: chartSelection.alternative.installCmd, importExample: chartSelection.alternative.importExample } : null,
+                                                also_consider: (chartSelection.also_consider || []).map(l => ({ name: l?.name, package: l?.package, approach: l?.approach, families: l?.families })),
                                             } : null,
                                         },
                                         usage: {
@@ -1731,7 +1782,7 @@ class DesignGenomeServer {
                             `| Intent | ${args.intent} |`,
                             `| Seed | \`${args.seed}\` |`,
                             `| Sector | **${civSector}** |`,
-                            `| Tier reached | **${tier.tier}** (complexity: ${tier.complexity.toFixed(3)}) |`,
+                            `| Tier reached | **${tier.tier}** (complexity: ${(tier.complexity || 0).toFixed(3)}) |`,
                             `| Source | ${ecosystem ? "ecosystem-derived" : "standalone (no ecosystem provided)"} |`,
                             `| Code generated | ${args.generate_code === true ? "Yes" : "No — architecture specs only"} |`,
                             ``,
@@ -2341,17 +2392,43 @@ class DesignGenomeServer {
                         };
                     }
                     case "generate_design_through_persona": {
-                        validateArgs([{ name: "intent", required: true, maxLength: 1024 }]);
                         const { generateDesignThroughPersona } = await import("./bridge/persona-to-design.js");
                         const { generateCreatorGenome } = await import("./creator/generator.js");
                         const { generatePersona } = await import("./brief/generator.js");
-                        // Use provided genome or generate new one
-                        const creatorGenome = args.genome || generateCreatorGenome(`persona-${crypto.createHash('sha256').update(sanitize(args.intent || 'default')).digest('hex').slice(0, 16)}`);
-                        const persona = await generatePersona(creatorGenome);
+                        const { SemanticTraitExtractor } = await import("./semantic/extractor.js");
+                        const { getTierName } = await import("./genome/sequencer.js");
+                        // Use provided genome/persona or generate new one
+                        let persona;
+                        if (args.genome) {
+                            if (args.genome.instincts) {
+                                // Already a persona
+                                persona = args.genome;
+                            }
+                            else {
+                                // It's a genome, generate persona
+                                persona = await generatePersona(args.genome);
+                            }
+                        }
+                        else {
+                            const creatorGenome = generateCreatorGenome(args.seed || `persona-${crypto.createHash('sha256').update(sanitize(args.intent || 'default')).digest('hex').slice(0, 16)}`);
+                            persona = await generatePersona(creatorGenome);
+                        }
                         const result = await generateDesignThroughPersona(persona, {
                             description: sanitize(args.intent),
                             sector: args.sector
                         });
+                        // Inject complexity and tier if missing (required for reports)
+                        const extractor = new SemanticTraitExtractor(process.env.OPENAI_API_KEY || "");
+                        const analysis = await extractor.analyze(args.intent);
+                        const complexity = extractor.calculateComplexity(analysis.structural);
+                        result.genome.generation = {
+                            ...result.genome.generation,
+                            options: {
+                                ...result.genome.generation?.options,
+                                complexity,
+                                tier: getTierName(complexity)
+                            }
+                        };
                         return {
                             content: [{
                                     type: "text",
@@ -2467,7 +2544,7 @@ class DesignGenomeServer {
             `| Seed | \`${opts.seed}\` |`,
             `| DNA Hash | \`${genome?.dnaHash ?? "–"}\` |`,
             `| Sector detected | **${opts.sector}** |`,
-            `| Complexity | ${opts.complexity.toFixed(3)} → **${opts.tier}** tier |`,
+            `| Complexity | ${(opts.complexity || 0).toFixed(3)} → **${opts.tier || "tribal"}** tier |`,
             ``,
             `## Chromosomes Sequenced`,
             ``,
@@ -2516,7 +2593,7 @@ class DesignGenomeServer {
             `  ↓ (if building a UI library)`,
             `generate_ecosystem      ← component specs + containment map`,
             ...(opts.complexity >= 0.68 ? [
-                `  ↓ (complexity ${opts.complexity.toFixed(2)} qualifies)`,
+                `  ↓ (complexity ${(opts.complexity || 0).toFixed(2)} qualifies)`,
                 `generate_civilization   ← architecture direction`
             ] : []),
             `  ↓`,

@@ -26,6 +26,8 @@ lerna-debug.log*
 *.swp
 *.swo
 *~
+.gemini/
+.claude/
 
 # OS files
 Thumbs.db

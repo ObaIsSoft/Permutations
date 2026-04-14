@@ -54,6 +54,7 @@ export class PersonaDesignBridge {
     persona: CreatorPersona,
     intent: DesignIntent
   ): Promise<{
+    persona: CreatorPersona;
     genome: DesignGenome;
     brief: CreativeBrief;
     influence: PersonaInfluence;
@@ -72,7 +73,7 @@ export class PersonaDesignBridge {
       persona
     );
     
-    return { genome, brief, influence };
+    return { persona, genome, brief, influence };
   }
 
   /**
@@ -501,7 +502,6 @@ export async function generateDesignVariations(
     const result = await bridge.generateDesignThroughPersona(persona, intent);
     
     variations.push({
-      persona,
       ...result,
     });
   }
