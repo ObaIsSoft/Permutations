@@ -562,7 +562,7 @@ class DesignGenomeServer {
             tools: [
                 {
                     name: "generate_design_genome",
-                    description: "STEP 1 — MANDATORY ENTRY POINT for every design task. Sequences a 32-chromosome design genome from natural language intent. CRITICAL: The complete genome object returned MUST be passed to ALL subsequent tools (generate_design_brief, validate_design, etc). Do NOT extract only dnaHash or traits. After calling this, you MUST write genome.json to disk before proceeding to any implementation. Returns CSS tokens, color system, typography, spacing, motion constraints, organism hierarchy (microbial/flora/fauna), and suggested_next workflow guide.",
+                    description: "STEP 1 — MANDATORY ENTRY POINT for every design task. AI INSTRUCTION: If the user asks to simulate a specific designer persona, use generate_design_through_persona INSTEAD. Sequences a 32-chromosome design genome from natural language intent. CRITICAL: The complete genome object returned MUST be passed to ALL subsequent tools (generate_design_brief, validate_design, etc). Do NOT extract only dnaHash or traits. After calling this, you MUST write genome.json to disk before proceeding to any implementation. Returns CSS tokens, color system, typography, spacing, motion constraints, organism hierarchy (microbial/flora/fauna), and suggested_next workflow guide.",
                     inputSchema: {
                         type: "object",
                         properties: {
@@ -779,7 +779,7 @@ class DesignGenomeServer {
                 },
                 {
                     name: "generate_creator_genome",
-                    description: "L0 LAYER — Generate a 16-chromosome Creator Genome for simulated designer personas. This is the foundation of generative design DNA. Returns latent space coordinates that encode cultural background, aesthetic sensibility, cognitive patterns, and creative instincts. Use this when you want unique designer perspectives rather than template-based designs.",
+                    description: "L0 LAYER — Generate a 16-chromosome Creator Genome for simulated designer personas. Returns latent space coordinates that encode cultural background, aesthetic sensibility, cognitive patterns, and creative instincts. AI INSTRUCTION: Only use this tool explicitly if the user wants to manually construct or inspect the DNA of a designer FIRST. Otherwise, use the all-in-one 'generate_design_through_persona' tool.",
                     inputSchema: {
                         type: "object",
                         properties: {
@@ -791,7 +791,7 @@ class DesignGenomeServer {
                 },
                 {
                     name: "generate_persona",
-                    description: "L0.5 LAYER — Decode a Creator Genome into a simulated designer persona using LLM. Returns a complete creative personality with biography, design instincts, worldview, and contradictions. Each persona has a unique voice (e.g., 'whispered forest diaries', 'Forged industrial poetry') that influences their design approach.",
+                    description: "L0.5 LAYER — Decode a Creator Genome into a simulated designer persona using LLM. Returns a complete creative personality with biography, design instincts, worldview, and contradictions. AI INSTRUCTION: Call this ONLY if you have already generated a Creator Genome and want to output their biography to the user. For complete design generation, use 'generate_design_through_persona'.",
                     inputSchema: {
                         type: "object",
                         properties: {
@@ -802,7 +802,7 @@ class DesignGenomeServer {
                 },
                 {
                     name: "generate_design_through_persona",
-                    description: "L0→L1 BRIDGE — Complete pipeline: Creator Persona interprets Design Intent to generate L1 Design Genome. The persona's traits (chaos tolerance, aesthetic sensibility, cognitive style) directly influence the resulting design system. Returns both the persona, creative brief, and the L1 genome.",
+                    description: "L0→L1 BRIDGE — Complete pipeline: Creator Persona interprets Design Intent to generate L1 Design Genome. AI INSTRUCTION: Use this tool INSTEAD OF 'generate_design_genome' when the user explicitly requests to 'design through a persona', 'act like a specific designer', or 'simulate a creative bias'. This executes the entire persona chain in one step, ensuring the persona's traits directly influence the resulting L1 design system.",
                     inputSchema: {
                         type: "object",
                         properties: {

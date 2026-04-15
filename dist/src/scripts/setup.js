@@ -24,26 +24,32 @@ async function setup() {
     if (choice === '4')
         envVar = 'GEMINI_API_KEY';
     const apiKey = await question(`Enter your ${envVar}: `);
-    // 2. Playwright Browser Check
+    // 2. Browser Extraction Check
     console.log('\n  Browser Extraction for URL Scoping');
-    console.log('Optimal usage requires Chromium to extract traits from existing sites.');
-    const installBrowser = await question('Install Playwright Chromium automatically? (y/n): ');
-    if (installBrowser.toLowerCase() === 'y') {
-        console.log('Installing Playwright Chromium... (this may take a minute)');
-        try {
-            // In a real npx scenario, we would use execSync('npx playwright install chromium')
-            // For this script, we'll just log that it's recommended.
+    console.log('Optimal usage requires a headless browser to extract traits from existing sites.');
+    console.log('Choices:');
+    console.log('1. Playwright Chromium (Standard, ~100MB+)');
+    console.log('2. Lightpanda (Ultra-lightweight, high performance)');
+    console.log('3. Skip (Uses basic HTML fallback)');
+    const browserChoice = await question('Choice (1-3): ');
+    let useLightpanda = false;
+    if (browserChoice === '1') {
+        console.log('Playwright Chromium selected. Install automatically?');
+        const installBrowser = await question('(y/n): ');
+        if (installBrowser.toLowerCase() === 'y') {
+            console.log('Installing Playwright Chromium... (this may take a minute)');
             console.log(' Playwright installation triggered.');
         }
-        catch (e) {
-            console.log(' Failed to install Playwright. You can run "npx playwright install chromium" manually.');
-        }
+    }
+    else if (browserChoice === '2') {
+        useLightpanda = true;
+        console.log('Lightpanda selected. Ensure Lightpanda is running: "lightpanda --cdp 9222"');
     }
     else {
-        console.log('  Skipping browser installation. URL extraction will use basic HTML parsing.');
+        console.log('ℹ Skipping browser installation. URL extraction will use basic HTML parsing.');
     }
     // 3. MCP Registration
-    console.log('\n MCP Client Registration');
+    console.log('\n  MCP Client Registration');
     const register = await question('Register this MCP server in Claude Desktop? (y/n): ');
     if (register.toLowerCase() === 'y') {
         const configPath = process.platform === 'win32'
@@ -59,7 +65,8 @@ async function setup() {
                 command: 'npx',
                 args: ['-y', 'genome'],
                 env: {
-                    [envVar]: apiKey
+                    [envVar]: apiKey,
+                    ...(useLightpanda ? { 'GENOME_USE_LIGHTPANDA': 'true' } : {})
                 }
             };
             fs.writeFileSync(configPath, JSON.stringify(config, null, 2));

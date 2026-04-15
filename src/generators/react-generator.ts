@@ -30,6 +30,11 @@ export interface ConfigFile { path: string; content: string; }
 
 // ── Genome Value Helpers ─────────────────────────────────────────────────────
 
+function getHashByte(seed: string, index: number): number {
+    const wrappedIndex = index % 32;
+    return parseInt(seed.slice(wrappedIndex * 2, wrappedIndex * 2 + 2), 16) / 255;
+}
+
 function gv(genome: DesignGenome) {
     const ch = genome.chromosomes;
     const colors = ch.ch5_color_primary || {};
@@ -52,6 +57,17 @@ function gv(genome: DesignGenome) {
     const primaryLight = Math.round((colors.lightness ?? 0.5) * 100);
 
     return {
+        layoutWidth: (ch.ch1_structure.maxNesting > 2 ? 1100 : 900) + Math.floor(getHashByte(genome.dnaHash, 200) * 300),
+        articleWidth: 600 + Math.floor(getHashByte(genome.dnaHash, 201) * 200),
+        narrowWidth: 400 + Math.floor(getHashByte(genome.dnaHash, 202) * 200),
+        sidebarWidthCalc: 220 + Math.floor(getHashByte(genome.dnaHash, 203) * 80),
+        asideWidth: 280 + Math.floor(getHashByte(genome.dnaHash, 204) * 100),
+        colMinXs: 120 + Math.floor(getHashByte(genome.dnaHash, 205) * 40),
+        colMinSm: 160 + Math.floor(getHashByte(genome.dnaHash, 206) * 60),
+        colMin: 220 + Math.floor(getHashByte(genome.dnaHash, 207) * 80),
+        colMinLg: 280 + Math.floor(getHashByte(genome.dnaHash, 208) * 100),
+        rowHeight: 150 + Math.floor(getHashByte(genome.dnaHash, 209) * 100),
+
         primary: colors.hex || "#3b82f6",
         primaryDark: colors.darkModeHex || colors.hex || "#2563eb",
         secondary: sys.secondary?.hex || "#6366f1",
@@ -169,6 +185,7 @@ function lighten(hex: string, amount: number): string {
 export class ReactGenerator {
     generate(spec: PageCompositionSpec): ReactOutput {
         return {
+
             pages: [this.generatePage(spec)],
             components: this.generateComponents(spec),
             styles: [this.generateStyles(spec)],
@@ -183,6 +200,7 @@ export class ReactGenerator {
         const pageContent = this.renderPage(spec, v, animConfig);
 
         return {
+
             path: "src/pages/index.tsx",
             content: `${imports}
 
@@ -197,57 +215,78 @@ ${pageContent}  );
     private renderPage(spec: PageCompositionSpec, v: ReturnType<typeof gv>, animConfig: ReturnType<typeof getAnimationConfig>): string {
         const { layout, navigation, hero, sections, footer, sidebar } = spec;
         const indent = "    ";
-        let tree = "";
 
-        // Page wrapper with page transition + ch33 composition data attributes
-        const navType = navigation?.type ?? "none";
-        const compAttrs = `data-flow="${layout.flow}" data-density="${layout.density}" data-nav="${navType}" data-responsive="${layout.responsive}"`;
-        if (animConfig.preset.fmType !== "none") {
-            tree += `${indent}<motion.div className="page-layout layout-${layout.type}" ${compAttrs} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: ${animConfig.duration * 0.75} }}>\n`;
-        } else {
-            tree += `${indent}<div className="page-layout layout-${layout.type}" ${compAttrs}>\n`;
-        }
+        let navHtml = "";
+        let sidebarHtml = "";
+        let heroHtml = "";
+        let sectionsHtml = "";
+        let footerHtml = "";
 
-        // Navigation
         if (navigation?.pattern?.blueprint) {
-            tree += this.renderBlueprint(navigation.pattern.blueprint, v, animConfig, indent + "  ", 0, this.resolveAdaptiveProps(navigation.pattern, spec.genome));
+            navHtml = this.renderBlueprint(navigation.pattern.blueprint, v, animConfig, indent + "  ", 0, this.resolveAdaptiveProps(navigation.pattern, spec.genome));
         } else if (navigation) {
-            tree += this.renderNavFallback(navigation, v, animConfig, indent + "  ", 0);
+            navHtml = this.renderNavFallback(navigation, v, animConfig, indent + "  ", 0);
         }
 
-        // Main content
-        tree += `${indent}  <main className="main-content">\n`;
-
-        // Sidebar
         if (sidebar?.pattern?.blueprint) {
-            tree += this.renderBlueprint(sidebar.pattern.blueprint, v, animConfig, indent + "    ", 0, this.resolveAdaptiveProps(sidebar.pattern, spec.genome));
+            sidebarHtml = this.renderBlueprint(sidebar.pattern.blueprint, v, animConfig, indent + "    ", 0, this.resolveAdaptiveProps(sidebar.pattern, spec.genome));
         }
 
-        // Hero
         if (hero?.pattern?.blueprint) {
-            tree += this.renderBlueprint(hero.pattern.blueprint, v, animConfig, indent + "    ", 0, this.resolveAdaptiveProps(hero.pattern, spec.genome));
+            heroHtml = this.renderBlueprint(hero.pattern.blueprint, v, animConfig, indent + "    ", 0, this.resolveAdaptiveProps(hero.pattern, spec.genome));
         }
 
-        // Sections with staggered animation
         for (let i = 0; i < sections.length; i++) {
             const section = sections[i];
             const delay = i * animConfig.staggerInterval;
             if (section.pattern?.blueprint) {
-                tree += this.renderBlueprint(section.pattern.blueprint, v, animConfig, indent + "    ", delay, this.resolveAdaptiveProps(section.pattern, spec.genome));
+                sectionsHtml += this.renderBlueprint(section.pattern.blueprint, v, animConfig, indent + "    ", delay, this.resolveAdaptiveProps(section.pattern, spec.genome));
             } else {
-                tree += this.renderSectionFallback(section, v, animConfig, indent + "    ", delay);
+                sectionsHtml += this.renderSectionFallback(section, v, animConfig, indent + "    ", delay);
             }
         }
 
-        tree += `${indent}  </main>\n`;
-
-        // Footer
         if (footer?.pattern?.blueprint) {
-            tree += this.renderBlueprint(footer.pattern.blueprint, v, animConfig, indent + "  ", sections.length * animConfig.staggerInterval, this.resolveAdaptiveProps(footer.pattern, spec.genome));
+            footerHtml = this.renderBlueprint(footer.pattern.blueprint, v, animConfig, indent + "  ", sections.length * animConfig.staggerInterval, this.resolveAdaptiveProps(footer.pattern, spec.genome));
         }
 
-        tree += `${indent}</div>`;
-        return tree;
+        // Page wrapper with page transition + ch33 composition data attributes
+        const navType = navigation?.type ?? "none";
+        const compAttrs = `data-flow="${layout.flow}" data-density="${layout.density}" data-nav="${navType}" data-responsive="${layout.responsive}"`;
+        
+        if (!layout.pattern?.blueprint) {
+            throw new Error("Generators must use structural layout blueprints; layout.pattern.blueprint is missing. Fallbacks are not permitted.");
+        }
+
+        // Does the blueprint explicitly handle the sidebar via a specialized slot?
+        const templateStr = layout.pattern.blueprint.template;
+        const handlesSidebar = templateStr.includes("{{sidebar}}") || templateStr.includes("{{toc}}") || templateStr.includes("{{filters}}");
+        const handlesToolbar = templateStr.includes("{{toolbar}}") || templateStr.includes("{{navigation}}");
+        const handlesInput = templateStr.includes("{{input}}");
+
+        // Construct master children by placing unhandled specific elements into the main pipeline
+        const childrenContent = `${handlesToolbar ? "" : navHtml}${handlesSidebar ? "" : sidebarHtml}${heroHtml}${handlesInput ? "" : sectionsHtml}${footerHtml}`;
+
+        const layoutOverrides = {
+            ...this.resolveAdaptiveProps(layout.pattern, spec.genome),
+            children: childrenContent,
+            sidebar: sidebarHtml,
+            toc: sidebarHtml,
+            filters: sidebarHtml,
+            input: sectionsHtml,
+            toolbar: navHtml,
+            navigation: navHtml,
+            footer: footerHtml
+        };
+
+        let tree = this.renderBlueprint(layout.pattern.blueprint, v, animConfig, indent, 0, layoutOverrides);
+
+        // Wrap the dynamic blueprint in the global context provider element
+        if (animConfig.preset.fmType !== "none") {
+            return `${indent}<motion.div className="page-layout layout-${layout.type}" ${compAttrs} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: ${animConfig.duration * 0.75} }}>\n${tree}\n${indent}</motion.div>`;
+        } else {
+            return `${indent}<div className="page-layout layout-${layout.type}" ${compAttrs}>\n${tree}\n${indent}</div>`;
+        }
     }
 
     private resolveAdaptiveProps(pattern: any, genome: DesignGenome): Record<string, string> {
@@ -283,7 +322,7 @@ ${pageContent}  );
             spacing: String(v.md),
             gridColumns: String(v.columns),
             // Blueprint-local adaptive prop names ({{columns}}, {{width}}, etc.)
-            columns: String(v.columns), width: "280px", backdrop: "none",
+            columns: String(v.columns), width: `${v.sidebarWidthCalc}px`, backdrop: "none",
             color1: v.primary, color2: v.secondary, imagePosition: "right",
             // Spread resolved adaptive props last so genome values override defaults
             ...(adaptiveProps || {}),
@@ -465,6 +504,7 @@ export function ${component.name}({ ${component.props.filter((p: any) => !p.geno
         const animationCSS = generateCSSKeyframes(animConfig);
 
         return {
+
             path: "src/styles/index.css",
             content: `/* ── Genome-Derived CSS Variables ──────────────────────────────────── */
 :root {
@@ -517,7 +557,16 @@ export function ${component.name}({ ${component.props.filter((p: any) => !p.geno
   --line-height-tight: ${v.lineHeightTight};
   --composition-flow: ${spec.layout.flow}; --composition-density: ${spec.layout.density};
   --composition-nav: ${spec.navigation?.type ?? "none"}; --composition-responsive: ${spec.layout.responsive};
-  --sidebar-width: ${spec.sidebar?.width ?? "280px"};
+  --sidebar-width: ${spec.sidebar?.width ?? `${v.sidebarWidthCalc}px`};
+  --layout-width: ${v.layoutWidth}px;
+  --max-width-article: ${v.articleWidth}px;
+  --max-width-narrow: ${v.narrowWidth}px;
+  --aside-width: ${v.asideWidth}px;
+  --column-min-xs: ${v.colMinXs}px;
+  --column-min-sm: ${v.colMinSm}px;
+  --column-min: ${v.colMin}px;
+  --column-min-lg: ${v.colMinLg}px;
+  --row-height: ${v.rowHeight}px;
 ${adaptiveVarLines.join("\n")}
 ${Object.entries(spec.cssVariables).map(([name, val]) => `  ${name}: ${val};`).join("\n")}
 }
@@ -554,9 +603,9 @@ ul, ol { list-style: none; }
 
 /* ── Sections ──────────────────────────────────────────────────────────── */
 .section { padding: var(--spacing-section) var(--spacing-xl); }
-.section-container { max-width: 1200px; margin: 0 auto; }
+.section-container { max-width: var(--layout-width); margin: 0 auto; }
 .section-title { font-family: var(--font-display); font-size: var(--font-size-4xl); font-weight: 700; text-align: center; margin-bottom: var(--spacing-md); }
-.section-description { font-size: var(--font-size-lg); color: var(--color-text-muted); text-align: center; max-width: 640px; margin: 0 auto var(--spacing-2xl); line-height: var(--line-height); }
+.section-description { font-size: var(--font-size-lg); color: var(--color-text-muted); text-align: center; max-width: var(--max-width-narrow); margin: 0 auto var(--spacing-2xl); line-height: var(--line-height); }
 
 /* ── Page Layout ───────────────────────────────────────────────────────── */
 .page-layout { display: flex; flex-direction: column; min-height: 100vh; }
@@ -617,6 +666,7 @@ ${generateTransitionOutput(spec.genome).css}
             }
         }
         return {
+
             path: "package.json",
             content: JSON.stringify({ name: "genome-generated-app", version: "1.0.0", private: true, dependencies: deps }, null, 2),
         };
@@ -626,6 +676,7 @@ ${generateTransitionOutput(spec.genome).css}
         const v = gv(spec.genome);
         const fontLinks = this.generateFontLinks(v);
         return {
+
             path: "index.html",
             content: `<!DOCTYPE html>
 <html lang="en">

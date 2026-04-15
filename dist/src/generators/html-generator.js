@@ -15,6 +15,10 @@ import { generateCursorOutput } from "./cursor-engine.js";
 import { generateScrollOutput } from "./scroll-engine.js";
 import { generatePreloaderOutput } from "./preloader-engine.js";
 import { generateTransitionOutput } from "./transition-engine.js";
+function getHashByte(seed, index) {
+    const wrappedIndex = index % 32;
+    return parseInt(seed.slice(wrappedIndex * 2, wrappedIndex * 2 + 2), 16) / 255;
+}
 function gv(genome) {
     const ch = genome.chromosomes;
     const colors = ch.ch5_color_primary || {};
@@ -35,6 +39,16 @@ function gv(genome) {
     const primaryHue = Math.round(colors.hue ?? 210);
     const primaryLight = Math.round((colors.lightness ?? 0.5) * 100);
     return {
+        layoutWidth: (ch.ch1_structure.maxNesting > 2 ? 1100 : 900) + Math.floor(getHashByte(genome.dnaHash, 200) * 300),
+        articleWidth: 600 + Math.floor(getHashByte(genome.dnaHash, 201) * 200),
+        narrowWidth: 400 + Math.floor(getHashByte(genome.dnaHash, 202) * 200),
+        sidebarWidthCalc: 220 + Math.floor(getHashByte(genome.dnaHash, 203) * 80),
+        asideWidth: 280 + Math.floor(getHashByte(genome.dnaHash, 204) * 100),
+        colMinXs: 120 + Math.floor(getHashByte(genome.dnaHash, 205) * 40),
+        colMinSm: 160 + Math.floor(getHashByte(genome.dnaHash, 206) * 60),
+        colMin: 220 + Math.floor(getHashByte(genome.dnaHash, 207) * 80),
+        colMinLg: 280 + Math.floor(getHashByte(genome.dnaHash, 208) * 100),
+        rowHeight: 150 + Math.floor(getHashByte(genome.dnaHash, 209) * 100),
         primary: colors.hex || "#3b82f6", primaryDark: colors.darkModeHex || colors.hex || "#2563eb",
         secondary: sys.secondary?.hex || "#6366f1", accent: sys.accent?.hex || "#f59e0b",
         success: sys.semantic?.success?.hex || "#22c55e", warning: sys.semantic?.warning?.hex || "#f59e0b",
@@ -166,39 +180,64 @@ ${bodyContent}${cursor}
     renderBody(v, animConfig) {
         const { layout, navigation, hero, sections, footer, sidebar } = this.spec;
         const indent = "  ";
-        const navType = navigation?.type ?? "none";
-        let html = "";
-        if (layout.pattern?.blueprint)
-            html += this.renderBlueprint(layout.pattern.blueprint, v, animConfig, indent, 0, this.resolveAdaptiveProps(layout.pattern));
-        else
-            html += `${indent}<div class="page-layout layout-${layout.type}" data-flow="${layout.flow}" data-density="${layout.density}" data-nav="${navType}" data-responsive="${layout.responsive}">\n`;
-        if (navigation?.pattern?.blueprint)
-            html += this.renderBlueprint(navigation.pattern.blueprint, v, animConfig, indent + "  ", 0, this.resolveAdaptiveProps(navigation.pattern));
-        else if (navigation)
-            html += this.renderNavFallback(navigation, v, animConfig, indent + "  ", 0);
-        html += `${indent}  <main class="main-content">\n`;
-        if (sidebar?.pattern?.blueprint)
-            html += this.renderBlueprint(sidebar.pattern.blueprint, v, animConfig, indent + "    ", 0, this.resolveAdaptiveProps(sidebar.pattern));
+        let navHtml = "";
+        let sidebarHtml = "";
+        let heroHtml = "";
+        let sectionsHtml = "";
+        let footerHtml = "";
+        if (navigation?.pattern?.blueprint) {
+            navHtml = this.renderBlueprint(navigation.pattern.blueprint, v, animConfig, indent + "  ", 0, this.resolveAdaptiveProps(navigation.pattern));
+        }
+        else if (navigation) {
+            navHtml = this.renderNavFallback(navigation, v, animConfig, indent + "  ", 0);
+        }
+        if (sidebar?.pattern?.blueprint) {
+            sidebarHtml = this.renderBlueprint(sidebar.pattern.blueprint, v, animConfig, indent + "    ", 0, this.resolveAdaptiveProps(sidebar.pattern));
+        }
         if (hero?.pattern?.blueprint) {
-            html += this.renderBlueprint(hero.pattern.blueprint, v, animConfig, indent + "    ", 0, this.resolveAdaptiveProps(hero.pattern));
+            heroHtml = this.renderBlueprint(hero.pattern.blueprint, v, animConfig, indent + "    ", 0, this.resolveAdaptiveProps(hero.pattern));
         }
         else {
             const starResult = renderStarHero(this.genome, v, indent + "    ");
-            html += starResult.html + "\n";
+            heroHtml = starResult.html + "\n";
         }
         for (let i = 0; i < sections.length; i++) {
             const section = sections[i];
             const delay = i * animConfig.staggerInterval;
-            if (section.pattern?.blueprint)
-                html += this.renderBlueprint(section.pattern.blueprint, v, animConfig, indent + "    ", delay, this.resolveAdaptiveProps(section.pattern));
-            else
-                html += this.renderSectionFallback(section, v, animConfig, indent + "    ", delay, i);
+            if (section.pattern?.blueprint) {
+                sectionsHtml += this.renderBlueprint(section.pattern.blueprint, v, animConfig, indent + "    ", delay, this.resolveAdaptiveProps(section.pattern));
+            }
+            else {
+                sectionsHtml += this.renderSectionFallback(section, v, animConfig, indent + "    ", delay, i);
+            }
         }
-        html += `${indent}  </main>\n`;
-        if (footer?.pattern?.blueprint)
-            html += this.renderBlueprint(footer.pattern.blueprint, v, animConfig, indent + "  ", sections.length * animConfig.staggerInterval, this.resolveAdaptiveProps(footer.pattern));
-        html += `${indent}</div>`;
-        return html;
+        if (footer?.pattern?.blueprint) {
+            footerHtml = this.renderBlueprint(footer.pattern.blueprint, v, animConfig, indent + "  ", sections.length * animConfig.staggerInterval, this.resolveAdaptiveProps(footer.pattern));
+        }
+        const navType = navigation?.type ?? "none";
+        const compAttrs = `data-flow="${layout.flow}" data-density="${layout.density}" data-nav="${navType}" data-responsive="${layout.responsive}"`;
+        if (!layout.pattern?.blueprint) {
+            throw new Error("Generators must use structural layout blueprints; layout.pattern.blueprint is missing. Fallbacks are not permitted.");
+        }
+        const templateStr = layout.pattern.blueprint.template;
+        const handlesSidebar = templateStr.includes("{{sidebar}}") || templateStr.includes("{{toc}}") || templateStr.includes("{{filters}}");
+        const handlesToolbar = templateStr.includes("{{toolbar}}") || templateStr.includes("{{navigation}}");
+        const handlesInput = templateStr.includes("{{input}}");
+        const childrenContent = `${handlesToolbar ? "" : navHtml}${handlesSidebar ? "" : sidebarHtml}${heroHtml}${handlesInput ? "" : sectionsHtml}${footerHtml}`;
+        const layoutOverrides = {
+            ...this.resolveAdaptiveProps(layout.pattern),
+            children: childrenContent,
+            sidebar: sidebarHtml,
+            toc: sidebarHtml,
+            filters: sidebarHtml,
+            input: sectionsHtml,
+            toolbar: navHtml,
+            navigation: navHtml,
+            footer: footerHtml
+        };
+        let html = this.renderBlueprint(layout.pattern.blueprint, v, animConfig, indent, 0, layoutOverrides);
+        // Wrap the dynamic blueprint in the global context container
+        return `${indent}<div class="page-layout layout-${layout.type}" ${compAttrs}>\n${html}\n${indent}</div>`;
     }
     renderBlueprint(blueprint, v, animConfig, indent, delay, adaptiveProps) {
         const props = {
@@ -208,7 +247,7 @@ ${bodyContent}${cursor}
             year: new Date().getFullYear().toString(), colorPrimary: v.primary, colorAccent: v.accent,
             radius: String(v.radiusMd), spacing: String(v.md), gridColumns: String(v.columns),
             // Blueprint-local adaptive prop names ({{columns}}, {{width}}, etc.)
-            columns: String(v.columns), width: "280px", backdrop: "none",
+            columns: String(v.columns), width: `${v.sidebarWidthCalc}px`, backdrop: "none",
             color1: v.primary, color2: v.secondary, imagePosition: "right",
             // Spread resolved adaptive props last so genome values override defaults
             ...(adaptiveProps || {}),
@@ -366,7 +405,16 @@ ${bodyContent}${cursor}
   --line-height: ${v.lineHeight}; --line-height-tight: ${v.lineHeightTight};
   --composition-flow: ${this.spec.layout.flow}; --composition-density: ${this.spec.layout.density};
   --composition-nav: ${this.spec.navigation?.type ?? "none"}; --composition-responsive: ${this.spec.layout.responsive};
-  --sidebar-width: ${this.spec.sidebar?.width ?? "280px"};
+  --sidebar-width: ${this.spec.sidebar?.width ?? `${v.sidebarWidthCalc}px`};
+  --layout-width: ${v.layoutWidth}px;
+  --max-width-article: ${v.articleWidth}px;
+  --max-width-narrow: ${v.narrowWidth}px;
+  --aside-width: ${v.asideWidth}px;
+  --column-min-xs: ${v.colMinXs}px;
+  --column-min-sm: ${v.colMinSm}px;
+  --column-min: ${v.colMin}px;
+  --column-min-lg: ${v.colMinLg}px;
+  --row-height: ${v.rowHeight}px;
 ${adaptiveVarLines.join("\n")}
 ${Object.entries(this.spec.cssVariables).map(([name, val]) => `  ${name}: ${val};`).join("\n")}
 }
@@ -403,9 +451,9 @@ ul, ol { list-style: none; }
 
 /* ── Sections ──────────────────────────────────────────────────────────── */
 .section { padding: var(--spacing-section) var(--spacing-xl); }
-.section-container { max-width: 1200px; margin: 0 auto; }
+.section-container { max-width: var(--layout-width); margin: 0 auto; }
 .section-title { font-family: var(--font-display); font-size: var(--font-size-4xl); font-weight: 700; text-align: center; margin-bottom: var(--spacing-md); }
-.section-description { font-size: var(--font-size-lg); color: var(--color-text-muted); text-align: center; max-width: 640px; margin: 0 auto var(--spacing-2xl); line-height: var(--line-height); }
+.section-description { font-size: var(--font-size-lg); color: var(--color-text-muted); text-align: center; max-width: var(--max-width-narrow); margin: 0 auto var(--spacing-2xl); line-height: var(--line-height); }
 
 /* ── Page Layout ───────────────────────────────────────────────────────── */
 .page-layout { display: flex; flex-direction: column; min-height: 100vh; }
